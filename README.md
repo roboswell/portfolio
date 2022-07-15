@@ -1,0 +1,2 @@
+## This is a portfolio of projects I have completed which demonstrate some of my key data science skills, such as data wrangling, data visualization, and implementation of various natural language processing, machine learning and statistics models.
+ 

@@ -1,0 +1,38 @@
+---
+title: "Vizualizing Vader Sentiment Analysis of News Events in Nigeria, 2019"
+author: "Rob Boswell"
+date: "7/4/2022"
+output: html_document
+---
+
+$~$
+
+#### The following visualization compares VADER compound sentiment analysis scores calculated in and exported from the Portfolio-Nigeria_News_LDA_&_Sentiment_Analysis.ipynb file located in my GitHub portfolio repositiory that is also in the folder "nlp-topic_modeling_&_sentiment_analysis-nigeria_news-2019":
+
+$~$
+
+```{R, echo=FALSE, message=FALSE, warning=FALSE, fig.height=10, fig.width=12.5}
+
+library(readr)
+library(tidyverse)
+library(ggplot2)
+library(ggthemes)
+
+setwd("C:/Users/rb11/Desktop/RB/portfolio_data/")
+
+vader_median = read_csv("vader_median.csv")
+
+
+#Creating levels dictates the order of the faceted graphs. Otherwise they seem to appear in random order.
+vader_median$sentences_containing <- factor(vader_median$sentences_containing, levels = c('All Words', 'Words: "election" or "elections"', 'Words: "protest", "protests", "protester" or "protesters"', 'Words: "rights", "freedom", "liberty" or "liberties"', 'Word: "government"', 'Words: "Nigerian Army"', 'Word: "police"', 'Words: "justice system", "judicial system", "judiciary", "court system", "court" or "courts"', 'Words: "Boko Haram"', 'Words: "Islamic State", "ISIS" or "ISIL"', 'Word: "safety"', 'Word: "violence"'))
+
+
+#Note: Inside theme() when I add: strip.text.x = element_text(size = 13, face = "bold"), it changes the size of the font for the faceted group titles.
+
+
+cols=c("Quarter 1, 2019" = "#0099DF", "Quarter 2, 2019" = "#e7c060", "Quarter 3, 2019" = "#7c13c8", "Quarter 4, 2019" = "#1ea000")
+
+median_grouped_bar_chart = ggplot(vader_median, aes(x = quarter, y = vader_score, fill = quarter)) + geom_bar(stat = "identity", position = "dodge") + scale_x_discrete(name = "All Sentences that Contain the Above Specified Words", labels = function(x) str_wrap(x, width = 60)) + scale_y_continuous("VADER Sentiment Compound Score", labels = c(-1, -0.75,-0.5,-0.25,0.00, 0.25, 0.50), breaks = c(-1, -0.75,-0.5,-0.25,0.00, 0.25, 0.50)) + scale_colour_manual(values = cols, guide=NULL, labels = c("Quarter 1, 2019", "Quarter 2, 2019", "Quarter 3, 2019", "Quarter 4, 2019")) + theme_wsj() + theme(plot.title = element_text(hjust = 0.5), plot.subtitle=element_text(hjust=0.5, size = 12, color="black"), title =element_text(size=20, color= "steelblue", face='bold'), axis.title.x=element_text(size=16, vjust = -0.3), strip.text.x = element_text(size = 13, face = "bold"), axis.title.y=element_blank(), axis.text.x = element_blank(), axis.text.y = element_text(size = 14, face = 'bold'), legend.title = element_blank(), legend.text = element_text(size = 14)) + labs(x="All Sentences that Contain the Above Specified Words", y = "VADER Sentiment Compound Score", title="Median VADER Sentiment Compound Scores by Nigerian \nNewsfeed Sentence Type and by Quarter in 2019") + facet_wrap(~sentences_containing, labeller = label_wrap_gen(width = 34, multi_line = TRUE))
+median_grouped_bar_chart
+
+```
