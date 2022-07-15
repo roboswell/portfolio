@@ -1,5 +1,5 @@
 ---
-title: "Vizualizing Vader Sentiment Analysis of News Events in Nigeria, 2019"
+title: "Vizualizing VADER Sentiment Analysis of News Events in Nigeria, 2019"
 author: "Rob Boswell"
 date: "7/4/2022"
 output: html_document
