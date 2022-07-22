@@ -1,2 +1,2 @@
-## This is a portfolio of projects I have completed which demonstrate some of my key data science skills, such as data wrangling, data visualization, and implementation of various natural language processing, machine learning and statistics models. I continue to update this portfolio periodically.
+## This is a portfolio of projects I have completed which demonstrate some of my key data science skills, such as data wrangling, data visualization, and implementation of various natural language processing, machine learning and statistics models. I continue to update this portfolio periodically. For more details regarding my data science skills, please also visit my LinkedIn profile at https://www.linkedin.com/in/rob-boswell/
  
