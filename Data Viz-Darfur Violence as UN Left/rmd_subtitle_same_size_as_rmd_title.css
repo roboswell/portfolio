@@ -1,0 +1,9 @@
+/* rmd_subtitle_same_size_as_rmd_title.css */
+.title {
+  margin-bottom: 5px; /* Adjust the margin as needed to control the spacing */
+}
+
+.subtitle {
+  font-size: 40px; /* Adjust the font size as needed */
+  margin-top: 5px; /* Adjust the margin as needed to control the spacing */
+}

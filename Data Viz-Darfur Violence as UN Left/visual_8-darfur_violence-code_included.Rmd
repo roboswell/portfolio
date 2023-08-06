@@ -1,0 +1,745 @@
+---
+title: 'Attacks on Civilians Before vs. After South Darfur UN Base Closures - Visual 8'
+author: "Rob Boswell"
+date: "7-27-2023"
+output: html_document
+class_options: landscape
+---
+
+```{r echo=TRUE}
+
+library(stringr)
+
+# Get the current page number from the file name
+current_page <- as.numeric(str_extract(knitr::current_input(), "\\d+"))
+
+# Set the total number of pages
+total_pages <- 9
+
+# Generate the URLs for the previous and next pages
+previous_page <- ifelse(current_page > 1, paste0("visual_", current_page - 1, "-darfur_violence-code_included.html"), NA)
+next_page <- ifelse(current_page < total_pages, paste0("visual_", current_page + 1, "-darfur_violence-code_included.html"), NA)
+
+```
+
+<ul class="pager">
+  <li><a href="`r previous_page`">Previous Page</a></li>
+  <li><a href="`r next_page`">Next Page</a></li>
+</ul>
+
+<br>
+
+```{R Code for the Maps, echo=TRUE, fig.height=18, fig.width=10, message=FALSE, warning=FALSE}
+
+library(rgdal)
+library(tidyverse)
+library(tmap)
+library(sp)
+library(sf)
+
+
+setwd("C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project")
+
+
+darfur_internal<-raster::shapefile("C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project/darfur_internal.shp")
+
+
+ACLED_data <- readxl::read_excel("ACLED-DARFUR-VAC-2008-2021 (After Course Ended-for 2023 Portfolio).xlsx", 
+     col_types = c("date", "numeric", "text", 
+         "text", "text", "text", "text", "text", 
+         "text", "text", "text", "text", "text", 
+         "numeric", "numeric", "text", 
+         "text", "numeric", "numeric"))
+
+
+acled_short=ACLED_data[c("event_date","year","sub_event_type","actor1","inter1","admin1","admin2","location","latitude","longitude","attacks","fatalities")]
+
+
+acled_2016 = subset(acled_short, year == 2016)
+acled_2017 = subset(acled_short, year == 2017)
+acled_2018 = subset(acled_short, year == 2018)
+acled_2019 = subset(acled_short, year == 2019)
+acled_2020 = subset(acled_short, year == 2020)
+acled_2021 = subset(acled_short, year == 2021)
+
+geo_pko <- readxl::read_excel("Geo-PKO-v-2-1-2023_portfolio-UNAMID-Only_Bases_Removed_Still_in_Dataset_AFTER_True_YEAR_withdrawn-All_Years.xlsx")
+
+#Sources for the dates of UN base closures:
+#https://oios.un.org/file/8866/download?token=F6tc9ZI5
+#https://www.ecoi.net/en/file/local/2052225/S_2021_470_E.pdf
+#https://peacekeeping.un.org/en/unamid-hands-back-former-iss-compound-to-agricultural-research-centre-el-fasher-north-darfur
+#https://peacekeeping.un.org/en/unamid-expresses-concern-over-allegations-of-improper-team-site-handovers
+
+
+#2016
+geo_pko_for_maps_16 = filter(geo_pko, year == 2016)
+geo_pko_df_16 = geo_pko_for_maps_16[c("year","location","latitude", "longitude")]
+
+geo_pko_16_avg_troops_per_base = geo_pko_for_maps_16 %>% group_by(location) %>% summarise(avg.troops = mean(no.troops, na.rm=T))
+
+geo_pko_df_16 = inner_join(geo_pko_16_avg_troops_per_base, geo_pko_df_16, by="location")
+geo_pko_df_16 = distinct(geo_pko_df_16)
+
+active_bases_2016 = geo_pko_df_16
+
+#2017
+
+geo_pko_for_maps_17 = filter(geo_pko, year == 2017)
+
+geo_pko_df_17 = geo_pko_for_maps_17[c("year","location","latitude", "longitude")]
+
+geo_pko_17_avg_troops_per_base = geo_pko_for_maps_17 %>% group_by(location) %>% summarise(avg.troops = mean(no.troops, na.rm=T))
+
+geo_pko_df_17 = inner_join(geo_pko_17_avg_troops_per_base, geo_pko_df_17, by="location")
+geo_pko_df_17 = distinct(geo_pko_df_17)
+
+active_bases_2017 = geo_pko_df_17
+
+#2018
+
+geo_pko_for_maps_18 = filter(geo_pko, year == 2018)
+
+geo_pko_df_18 = geo_pko_for_maps_18[c("year","location","latitude", "longitude")]
+
+geo_pko_18_avg_troops_per_base = geo_pko_for_maps_18 %>% group_by(location) %>% summarise(avg.troops = mean(no.troops, na.rm=T))
+
+geo_pko_df_18 = inner_join(geo_pko_18_avg_troops_per_base, geo_pko_df_18, by="location")
+geo_pko_df_18 = distinct(geo_pko_df_18)
+active_bases_2018 = geo_pko_df_18
+
+#2019
+
+geo_pko_for_maps_19 = filter(geo_pko, year == 2019)
+
+
+geo_pko_df_19 = geo_pko_for_maps_19[c("year","location","latitude", "longitude")]
+
+geo_pko_19_avg_troops_per_base = geo_pko_for_maps_19 %>% group_by(location) %>% summarise(avg.troops = mean(no.troops, na.rm=T))
+
+geo_pko_df_19 = inner_join(geo_pko_19_avg_troops_per_base, geo_pko_df_19, by="location")
+geo_pko_df_19 = distinct(geo_pko_df_19)
+active_bases_2019 = geo_pko_df_19
+
+
+#2020
+
+geo_pko_for_maps_20 = filter(geo_pko, year == 2020)
+
+geo_pko_df_20 = geo_pko_for_maps_20[c("year","location","latitude", "longitude")]
+
+geo_pko_20_avg_troops_per_base = geo_pko_for_maps_20 %>% group_by(location) %>% summarise(avg.troops = mean(no.troops, na.rm=T))
+
+geo_pko_df_20 = inner_join(geo_pko_20_avg_troops_per_base, geo_pko_df_20, by="location")
+geo_pko_df_20 = distinct(geo_pko_df_20)
+active_bases_2020 = geo_pko_df_20
+
+
+#At this point, I made a "contains" spatial join using QGIS rather than R.
+
+#I identified the second level administrative units in which each active UN base exists, and color the map by the average number of UN troops present in a given second level administrative unit during each year.
+
+#active bases, 2016
+coordinates(active_bases_2016)=~longitude+latitude
+proj4string(active_bases_2016) <- CRS("+proj=longlat +datum=WGS84")
+active_bases_2016<-spTransform(active_bases_2016, CRS("+proj=longlat"))
+raster::shapefile(active_bases_2016, "active_bases_2016.shp", overwrite=T)
+
+
+#active bases, 2017
+
+coordinates(active_bases_2017)=~longitude+latitude
+proj4string(active_bases_2017) = CRS("+proj=longlat +datum=WGS84")
+active_bases_2017 = spTransform(active_bases_2017, CRS("+proj=longlat"))
+raster::shapefile(active_bases_2017, "active_bases_2017.shp", overwrite=T)
+
+
+#active bases, 2018
+coordinates(active_bases_2018)=~longitude+latitude
+proj4string(active_bases_2018) <- CRS("+proj=longlat +datum=WGS84")
+active_bases_2018<-spTransform(active_bases_2018, CRS("+proj=longlat"))
+raster::shapefile(active_bases_2018, "active_bases_2018.shp", overwrite=T)
+
+#active bases, 2019
+coordinates(active_bases_2019)=~longitude+latitude
+proj4string(active_bases_2019) <- CRS("+proj=longlat +datum=WGS84")
+active_bases_2019<-spTransform(active_bases_2019, CRS("+proj=longlat"))
+raster::shapefile(active_bases_2019, "active_bases_2019.shp", overwrite=T)
+
+
+#active bases, 2020
+coordinates(active_bases_2020)=~longitude+latitude
+proj4string(active_bases_2020) <- CRS("+proj=longlat +datum=WGS84")
+active_bases_2020<-spTransform(active_bases_2020, CRS("+proj=longlat"))
+raster::shapefile(active_bases_2020, "active_bases_2020.shp", overwrite=T)
+
+
+#For this set of maps, I focus on the administrative units specifically in South Darfur. I will therefore use a polygon shapefile of Darfur, again making it into a choropleth map based on the average number of troops (stationed at bases) in a given second level administrative region. I also create 50 mile radius buffers emanating out from the coordinates of bases that were abandoned by the UN and calculate the number of attacks on civilians and fatalities from such attacks inside the buffers, comparing these figures the year before a given UN base was closed with the actual year it was closed. 
+
+
+
+#2017
+
+my_box <- rgeos::bbox2SP(n = 16.12054, s = 8.64132, w = 21.61368, e = 29.58313, proj4string = CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+
+
+active_bases_2016_joined<-st_read("active_bases_2016_joined.shp", quiet = TRUE)
+CRS.new <- st_crs("EPSG:4269")
+active_bases_2016_joined = readOGR(dsn = paste0(getwd()), layer="active_bases_2016_joined", verbose = FALSE)
+active_bases_2016_joined<-st_as_sf(active_bases_2016_joined)
+active_bases_2016_joined.4269 <- st_transform(active_bases_2016_joined, CRS.new)
+
+
+active_bases_2017_joined<-st_read("active_bases_2017_joined.shp", quiet = TRUE)
+CRS.new <- st_crs("EPSG:4269")
+active_bases_2017_joined = readOGR(dsn = paste0(getwd()), layer="active_bases_2017_joined", verbose = FALSE)
+active_bases_2017_joined<-st_as_sf(active_bases_2017_joined)
+active_bases_2017_joined.4269 <- st_transform(active_bases_2017_joined, CRS.new)
+
+active_bases_2018_joined<-st_read("active_bases_2018_joined.shp", quiet = TRUE)
+CRS.new <- st_crs("EPSG:4269")
+active_bases_2018_joined = readOGR(dsn = paste0(getwd()), layer="active_bases_2018_joined", verbose = FALSE)
+active_bases_2018_joined<-st_as_sf(active_bases_2018_joined)
+active_bases_2018_joined.4269 <- st_transform(active_bases_2018_joined, CRS.new)
+
+active_bases_2019_joined<-st_read("active_bases_2019_joined.shp", quiet = TRUE)
+CRS.new <- st_crs("EPSG:4269")
+active_bases_2019_joined = readOGR(dsn = paste0(getwd()), layer="active_bases_2019_joined", verbose = FALSE)
+active_bases_2019_joined<-st_as_sf(active_bases_2019_joined)
+active_bases_2019_joined.4269 <- st_transform(active_bases_2019_joined, CRS.new)
+
+active_bases_2020_joined<-st_read("active_bases_2020_joined.shp", quiet = TRUE)
+CRS.new <- st_crs("EPSG:4269")
+active_bases_2020_joined = readOGR(dsn = paste0(getwd()), layer="active_bases_2020_joined", verbose = FALSE)
+active_bases_2020_joined<-st_as_sf(active_bases_2020_joined)
+active_bases_2020_joined.4269 <- st_transform(active_bases_2020_joined, CRS.new)
+
+#2016 vs. 2017
+#2016
+
+CRS.new <- st_crs("EPSG:4269")
+active_bases_2016_joined.4269 <- st_transform(active_bases_2016_joined, CRS.new)
+acled_2016 = readOGR(dsn = paste0(getwd()), layer="acled_2016", verbose = FALSE)
+closed_bases_south_2017 = readOGR(dsn = paste0(getwd()), layer="closed_bases_south_2017-portfolio_2023", verbose = FALSE)
+
+CRS.new <- st_crs("EPSG:4087")
+acled_2016<-st_as_sf(acled_2016)
+closed_bases_south_2017 <- st_as_sf(closed_bases_south_2017)
+
+
+acled_2016 <- st_transform(acled_2016, CRS.new)
+
+
+closed_bases_south_2017 <- st_transform(closed_bases_south_2017, CRS.new)
+# 80,467.2 m. = 50 mi.
+closed_bases_south_2017_buffers <- st_buffer(closed_bases_south_2017, 80467.2)
+
+unionBuffers <- st_union(closed_bases_south_2017_buffers)
+
+acled_2016$fatalities = as.numeric(acled_2016$fatalities)
+
+# Layout with Title
+layout1 <- tm_layout(
+          title = "Attacks on Civilians, Before vs. After the 2017\n Edd el Fursan and Tulus Base Closures",
+          title.position = c("left","top"),
+          title.size=20, title.color="steelblue", fontface = 7,
+          legend.title.size = 1,
+          legend.title.color = "steelblue",
+          legend.text.size = 0.6,
+          legend.text.color = "steelblue",
+          legend.position = c(0.75,0.25),#c(horizontal, vertical)
+          legend.bg.color = "white",
+          legend.bg.alpha = 1,
+          bg.color="white",
+          frame=FALSE)
+
+layout2 <- tm_layout(
+          title = "Attacks on Civilians, Before vs. After the 2018\n Buram and Graida Base Closures",
+          title.position = c("left","top"),
+          title.size=20, title.color="steelblue", fontface = 7,
+          legend.title.size = 1,
+          legend.title.color = "steelblue",
+          legend.text.size = 0.6,
+          legend.text.color = "steelblue",
+          legend.position = c(0.75,0.25),#c(horizontal, vertical)
+          legend.bg.color = "white",
+          legend.bg.alpha = 1,
+          bg.color="white",
+          frame=FALSE)
+
+layout3 <- tm_layout(
+          title = "Attacks on Civilians, Before vs. After the 2019\n Nyala Base Closure",
+          title.position = c("left","top"),
+          title.size=20, title.color="steelblue", fontface = 7,
+          legend.title.size = 1,
+          legend.title.color = "steelblue",
+          legend.text.size = 0.6,
+          legend.text.color = "steelblue",
+          legend.position = c(0.76,0.25),#c(horizontal, vertical)
+          legend.bg.color = "white",
+          legend.bg.alpha = 1,
+          bg.color="white",
+          frame=FALSE)
+
+# Define the layout object without title
+layout_no_title <- tm_layout(
+          title = "",  
+          title.size=20, title.color="steelblue", fontface = 7,
+          legend.title.size = 1,
+          legend.title.color = "steelblue",
+          legend.text.size = 0.6,
+          legend.text.color = "steelblue",
+          legend.bg.color = "white",
+          legend.bg.alpha = 1,
+          bg.color="white",
+          frame=FALSE)
+
+
+tmap_mode("plot")
+
+t_2016.1 = tm_shape(active_bases_2016_joined.4269, bbox = my_box) + tm_fill("avg_troops", title="Average Number\nof UN Troops", palette="Greens") + 
+layout1 +
+tm_borders() +
+tm_add_legend(title="") +
+tm_shape(closed_bases_south_2017) + 
+tm_dots(size=0.5, col="steelblue") +
+tm_shape(unionBuffers) + 
+tm_borders(col = "blue") + 
+tm_shape(acled_2016)+
+tm_bubbles(size="fatalities", col="red", alpha=0.3, jitter=0.05, title.size="Fatalities", breaks=c(0,10,20,30,40,50), sizes.legend=c(20,40,60,80,100), sizes.legend.labels=c("10","20","30","40","50"))+
+tm_credits(text="2016", position=c("center", "bottom"), size=1.5)
+
+
+#2017
+
+CRS.new <- st_crs("EPSG:4269")
+active_bases_2017_joined.4269 <- st_transform(active_bases_2017_joined, CRS.new)
+acled_2017 = readOGR(dsn = paste0(getwd()), layer="acled_2017", verbose = FALSE)
+acled_2017<-st_as_sf(acled_2017)
+CRS.new <- st_crs("EPSG:4087")
+acled_2017<-st_as_sf(acled_2017)
+
+tmap_mode("plot")
+
+t_2017.1 = tm_shape(active_bases_2017_joined.4269, bbox = my_box) + tm_fill("avg_troops", title="Average Number\nof UN Troops", palette="Greens") + 
+layout_no_title +
+tm_borders() +
+tm_add_legend(title="") +
+tm_shape(closed_bases_south_2017) + 
+tm_dots(size=0.5, col="steelblue") +
+tm_shape(unionBuffers) + 
+tm_borders(col = "blue") + 
+tm_shape(acled_2017)+
+tm_bubbles(size="fatalts", col="red", alpha=0.3, jitter=0.05, title.size="Fatalities", breaks=c(0,10,20,30,40,50), sizes.legend=c(5,10,15,20,25), scale = 0.5, sizes.legend.labels=c("10","20","30","40","50"))+
+tm_credits(text="2017", position=c("center", "bottom"), size=1.5)+ 
+tm_legend(show = FALSE)
+
+
+#2017 vs. 2018
+#2017
+
+CRS.new <- st_crs("EPSG:4269")
+
+active_bases_2017_joined.4269 <- st_transform(active_bases_2017_joined, CRS.new)
+
+acled_2017 = readOGR(dsn = paste0(getwd()), layer="acled_2017", verbose = FALSE)
+
+closed_bases_south_2018 = readOGR(dsn = paste0(getwd()), layer="closed_bases_south_2018-portfolio_2023", verbose = FALSE)
+
+CRS.new <- st_crs("EPSG:4087")
+
+acled_2017<-st_as_sf(acled_2017)
+
+closed_bases_south_2018 <- st_as_sf(closed_bases_south_2018)
+
+
+acled_2017 <- st_transform(acled_2017, CRS.new)
+
+
+closed_bases_south_2018 <- st_transform(closed_bases_south_2018, CRS.new)
+
+closed_bases_south_2018_buffers <- st_buffer(closed_bases_south_2018, 80467.2)
+
+unionBuffers <- st_union(closed_bases_south_2018_buffers)
+
+tmap_mode("plot")
+
+t_2017.2 = tm_shape(active_bases_2017_joined.4269, bbox = my_box) + tm_fill("avg_troops", title="Average Number\nof UN Troops", palette="Greens") + 
+layout2 +
+tm_borders() +
+tm_add_legend(title="") +
+tm_shape(closed_bases_south_2018) + 
+tm_dots(size=0.5, col="steelblue") +
+tm_shape(unionBuffers) + 
+tm_borders(col = "blue") + 
+tm_shape(acled_2017)+
+tm_bubbles(size="fatalts", col="red", alpha=0.3, jitter=0.05, title.size="Fatalities", breaks=c(0,10,20,30,40,50), sizes.legend=c(36,72,108,144,180), scale = 0.5, sizes.legend.labels=c("10","20","30","40","50"))+
+tm_credits(text="2017", position=c("center", "bottom"), size=1.5)
+
+
+#2018
+
+
+CRS.new <- st_crs("EPSG:4269")
+
+active_bases_2018_joined = readOGR(dsn = paste0(getwd()), layer="active_bases_2018_joined", verbose = FALSE)
+
+active_bases_2018_joined <- st_as_sf(active_bases_2018_joined)
+
+active_bases_2018_joined.4269 <- st_transform(active_bases_2018_joined, CRS.new)
+
+CRS.new <- st_crs("EPSG:4087")
+
+closed_bases_south_2018 <-raster::shapefile("C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project/closed_bases_south_2018-portfolio_2023.shp")
+closed_bases_south_2018=st_as_sf(closed_bases_south_2018)
+closed_bases_south_2018=st_transform(closed_bases_south_2018, CRS.new)
+
+
+acled_2018 = readOGR(dsn = paste0(getwd()), layer="acled_2018", verbose = FALSE)
+acled_2018<-st_as_sf(acled_2018)
+acled_2018 <- st_transform(acled_2018, CRS.new)
+
+
+closed_bases_south_2018_buffers <- st_buffer(closed_bases_south_2018, 80467.2)
+
+unionBuffers <- st_union(closed_bases_south_2018_buffers)
+
+
+acled_2019 = readOGR(dsn = paste0(getwd()), layer="acled_2019", verbose = FALSE)
+CRS.new <- st_crs("EPSG:4087")
+acled_2019 <-st_as_sf(acled_2019)
+acled_2019 <- st_transform(acled_2019, CRS.new)
+
+
+acled_2020 = readOGR(dsn = paste0(getwd()), layer="acled_2019", verbose = FALSE)
+CRS.new <- st_crs("EPSG:4087")
+acled_2020 <-st_as_sf(acled_2020)
+acled_2020 <- st_transform(acled_2020, CRS.new)
+
+
+
+#fatalities in 2017
+fatality_sum_2017 = sf::st_filter(acled_2017, closed_bases_south_2018_buffers, .pred = st_within)
+
+length(fatality_sum_2017$fatalts)
+
+sum(fatality_sum_2017$fatalts)
+
+
+#fatalities in 2018
+fatality_sum_2018 = sf::st_filter(acled_2018, closed_bases_south_2018_buffers, .pred = st_within)
+
+
+length(fatality_sum_2018$fatalts)
+
+sum(fatality_sum_2018$fatalts)
+
+
+#fatalities in 2019
+fatality_sum_2019 = sf::st_filter(acled_2019, closed_bases_south_2018_buffers, .pred = st_within)
+
+length(fatality_sum_2019$fatalts)
+
+sum(fatality_sum_2019$fatalts)
+
+
+#fatalities in 2020
+fatality_sum_2020 = sf::st_filter(acled_2020, closed_bases_south_2018_buffers, .pred = st_within)
+
+length(fatality_sum_2020$fatalts)
+
+sum(fatality_sum_2020$fatalts)
+
+tmap_mode("plot")
+
+t_2018.2=tm_shape(active_bases_2018_joined.4269, bbox =my_box) + tm_fill("avg_troops", title="Average Number\nof UN Troops", palette="Greens") + 
+layout_no_title +
+tm_borders() +
+tm_add_legend(title="") +
+tm_shape(closed_bases_south_2018) + 
+tm_dots(size=0.5, col="steelblue") +
+tm_shape(unionBuffers) + 
+tm_borders(col = "blue") + 
+tm_shape(acled_2018)+
+tm_bubbles(size="fatalts", col="red", alpha=0.3, jitter=0.05, title.size="Fatalities", breaks=c(0,10,20,30,40,50), sizes.legend=c(10,20,30,40,50), sizes.legend.labels=c("10","20","30","40","50"))+
+tm_credits(text="2018", position=c("center", "bottom"), size=1.5)+ 
+tm_legend(show = FALSE)
+
+
+#2018 vs. 2019
+
+#2018
+
+my_box <- rgeos::bbox2SP(n = 16.12054, s = 8.64132, w = 21.61368, e = 29.58313, proj4string = CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+
+CRS.new <- st_crs("EPSG:4269")
+
+active_bases_2018_joined = readOGR(dsn = paste0(getwd()), layer="active_bases_2018_joined", verbose = FALSE)
+
+active_bases_2018_joined <- st_as_sf(active_bases_2018_joined)
+
+active_bases_2018_joined.4269 <- st_transform(active_bases_2018_joined, CRS.new)
+
+CRS.new <- st_crs("EPSG:4087")
+
+closed_bases_south_2019 <-raster::shapefile("C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project/closed_bases_south_2019-portfolio_2023.shp")
+closed_bases_south_2019=st_as_sf(closed_bases_south_2019)
+closed_bases_south_2019=st_transform(closed_bases_south_2019, CRS.new)
+
+
+acled_2018 = readOGR(dsn = paste0(getwd()), layer="acled_2018", verbose = FALSE)
+
+acled_2018<-st_as_sf(acled_2018)
+
+acled_2018 <- st_transform(acled_2018, CRS.new)
+
+
+closed_bases_south_2019_buffers <- st_buffer(closed_bases_south_2019, 80467.2)
+
+unionBuffers <- st_union(closed_bases_south_2019_buffers)
+
+tmap_mode("plot")
+
+t_2018.3=tm_shape(active_bases_2018_joined.4269, bbox =my_box) + tm_fill("avg_troops", title="Average Number\nof UN Troops", palette="Greens") + 
+layout3 +
+tm_borders() +
+tm_add_legend(title="") +
+tm_shape(closed_bases_south_2019) + 
+tm_dots(size=0.5, col="steelblue") +
+tm_shape(unionBuffers) + 
+tm_borders(col = "blue") + 
+tm_shape(acled_2018)+
+tm_bubbles(size="fatalts", col="red", alpha=0.3, jitter=0.05, title.size="Fatalities", breaks=c(0,10,20,30,40,50), sizes.legend=c(10,20,30,40,50), sizes.legend.labels=c("10","20","30","40","50"))+
+tm_credits(text="2018", position=c("center", "bottom"), size=1.5)
+
+
+#2019
+
+
+CRS.new <- st_crs("EPSG:4269")
+
+active_bases_2019_joined = readOGR(dsn = paste0(getwd()), layer="active_bases_2019_joined", verbose = FALSE)
+
+active_bases_2019_joined <- st_as_sf(active_bases_2019_joined)
+
+active_bases_2019_joined.4269 <- st_transform(active_bases_2019_joined, CRS.new)
+
+CRS.new <- st_crs("EPSG:4087")
+
+closed_bases_south_2019 <-raster::shapefile("C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project/closed_bases_south_2019-portfolio_2023.shp")
+closed_bases_south_2019=st_as_sf(closed_bases_south_2019)
+closed_bases_south_2019=st_transform(closed_bases_south_2019, CRS.new)
+
+
+closed_bases_south_2019_buffers <- st_buffer(closed_bases_south_2019, 80467.2)
+
+unionBuffers <- st_union(closed_bases_south_2019_buffers)
+
+#fatalities in 2018
+fatality_sum_2018 = sf::st_filter(acled_2018, closed_bases_south_2019_buffers, .pred = st_within)
+
+length(fatality_sum_2018$fatalts)
+
+sum(fatality_sum_2018$fatalts)
+
+
+#fatalities in 2019
+fatality_sum_2019 = sf::st_filter(acled_2019, closed_bases_south_2019_buffers, .pred = st_within)
+
+length(fatality_sum_2019$fatalts)
+
+sum(fatality_sum_2019$fatalts)
+
+
+#fatalities in 2020
+fatality_sum_2020 = sf::st_filter(acled_2020, closed_bases_south_2019_buffers, .pred = st_within)
+
+length(fatality_sum_2020$fatalts)
+
+sum(fatality_sum_2020$fatalts)
+
+
+tmap_mode("plot")
+
+t_2019.3=tm_shape(active_bases_2019_joined.4269, bbox =my_box) + tm_fill("avg_troops", title="Average Number\nof UN Troops", palette="Greens") + 
+layout_no_title +
+tm_borders() +
+tm_add_legend(title="") +
+tm_shape(closed_bases_south_2019) + 
+tm_dots(size=0.5, col="steelblue") +
+tm_shape(unionBuffers) + 
+tm_borders(col = "blue") + 
+tm_shape(acled_2019)+
+tm_bubbles(size="fatalts", col="red", alpha=0.3, jitter=0.05, title.size="Fatalities", breaks=c(0,10,20,30,40,50), sizes.legend=c(10,20,30,40,50), sizes.legend.labels=c("10","20","30","40","50"))+
+tm_credits(text="2019", position=c("center", "bottom"), size=1.5)+ 
+tm_legend(show = FALSE)
+
+
+#Calculating fatalities (sum) and attacks (length) in 2016 - Buffer 2017
+fatality_sum_2016.buffer_2017 = sf::st_filter(acled_2016, closed_bases_south_2017_buffers, .pred = st_within)
+length(fatality_sum_2016.buffer_2017$fatalities)
+sum(fatality_sum_2016.buffer_2017$fatalities)
+
+
+#Calculating fatalities (sum) and attacks (length) in 2017 - Buffer 2017
+fatality_sum_2017.buffer_2017 = sf::st_filter(acled_2017, closed_bases_south_2017_buffers, .pred = st_within)
+length(fatality_sum_2017.buffer_2017$fatalts)
+sum(fatality_sum_2017.buffer_2017$fatalts)
+
+
+#Calculating fatalities (sum) and attacks (length) in 2018 - Buffer 2017
+fatality_sum_2018.buffer_2017 = sf::st_filter(acled_2018, closed_bases_south_2017_buffers, .pred = st_within)
+length(fatality_sum_2018.buffer_2017$fatalts)
+sum(fatality_sum_2018.buffer_2017$fatalts)
+
+
+#Calculating fatalities (sum) and attacks (length) in 2019 - Buffer 2017
+fatality_sum_2019.buffer_2017 = sf::st_filter(acled_2019, closed_bases_south_2017_buffers, .pred = st_within)
+length(fatality_sum_2019.buffer_2017$fatalts)
+sum(fatality_sum_2019.buffer_2017$fatalts)
+
+
+#Calculating fatalities (sum) and attacks (length) in 2020 - Buffer 2017
+fatality_sum_2020.buffer_2017 = sf::st_filter(acled_2020, closed_bases_south_2017_buffers, .pred = st_within)
+length(fatality_sum_2020.buffer_2017$fatalts)
+sum(fatality_sum_2020.buffer_2017$fatalts)
+
+acled_2021 = readOGR(dsn = paste0(getwd()), layer="acled_2021", verbose = FALSE)
+CRS.new <- st_crs("EPSG:4087")
+acled_2021<-st_as_sf(acled_2021)
+acled_2021 <- st_transform(acled_2021, CRS.new)
+
+
+#Calculating fatalities (sum) and attacks (length) in 2021 - Buffer 2017
+fatality_sum_2021.buffer_2017 = sf::st_filter(acled_2021, closed_bases_south_2017_buffers, .pred = st_within)
+fatality_sum_2021.buffer_2017$fatalities=as.numeric(fatality_sum_2021.buffer_2017$fatalities)
+length(fatality_sum_2021.buffer_2017$fatalities)
+sum(fatality_sum_2021.buffer_2017$fatalities)
+
+
+#Calculating fatalities (sum) and attacks (length) in 2016 - Buffer 2018
+fatality_sum_2016.buffer_2018 = sf::st_filter(acled_2016, closed_bases_south_2018_buffers, .pred = st_within)
+length(fatality_sum_2016.buffer_2018$fatalities)
+sum(fatality_sum_2016.buffer_2018$fatalities)
+
+#Calculating fatalities (sum) and attacks (length) in 2017 - Buffer 2018
+fatality_sum_2017.buffer_2018 = sf::st_filter(acled_2017, closed_bases_south_2018_buffers, .pred = st_within)
+length(fatality_sum_2017.buffer_2018$fatalts)
+sum(fatality_sum_2017.buffer_2018$fatalts)
+
+
+#Calculating fatalities (sum) and attacks (length) in 2018 - Buffer 2018
+fatality_sum_2018.buffer_2018 = sf::st_filter(acled_2018, closed_bases_south_2018_buffers, .pred = st_within)
+length(fatality_sum_2018.buffer_2018$fatalts)
+sum(fatality_sum_2018.buffer_2018$fatalts)
+
+
+#Calculating fatalities (sum) and attacks (length) in 2019 - Buffer 2018
+fatality_sum_2019.buffer_2018 = sf::st_filter(acled_2019, closed_bases_south_2018_buffers, .pred = st_within)
+length(fatality_sum_2019.buffer_2018$fatalts)
+sum(fatality_sum_2019.buffer_2018$fatalts)
+
+
+#Calculating fatalities (sum) and attacks (length) in 2020 - Buffer 2018
+fatality_sum_2020.buffer_2018 = sf::st_filter(acled_2020, closed_bases_south_2018_buffers, .pred = st_within)
+length(fatality_sum_2020.buffer_2018$fatalts)
+sum(fatality_sum_2020.buffer_2018$fatalts)
+
+
+#Calculating fatalities (sum) and attacks (length) in 2021 - Buffer 2018
+fatality_sum_2021.buffer_2018 = sf::st_filter(acled_2021, closed_bases_south_2018_buffers, .pred = st_within)
+fatality_sum_2021.buffer_2018$fatalities=as.numeric(fatality_sum_2021.buffer_2018$fatalities)
+length(fatality_sum_2021.buffer_2018$fatalities)
+sum(fatality_sum_2021.buffer_2018$fatalities)
+
+
+#Calculating fatalities (sum) and attacks (length) in 2016 - Buffer 2019
+fatality_sum_2016.buffer_2019 = sf::st_filter(acled_2016, closed_bases_south_2019_buffers, .pred = st_within)
+length(fatality_sum_2016.buffer_2019$fatalities)
+sum(fatality_sum_2016.buffer_2019$fatalities)
+
+
+#Calculating fatalities (sum) and attacks (length) in 2017 - Buffer 2019
+fatality_sum_2017.buffer_2019 = sf::st_filter(acled_2017, closed_bases_south_2019_buffers, .pred = st_within)
+length(fatality_sum_2017.buffer_2019$fatalts)
+sum(fatality_sum_2017.buffer_2019$fatalts)
+
+
+#Calculating fatalities (sum) and attacks (length) in 2018 - Buffer 2019
+fatality_sum_2018.buffer_2019 = sf::st_filter(acled_2018, closed_bases_south_2019_buffers, .pred = st_within)
+length(fatality_sum_2018.buffer_2019$fatalts)
+sum(fatality_sum_2018.buffer_2019$fatalts)
+
+
+#Calculating fatalities (sum) and attacks (length) in 2019 - Buffer 2019
+fatality_sum_2019.buffer_2019 = sf::st_filter(acled_2019, closed_bases_south_2019_buffers, .pred = st_within)
+length(fatality_sum_2019.buffer_2019$fatalts)
+sum(fatality_sum_2019.buffer_2019$fatalts)
+
+
+#Calculating fatalities (sum) and attacks (length) in 2020 - Buffer 2019
+fatality_sum_2020.buffer_2019 = sf::st_filter(acled_2020, closed_bases_south_2019_buffers, .pred = st_within)
+length(fatality_sum_2020.buffer_2019$fatalts)
+sum(fatality_sum_2020.buffer_2019$fatalts)
+
+
+#Calculating fatalities (sum) and attacks (length) in 2021 - Buffer 2019
+fatality_sum_2021.buffer_2019 = sf::st_filter(acled_2021, closed_bases_south_2019_buffers, .pred = st_within)
+fatality_sum_2021.buffer_2019$fatalities=as.numeric(fatality_sum_2021.buffer_2019$fatalities)
+length(fatality_sum_2021.buffer_2019$fatalities)
+sum(fatality_sum_2021.buffer_2019$fatalities)
+
+
+acled_2020 = readOGR(dsn = paste0(getwd()), layer="acled_2020", verbose = FALSE)
+
+acled_2020 <-st_as_sf(acled_2020)
+
+acled_2020 <- st_transform(acled_2020, CRS.new)
+
+```
+
+```{R Joined 6 Maps, echo=TRUE, fig.height=18, fig.width=10, message=FALSE, warning=FALSE}
+
+tmap_arrange(t_2016.1, t_2017.1, t_2017.2, t_2018.2, t_2018.3, t_2019.3, nrow = 3, ncol = 2, asp=1, outer.margins = 0)
+
+```
+
+#### **Takeaways:** In this visual, I have also created 50 mile radius buffers around all UN bases that were withdrawn in South Darfur in 2017, 2018, and 2019. No bases in 2020 were withdrawn from South Darfur. I then have calculated the total attacks on civilians and fatalities from such attacks, even as I did with West Darfur in the last visualization (Visual 7).
+
+<br>
+
+#### Whereas in 2016 (the year before the Edd El Fursan and Tulus UN bases were closed) there were 47 attacks on civilians and 58 fatalities from these attacks within 50 miles of these bases, in 2017 there were 25 attacks on civilians and 31 fatalities within 50 miles of these closed bases. This equates to a 46.8% decrease in attacks on civilians and an 87% decrease in civilian killings.
+
+<br>
+
+#### Likewise, whereas in 2017 (the year before the Buram and Graida UN compounds were closed down) there were 32 attacks on civilians and 28 fatalities from these attacks within a 50 mile radius of the bases, in 2018 there were 27 attacks and 28 fatalities - roughly the same levels of violence.
+
+<br> 
+
+#### Further, while there were 21 attacks on civilians and 22 fatalities from these attacks in 2018 within 50 miles radius of the Nyala UN compound the year before it was shut down), in 2019 there were only 10 attacks on civilians and 6 fatalities from these attacks. This represents a 110% decrease in attacks on civilians and a 267% decrease in civilian killings.
+
+<br> 
+
+#### In the case of South Darfur, these figures do not appear to support the theory that the withdrawal of UN compounds led to increasing patterns of violence against civilians, at least in the immediate aftermath. However, a similar pattern as was seen in West Darfur repeats itself in South Darfur interms of escalating violence years later. Though not apparent from these maps, when I calculate attacks on civilians and fatalities from such attacks into future years, I notice that in 2020 there was a noticeable spike in civilian killings within 50 miles of each of the aforementioned South Darfur UN bases that had been withdrawn between 2017-2019. Within 50 miles of the Edd El Fursan and Tulus compounds, there were 57 civilian killings, on par with the 58 civilian killings which occurred in 2016 - the year before the bases closed. Further, in 2020 there were 78 civilian killings within 50 miles of the Buram and Graida UN bases that were closed in 2018, which represents a 179% increase in civilian killings compared to 2017. Additionally, in 2020 there were 32 civilian killings within 50 miles of the Nyala UN compound that closed in 2019, which represents a 45% increase in civilan killings compared to 2018.
+
+<br>
+
+#### Just as with the case of the West Darfur violence in 2021 following UN base withdrawals, it is unclear whether a power vacuum from such withdrawals eventually led to the increase in civilian killings in 2020 in South Darfur, or whether additional conflict dynamics were at least partly responsible.
+
+```{r echo=TRUE}
+
+# Get the current page number from the file name
+current_page <- as.numeric(str_extract(knitr::current_input(), "\\d+"))
+
+# Set the total number of pages
+total_pages <- 9
+
+# Generate the URLs for the previous and next pages
+previous_page <- ifelse(current_page > 1, paste0("visual_", current_page - 1, "-darfur_violence-code_included.html"), NA)
+next_page <- ifelse(current_page < total_pages, paste0("visual_", current_page + 1, "-darfur_violence-code_included.html"), NA)
+
+```
+
+<ul class="pager">
+  <li><a href="`r previous_page`">Previous Page</a></li>
+  <li><a href="`r next_page`">Next Page</a></li>
+</ul>

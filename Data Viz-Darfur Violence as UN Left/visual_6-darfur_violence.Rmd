@@ -1,0 +1,410 @@
+---
+title: 'Attacks on Civilians in Darfur: 2016 vs. 2020'
+subtitle: 'Visual 6'
+author: "Rob Boswell"
+date: "7-27-2023"
+output: 
+  html_document:
+    css: rmd_subtitle_same_size_as_rmd_title.css
+class_options: landscape
+---
+
+```{r echo=FALSE}
+
+library(stringr)
+
+# Get the current page number from the file name
+current_page <- as.numeric(str_extract(knitr::current_input(), "\\d+"))
+
+# Set the total number of pages
+total_pages <- 9
+
+# Generate the URLs for the previous and next pages
+previous_page <- ifelse(current_page > 1, paste0("visual_", current_page - 1, "-darfur_violence.html"), NA)
+next_page <- ifelse(current_page < total_pages, paste0("visual_", current_page + 1, "-darfur_violence.html"), NA)
+
+```
+
+<ul class="pager">
+  <li><a href="`r previous_page`">Previous Page</a></li>
+  <li><a href="`r next_page`">Next Page</a></li>
+</ul>
+
+<br>
+
+```{r Code for Maps 2016 vs. 2020 - part 1, echo=FALSE, fig.height=10, fig.width=10, message=FALSE, warning=FALSE, include=FALSE}
+
+
+library(raster)
+library(rgdal)
+library(tidyverse)
+library(ggplot2)
+library(ggthemes)
+library(lubridate)
+library(rtweet) 
+library(network) 
+library(igraph)
+library(ggraph) 
+library(ggnetwork) 
+library(GGally)
+library(ggrepel) 
+library(jsonlite) 
+library(intergraph)
+library(svgPanZoom) 
+library(DT)
+library(widgetframe)
+library(viridis)
+library(tmap)
+library(ggmap)
+options("rgdal_show_exportToProj4_warnings"="none")
+library(rgdal)
+library(sp)
+options(sf_use_s2 = FALSE)
+library(sf)
+library(tigris)
+options(tigris_use_cache=TRUE)
+options(tigris_class="sf")
+
+
+setwd("C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project")
+
+
+ACLED_data <- readxl::read_excel("ACLED-DARFUR-VAC-2008-2021 (After Course Ended-for 2023 Portfolio).xlsx", 
+     col_types = c("date", "numeric", "text", 
+         "text", "text", "text", "text", "text", 
+         "text", "text", "text", "text", "text", 
+         "numeric", "numeric", "text", 
+         "text", "numeric", "numeric"))
+
+
+acled_short=ACLED_data[c("event_date","year","sub_event_type","actor1","inter1","admin1","admin2","location","latitude","longitude","attacks","fatalities")]
+
+acled_2016 = subset(acled_short, year == 2016)
+acled_2017 = subset(acled_short, year == 2017)
+acled_2020 = subset(acled_short, year == 2020)
+
+geo_pko <- readxl::read_excel("Geo-PKO-v-2-1-2023_portfolio-UNAMID-Only_Bases_Removed_Still_in_Dataset_AFTER_True_YEAR_withdrawn-All_Years.xlsx")
+
+#Sources for the dates of UN base closures:
+#https://oios.un.org/file/8866/download?token=F6tc9ZI5
+#https://www.ecoi.net/en/file/local/2052225/S_2021_470_E.pdf
+#https://peacekeeping.un.org/en/unamid-hands-back-former-iss-compound-to-agricultural-research-centre-el-fasher-north-darfur
+#https://peacekeeping.un.org/en/unamid-expresses-concern-over-allegations-of-improper-team-site-handovers
+
+geo_pko_for_maps_16 = filter(geo_pko, year == 2016)
+
+
+geo_pko_df_16 = geo_pko_for_maps_16[c("year","location","latitude", "longitude")]
+
+geo_pko_16_avg_troops_per_base = geo_pko_for_maps_16 %>% group_by(location) %>% summarise(avg.troops = mean(no.troops, na.rm=T))
+
+geo_pko_df_16 = inner_join(geo_pko_16_avg_troops_per_base, geo_pko_df_16, by="location")
+geo_pko_df_16 = distinct(geo_pko_df_16)
+
+active_bases_2016 = geo_pko_df_16
+
+#2017
+
+geo_pko_for_maps_17 = filter(geo_pko, year == 2017)
+
+
+geo_pko_df_17 = geo_pko_for_maps_17[c("year","location","latitude", "longitude")]
+
+geo_pko_17_avg_troops_per_base = geo_pko_for_maps_17 %>% group_by(location) %>% summarise(avg.troops = mean(no.troops, na.rm=T))
+
+geo_pko_df_17 = inner_join(geo_pko_17_avg_troops_per_base, geo_pko_df_17, by="location")
+geo_pko_df_17 = distinct(geo_pko_df_17)
+
+active_bases_2017 = geo_pko_df_17
+
+
+#2020
+
+geo_pko_for_maps_20 = filter(geo_pko, year == 2020)
+
+
+geo_pko_df_20 = geo_pko_for_maps_20[c("year","location","latitude", "longitude")]
+
+geo_pko_20_avg_troops_per_base = geo_pko_for_maps_20 %>% group_by(location) %>% summarise(avg.troops = mean(no.troops, na.rm=T))
+
+geo_pko_df_20 = inner_join(geo_pko_20_avg_troops_per_base, geo_pko_df_20, by="location")
+geo_pko_df_20 = distinct(geo_pko_df_20)
+
+
+active_bases_2020 = geo_pko_df_20
+
+
+darfur_internal<-raster::shapefile("C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project/darfur_internal.shp")
+
+
+#At this point, I made a "contains" spatial join using QGIS rather than R:
+
+
+#I identify the second level administrative units in which each active UN base exists, and color the map by the number of UN troops present during each year between 2016-2020 in a given administrative unit.
+
+#active bases, 2016
+coordinates(active_bases_2016)=~longitude+latitude
+proj4string(active_bases_2016) <- CRS("+proj=longlat +datum=WGS84")
+active_bases_2016<-spTransform(active_bases_2016, CRS("+proj=longlat"))
+raster::shapefile(active_bases_2016, "active_bases_2016.shp", overwrite=T)
+
+#active bases, 2017
+
+coordinates(active_bases_2017)=~longitude+latitude
+proj4string(active_bases_2017) = CRS("+proj=longlat +datum=WGS84")
+active_bases_2017 = spTransform(active_bases_2017, CRS("+proj=longlat"))
+raster::shapefile(active_bases_2017, "active_bases_2017.shp", overwrite=T)
+
+#active bases, 2020
+coordinates(active_bases_2020)=~longitude+latitude
+proj4string(active_bases_2020) <- CRS("+proj=longlat +datum=WGS84")
+active_bases_2020<-spTransform(active_bases_2020, CRS("+proj=longlat"))
+raster::shapefile(active_bases_2020, "active_bases_2020.shp", overwrite=T)
+
+
+#I will use a polygon shapefile of Darfur, making it into a choropleth map based on the total average number of troops stationed at bases in a given second level administrative region. I will create 50 mile radius buffers emanating out from the coordinates of bases that were abandoned by the UN. Inside these buffers, I am able to calculate the number of attacks on civilians and the number of civilian fatalities from such attacks within 50 miles (approx. 80 km) from such bases - both the year before the base was closed and the first year in which the base was closed.
+
+#We know that the UN bases withdrawn from West Darfur included the Habila base in 2018, the Forobaranga, Masteri, and Mournei bases in 2019, and the El Geneina base in 2020. 
+
+#I therefore create three faceted maps: one comparing fatalities within 50 miles from the Habila base in 2017 vs. 2018, one comparing fatalities within 50 miles of the Forobaranga, Masteri, and Mournei bases in 2018 vs. 2019, and one comparing fatalities within 50 miles of the El Geneina base in 2019 vs. 2020.
+
+#The first step will be to take the active_bases shapefiles I exported earlier, and to spatially join them to a West Darfur polygon which contains second level administrative regions within it. I thus create a West Darfur spatially joined polygone shapefile. I then upload these spatially joined files, and create choloropleth maps based again on the total average number of troops in a given second level administrative region for the years in which I am comparing discussed above:
+
+
+#2017
+
+library(rgdal)
+
+wd=setwd("C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project")
+
+
+library(tmap)
+library(sf)
+
+
+my_box <- rgeos::bbox2SP(n = 16.12054, s = 8.64132, w = 24.61368, e = 27.58313, proj4string = CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+
+
+
+suppressWarnings({
+acled_2016 <- st_read("acled_2016.shp")
+acled_2016 = rgdal::readOGR(dsn = paste0(getwd()), layer="acled_2016")
+CRS.new <- st_crs("EPSG:4087")
+acled_2016<-st_as_sf(acled_2016)
+acled_2016 <- st_transform(acled_2016, CRS.new)
+})
+
+suppressWarnings({
+acled_2020 <- st_read("acled_2020.shp")
+acled_2020 = rgdal::readOGR(dsn = paste0(getwd()), layer="acled_2020")
+acled_2020<-st_as_sf(acled_2020)
+acled_2020 <- st_transform(acled_2020, CRS.new)
+})
+
+suppressWarnings({
+active_bases_2016_joined<-st_read("active_bases_2016_joined.shp")
+CRS.new <- st_crs("EPSG:4269")
+active_bases_2016_joined = rgdal::readOGR(dsn = paste0(getwd()), layer="active_bases_2016_joined")
+active_bases_2016_joined<-st_as_sf(active_bases_2016_joined)
+active_bases_2016_joined.4269 <- st_transform(active_bases_2016_joined, CRS.new)
+})
+
+suppressWarnings({
+active_bases_2020_joined<-st_read("active_bases_2020_joined.shp")
+CRS.new <- st_crs("EPSG:4269")
+active_bases_2020_joined = rgdal::readOGR(dsn = paste0(getwd()), layer="active_bases_2020_joined")
+active_bases_2020_joined<-st_as_sf(active_bases_2020_joined)
+active_bases_2020_joined.4269 <- st_transform(active_bases_2020_joined, CRS.new)
+})
+
+suppressWarnings({
+darfur_base_coordinates_2017<-st_read("active_bases_2017.shp")
+darfur_base_coordinates_2017<-st_as_sf(darfur_base_coordinates_2017)
+darfur_base_coordinates_2017 <- st_transform(darfur_base_coordinates_2017, CRS.new)
+})
+
+CRS.new <- st_crs("EPSG:4087")
+
+suppressWarnings({
+darfur_base_coordinates_2020<-st_read("active_bases_2020.shp")
+darfur_base_coordinates_2020<-st_as_sf(darfur_base_coordinates_2020)
+darfur_base_coordinates_2020 <- st_transform(darfur_base_coordinates_2020, CRS.new)
+})
+
+acled_2016$fatalities <- as.numeric(acled_2016$fatalities)
+acled_2020$fatalts <- as.numeric(acled_2020$fatalts)
+
+```
+
+```{r Actual Maps 2016 vs. 2020 - part 2, echo=FALSE, fig.height=10, fig.width=10, message=FALSE, warning=FALSE, include=FALSE}
+
+tmap_mode("plot")
+
+# Rename the "fatalts" variable to "fatalities" in the acled_2020 dataset 
+acled_2020$fatalities <- acled_2020$fatalts
+
+# Delete the "fatalts" column for good
+acled_2020 <- subset(acled_2020, select = -fatalts)
+
+# Set the breaks for "Average Number of UN Troops"
+troops_breaks <- c(0, 200, 400, 600, 800, 1000)
+
+# Set the breaks and labels for "Fatalities"
+fatalities_breaks <- c(0, 10, 20, 30, 40, 50)
+fatalities_labels <- c("0 to 10", "10 to 20", "20 to 30", "30 to 40", "40 to 50")
+
+# Define the layout object without title
+layout <- tm_layout(
+          title = "Fatalities from Attacks on Darfur Civilians: 2016 vs. 2020\nBlue Dots are Active UN Bases",
+          title.position = c("left","top"),
+          title.size=20, title.color="steelblue", fontface = 7,
+          legend.title.size = 1.2,
+          legend.title.color = "steelblue",
+          legend.text.size = 0.8,
+          legend.text.color = "steelblue",
+          legend.position = c(0.75,0.25),#legend.position = c("right","bottom"),
+          legend.bg.color = "white",
+          legend.bg.alpha = 1,
+          bg.color="white",
+          frame=FALSE,
+          inner.margins = c(0.05, 0.05, 0.05, 0.00),
+          outer.margins = c(2, 0.1, 1, 0.9),
+          between.margin = 0,
+          asp=1.5)
+
+# Define the layout object without title
+layout2 <- tm_layout(
+          title = "",  
+          title.size=20, title.color="steelblue", fontface = 7,
+          legend.title.size = 1.2,
+          legend.title.color = "steelblue",
+          legend.text.size = 0.8,
+          legend.text.color = "steelblue",
+          legend.position = c(0.75,0.25),#legend.position = c("right","bottom"),
+          legend.bg.color = "white",
+          legend.bg.alpha = 1,
+          bg.color="white",
+          frame=FALSE,
+          inner.margins = c(0.05, 0.05, 0.05, 0.00),
+          outer.margins = c(2, 0.1, 1, 0.9),
+          between.margin = 1,
+          asp=1.5)
+
+
+
+# Modify the tm_bubbles functions for both maps
+t=tm_shape(active_bases_2016_joined, bbox =my_box) + tm_fill("avg_troops", title="Average Number\nof UN Troops", palette="Greens", breaks=troops_breaks) + 
+layout +
+tm_borders() +
+tm_shape(active_bases_2016) + 
+tm_symbols(size=0.5, col="steelblue", shapes.legend = "Active UN Bases", shapes=22) +
+tm_shape(acled_2016)+
+tm_bubbles(size="fatalities", col="red", alpha=0.4, jitter=0.05, title.size="Fatalities", breaks=c(0,20,40,60,80,100), sizes.legend=c(20,40,60,80,100), sizes.legend.labels=c("10","20","30","40","50"))+
+tm_credits(text="2016", position=c("center", "bottom"), size=1.5) + tm_layout(
+  #legend.position = c("right", "center")
+  legend.position = c(0.75,0.25)
+  )
+
+t2=tm_shape(active_bases_2020_joined, bbox =my_box) + tm_fill("avg_troops", title="Average Number\nof UN Troops", palette="Greens", breaks=troops_breaks) + 
+layout2 +
+tm_borders() +
+tm_shape(active_bases_2020) + 
+tm_symbols(size=0.5, col="steelblue", shapes.legend = "Active UN Bases", shapes=22) +
+tm_shape(acled_2020)+
+tm_bubbles(size="fatalities", col="red", alpha=0.4, jitter=0.05, title.size="Fatalities", breaks=c(0,20,40,60,80,100), sizes.legend=c(20,40,60,80,100), sizes.legend.labels=c("10","20","30","40","50"))+
+tm_credits(text="2020", position=c("center", "bottom"), size=1.5) + tm_legend(show = FALSE)
+
+# Define the width of the maps
+map_width <- unit(10, "cm")   # Adjust the width as needed
+```
+
+
+
+```{r Actual Maps 2016 vs. 2020 - part 3, echo=FALSE, fig.height=6, fig.width=10.5, message=FALSE, warning=FALSE}
+
+
+# Define the width of the maps
+map_width <- unit(10, "cm")   # Adjust the width as needed
+
+# Modify the layout of t
+t <- t + tm_layout(
+  inner.margins = c(0.055, 0.155, 0.055, 0.030),   # Increase this value to zoom out more
+  outer.margins = c(1.7, 1, 1, 0),          # Increase the first value to add space on the left
+  between.margin = 0,
+  asp = 1                                    # Set aspect ratio to 1 to keep the maps square-shaped
+)
+
+# Modify the layout of t2
+t2 <- t2 + tm_layout(
+  inner.margins = c(0.055, 0.155, 0.055, 0.030),   # Increase this value to zoom out more
+  outer.margins = c(1.7, 1, 1, 0),          # Increase the first value to add space on the left
+  between.margin = 1.0,
+  asp = 1                                    # Set aspect ratio to 1 to keep the maps square-shaped
+)
+
+# Combine the two maps using tmap_arrange()
+grid_map <- tmap_arrange(t, t2, ncol = 2, nrow = 1, widths = c(1.1*map_width, 1.1*map_width))
+
+# Display the grid map
+grid_map
+
+
+```
+
+
+
+
+#### I must first note that although the prior visuals discussed have displayed data on violence against civilians from the ACLED dataset up until 2021, data on UNAMID troop numbers from the Geo-PKO dataset is not available past 2020. I will therefore compare a map of Darfur in 2020 with a map of Darfur in 2016 since 2016 was the year before the UN began phasing bases in Darfur out of operation. However, we must recall that in Visual 2 we saw that there were more civilian killings in 2021 than in 2020, and in Visual 3 we saw that West Darfur had a massive increase in civilian killings in 2021 compared to 2020.
+
+<br>
+
+#### **Takeaways:** It appears that between 2016 to 2020, the dispersion pattern of individual attacks on civilians throughout Darfur substantially changed. In 2016, attacks garnering the highest numbers of fatalites appear congregated in administrative districts of Darfur where Central, South, and North Darfur meet, with other attacks mostly scattered throughout the western and southern districts. However, by 2020 the attacks involving the highest numbers of fatalities shifted to South Darfur administrative districts. Individual attacks involving mostly low fatality counts increased substantially in West Darfur by 2020, as UN bases and peacekeepers withdrew.
+
+<br>
+
+#### A common pattern in both maps is that the administrative districts containing the highest concentration of attacks on civilians had either no UN bases, or UN bases with combined average yearly troop numbers of only 200 or less.
+
+<br>
+
+#### Let's make sense of what we know so far from some of the visuals shown previously, and then tie in this visual's findings. In visual 3, in 2016, the three regions with the highest number of civilian killings were 1) Central Darfur (253), 2) South Darfur (139), and 3) North Darfur (114). These 3 regions alone accounted for 506 civilian killings. West Darfur that year had 36 civilian killings. But in 2020, the top 3 regions in terms of civilian killings were 1) South Darfur (95), 2) Central Darfur (35), and 3) West Darfur (31). The fact that these 3 regions accounted for a combined total of only 161 civilian fatalities is a welcome finding. However, in the next year - 2021 - not shown in the current visual, the number of civilians killed in West Darfur shot up to 155 (the largest total from any region that year and a 400% increase from 2020).
+
+<br>
+
+#### Therefore, Central and South Darfur were among the top 3 regions in terms of civilian killings in both 2016 and 2020, but West Darfur emerged as a top 3 region in 2020. So, while overall fatalities in Central and South Darfur dropped from 2016 to 2020, West Darfur had about the same number of civilian killings in both years, but shot up in the last year of UNAMID's presence (2021) as the last UN bases were being decommissioned.
+
+<br>
+
+#### In addition, in Visual 5, the heat map of attacks on civilians in Darfur during 2016 showed that attacks on civilians (irrespective of fatality numbers resulting from such attacks) were highly concentrated in the region where the Central Darfur, South Darfur, and North Darfur borders meet each other. There was almost no concentration of attacks on civilians in West Darfur in 2016. In 2020, the heavy concentration of attacks on civiilians appears to have moved to the northeastern part of Central Darfur. There was some  concentration of attacks on civilians in West Darfur in 2020, but it does not appear very severe. 
+
+<br>
+
+#### In the heat map of Darfur in 2021, the concentration of attacks on civilians appears to have slightly increased. At first glance, this may seem surprising considering that Visual 3 showed that civilian killings in West Darfur in 2021 were greater than any other region that year. However, it is likely the case that the average number of civilians killed per attack was particularly high in 2021 even though the concentration of attack incidents (from Visual 5) was not. It can also be seen from the 2020 heatmap in Visual 5 that the concentration of attacks on civilians in South Darfur appears very mild even though the current visual demonstrates that the most serious attack incidents in terms of high fatalities - occured in South Darfur that year.
+
+<br>
+
+#### In the next two visualizations, I take a quantitative approach to analysing levels of violence against civilans in the immediate areas surrounding UN bases that were closed in these two regions - West Darfur and South Darfur. In terms of West Darfur, in Visual 7 I compare maps of the region between the years 2016 - 2019 in terms of both attacks on civilians and civilian fatalities (since the current visual suggests higher numbers of attacks were not usually accompanied by larger fatality numbers). I conduct a similar analysis in Visual 8 in terms of South Darfur - calculating numbers of fatalities resulting from attacks on civilians (since the current visual suggests that larger than usual fatality numbers tended to coincide with attack incidents in the region). However, since no UN bases were withdrawn from West Darfur or South Darfur in 2020, I only compare the areas surrounding UN bases that were withdrawn in from West Darfur and South Darfur up to 2019.
+
+<br>
+
+#### The analysis so far lends itself to the view that that the UN should have closed down its bases at a slower pace to see what would happen in terms of civilian attacks and fatality numbers before proceeding to further downsize its operations. It thus far seems plausible that the premature withdrawal of UN bases in these 2 regions may have allowed violence to spread.
+
+```{r echo=FALSE}
+
+library(stringr)
+
+# Get the current page number from the file name
+current_page <- as.numeric(str_extract(knitr::current_input(), "\\d+"))
+
+# Set the total number of pages
+total_pages <- 9
+
+# Generate the URLs for the previous and next pages
+previous_page <- ifelse(current_page > 1, paste0("visual_", current_page - 1, "-darfur_violence.html"), NA)
+next_page <- ifelse(current_page < total_pages, paste0("visual_", current_page + 1, "-darfur_violence.html"), NA)
+
+```
+
+<ul class="pager">
+  <li><a href="`r previous_page`">Previous Page</a></li>
+  <li><a href="`r next_page`">Next Page</a></li>
+</ul>

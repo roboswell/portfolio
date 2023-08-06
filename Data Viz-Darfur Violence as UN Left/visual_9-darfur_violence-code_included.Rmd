@@ -1,0 +1,142 @@
+---
+title: "Perpetrators’ Share of Civilian Killings in South and West Darfur - Visual 9"
+author: "Rob Boswell"
+date: "7-27-2023"
+output: html_document
+---
+
+```{r echo=TRUE}
+
+library(stringr)
+
+# Get the current page number from the file name
+current_page <- as.numeric(str_extract(knitr::current_input(), "\\d+"))
+
+# Set the total number of pages
+total_pages <- 9
+
+# Generate the URLs for the previous and next pages
+previous_page <- ifelse(current_page > 1, paste0("visual_", current_page - 1, "-darfur_violence-code_included.html"), NA)
+
+# I did not include code for "Next Page" because this is the last page
+
+```
+
+<ul class="pager">
+  <li><a href="`r previous_page`">Previous Page</a></li>
+</ul>
+
+<br>
+
+
+```{r Code, message=FALSE, warning=FALSE, echo=TRUE}
+
+library(tidyverse)
+library(ggplot2)
+library(ggthemes)
+library(plotly)
+
+setwd("C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project")
+
+ACLED_data <- readxl::read_excel("ACLED-DARFUR-VAC-2008-2021 (After Course Ended-for 2023 Portfolio)-UPDATED VERSION-inter1_numbers_replaced_with_actor_names.xlsx", 
+     col_types = c("date", "numeric", "text", 
+         "text", "text", "text", "text", "text", 
+         "text", "text", "text", "text", "text", 
+         "numeric", "numeric", "text", "text", 
+         "text", "numeric", "numeric"))
+
+acled_short=ACLED_data[c("event_date","year","sub_event_type","actor1","inter1","admin1","admin2","location","latitude","longitude","attacks","fatalities")]
+
+acled_2016_2021_west_south = subset(acled_short, acled_short$year != 2008 & acled_short$year != 2009 & acled_short$year != 2010 & acled_short$year != 2011 & acled_short$year != 2012 & acled_short$year != 2013 & acled_short$year != 2014 & acled_short$year != 2015 & acled_short$admin1 != 'North Darfur'  & acled_short$admin1 != 'East Darfur' & acled_short$admin1 != 'Central Darfur')
+
+fatalities_by_region_year_actor=acled_2016_2021_west_south %>% group_by(admin1, year, inter1) %>% tally(fatalities)
+
+# Your data manipulation code (assuming it's correct)
+df2 <- fatalities_by_region_year_actor %>% 
+  mutate(pct = prop.table(n) * 100) %>%
+  mutate(inter1 = factor(inter1, levels = c("State Forces", "Political Militias", "Identity Militias", "Rebel Groups", "External/Other Forces"))) %>% #This controls the order of the armed groups on the legend 
+  mutate(Percent = round(pct, digits = 2),
+         Perpetrator = inter1,
+         Year = year)
+
+# Define colors corresponding to each group
+colors <- c("State Forces" = "maroon1",
+            "Political Militias" = "deepskyblue1",
+            "Identity Militias" = "peru",
+            "Rebel Groups" = "gray65",
+            "External/Other Forces" = "black")
+
+# Specify the custom labels for the y-axis
+custom_labels <- c("0", "25", "50", "75", "100")
+
+# Create the plot
+gg <- ggplot(df2, aes(x = Year, y = Percent, fill = Perpetrator)) +
+  geom_col(position = "fill", width = 0.8, size = 1, alpha = 0.7) +
+  scale_fill_manual(values = colors, 
+                    breaks = c("State Forces", "Political Militias", "Identity Militias", "Rebel Groups", "External/Other Forces"),
+                    labels = c("State Forces", "Political Militias", "Identity Militias", "Rebel Groups", "External/Other Forces")) +
+  scale_y_continuous(breaks = seq(0, 1, by = 0.25), labels = custom_labels) +  # Set custom breaks and labels for y-axis
+  scale_x_continuous(breaks = seq(min(df2$Year), max(df2$Year), by = 1)) +  # Ensure years are displayed without gaps
+  theme_wsj() +
+  theme(legend.position = "top",
+        title = element_text(size = 16, color = "steelblue", face = 'bold'),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.x = element_text(size = 12), #The years
+        axis.text.y = element_text(size = 14), #The percentages from 0 to 100 on the y-axis
+        strip.text.x = element_text(size=16, face = 'bold'), #"South Darfur" & "West Darfur"
+        legend.text=element_text(size=13)) + #The names of the armed groups
+  labs(title = "Perpetrators' Share of Civilian Killings (2016-2021)",
+       subtitle = "Jan. 2016 - Dec. 2021",
+       caption = "") +
+  guides(fill = guide_legend(title = "")) +
+  facet_wrap(~ admin1)
+
+```
+
+<center>
+```{r Perpetrators Share of Civilian Killings in South and West Darfur, message=FALSE, warning=FALSE, echo=TRUE}
+
+ggplotly(gg, height = 600, width = 850)
+
+```
+</center>
+
+<br>
+
+#### **Takeaways:** This interactive plot examines the two regions of Darfur which we have seen particularly problemmatic cases with respect to attacks on and killings of civilians. The plot provides a breakdown of the proportion of violence carried out by different types of armed actors. It is interesting to note that while in 2018 State Forces were responsible for 38% and 43% of civilian killings in South Darfur and West Darfur, respectively, their proportion of the killings in both regions in subsequent years dropped dramatically.  This appears to be a positive development, as it may suggest that the political will to refrain from state sponsored killings may have been increasing. Such political will may reflect changing realities of governance after the revolution between December 2018 and September 2019 which toppled the country's longtime dictator, Omar al-Bashir, and brought a joint civilian-military transitional government to power.
+
+<br>
+
+#### At the same time, it is important to keep in mind that in South Darfur, civilian killings by political militias increased from 33% in 2018 to 57% in 2019, and that in West Darfur civilian killings by political militias increased from 4% in 2019 to 68% in 2020. Looking more closely at the raw data involving these political militia killings, I was able to see that the vast majority of them were unable to be identified as linked to the government or opposition, and so it is at least in theory possible that state led killings of civilians remained, carried out by sympathetic political militias acting on behalf of the state who were able to hide their identities.
+
+<br>
+
+#### Also troubling is the trend of the proportion of civilian killings carried out by identity group based militias surging as State Force killings subsided. Identity militia killings of civilians increased from 23% of the overall share in 2019 in South Darfur to 77% in 2020, while identity milita killings of civilians in West Darfur surged from 50% of the overall share in 2018 to 85% in 2019. While the share of civilian killings committed by identity militias decreased to 26% in 2020, they once again dramatically surged to 93% in 2021 as the last UN bases were closing. 
+
+<br>
+
+#### What can be made of these findings? They may suggest that as UN troops pulled out, and despite potentially improved political will by State Forces to refrain from civilian killings, left to its own devices the Government of Sudan may not have had the capacity on its own to fill the power vacuums that emerged after UN troop and base withdrawals in South and West Darfur to prevent civilian killings. Though not seen in the above interactive visualization, in 2022, in West Darfur over 500 civilian killings occurred, many of which involved the Rizeigat Arab militias in retaliatory attacks against other minority groups like the Gimir and Masalit tribes. One such Rizeigat Arab militia attack on the village of Al-Kereinik in April 2022 was alleged to have been directly supported by the Rapid Support Forces - the leader of whom at that time shared power in Sudan's Transitional Sovereignty Council. (Source: https://acleddata.com/2023/03/03/context-assessment-new-political-deal-amidst-rising-political-disorder-in-sudan/)
+
+<br>
+
+#### Since civil war broke out in April 2023 between the Sudanese Armed Forces and the Rapid Support Forces, killings of civilans on both sides have increased. Even if the civil war ends soon, unless the Sudanese government receives strong support for protecting civilians from violence in South and West Darfur from either the UN or other entities capable of strengthening the Sudanese government's capacity to protect civilians, identity group and political militias may continue the bloodshed for years to come.
+
+```{r echo=TRUE}
+
+# Get the current page number from the file name
+current_page <- as.numeric(str_extract(knitr::current_input(), "\\d+"))
+
+# Set the total number of pages
+total_pages <- 9
+
+# Generate the URLs for the previous and next pages
+previous_page <- ifelse(current_page > 1, paste0("visual_", current_page - 1, "-darfur_violence-code_included.html"), NA)
+
+# I did not include code for "Next Page" because this is the last page
+
+```
+
+<ul class="pager">
+  <li><a href="`r previous_page`">Previous Page</a></li>
+</ul>

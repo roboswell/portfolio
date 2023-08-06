@@ -1,0 +1,463 @@
+---
+title: "Portfolio Project: Visualizing Political Violence in Nigeria in 2019"
+author: "Rob Boswell"
+date: "6/10/2022"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+### This portfolio project demonstrates a portion of my data wrangling and data divisualization skills using R. I intentionally show the code for each visualizaton including (hidden) preliminary visualizations later combined into (non-hidden) faceted visualizations.
+
+$~$
+
+#### **Visualization 1:** Create a visualization showing the most common event types involving political violence in the ACLED dataset for Nigeria in 2019. Please see the ACLED Codebook for information about the dataset: https://acleddata.com/acleddatanew/wp-content/uploads/2021/11/ACLED_Codebook_v1_January-2021.pdf
+
+$~$
+
+#### Note: According to the ACLED Codebook, the dataset contains the following event types: 1) battles, 2) explosions/remote violence, 3) violence against civilians, 4) protests, 5) riots, and 6) strategic developments. Strategic developments are events that capture "contextually important information regarding the activities of violent groups that is not itself recorded as political violence..." (pg. 15) 
+
+$~$
+
+#### I will delete this event type since it is non-violent. Looking at the event type of "protests", there are 3 sub-event types: 1) peaceful protests, 2) "protests with intervention", and 3) "excessive force against protesters." Since peaceful protests are by nature non-violent, and since "protests with intervention" occurs when "individuals are engaged in a peaceful protest during which there is an attempt to disperse or suppress the protest without serious/lethal injuries being reported or the targeting of protesters with lethal weapons," I also consider this sub-event type to be non-violent. Only "excessive force against protesters" involves use of violence. 
+
+$~$
+
+#### I therefore first delete the two aforementioned non-violent sub event types of "protests" and delete the event type of "strategic developments" from the original dataset, before preceding to create my visualization:
+
+```{R, echo=TRUE, message=FALSE, warning=FALSE, fig.height=3.5, fig.width=8.5}
+
+library(plyr)
+library(dplyr)
+library(readr)
+library(readxl)
+library(tidyverse)
+library(ggplot2)
+library(ggthemes)
+library(stringr)
+
+setwd("C:/Users/rsb84/Desktop/RB/portfolio_data/nigeria_news/")
+
+acled_df = read_csv('Nigeria2019_ACLED_Extract.csv')
+
+events = acled_df[,c('iso3','data_id','event_type','sub_event_type')]
+#View(events)
+
+# v.events stands for violent events:
+v.events = events %>% subset(sub_event_type != 'Peaceful protest' & sub_event_type != 'Protest with intervention' & event_type != 'Strategic developments')
+
+
+# The following code counts the number of event types in Nigeria in 2019, sorting them from greatest to least:
+
+num_v.events <- v.events %>% 
+  group_by(event_type) %>% 
+  dplyr::summarise(n = n())
+num_v.events = arrange(num_v.events, desc(n))
+
+
+# I am now able to create a ggplot2 visualization which ranks the most common political event types for Nigeria in 2019:
+
+num_events_plot <- ggplot(num_v.events, aes(x=as.numeric(n), y=reorder(event_type, as.numeric(n)), color=n)) + geom_point(size=5) + geom_segment(aes(x=0, xend=as.numeric(n), y=event_type, yend=event_type)) + scale_colour_gradient(low="dark grey", high="red", guide=NULL) + scale_x_continuous("Instances of Political Violence") + scale_y_discrete("Event Types") + theme_wsj() + theme(plot.title = element_text(hjust = 0.5), title =element_text(size=14, color='steelblue', face='bold'), axis.title.x=element_blank(), axis.title.y=element_blank(), axis.text.x = element_text(size = 9.7), axis.text.y = element_text(size = 12)) + labs(title="Most Common Types of Political Violence \nEvents in Nigeria (2019)", caption = 'Source: The ACLED Dataset', color='black')
+num_events_plot
+
+```
+
+$~$
+
+#### **Visualization 2 and 3:** Compare which actors are the highest risk actors both in terms of numbers of politically violent events each was involved in (whether as an aggressor or victim) and the number of fatalities which arose because of these events. 
+$~$
+
+#### My goal here is to create a facet of 2 horizontal bar charts listing the top actors at risk in terms of a) the total number of events they were involved in and b) the number of fatalities which occurred from these events. However, since one of the actor categories is "NA" (i.e., missing), and since this category is by far the top ranked actor name category in terms of both overall number of violent events and in terms of fatalities, I will create 2 different faceted visualizations - one comparing event and fatality counts for all actors (including "NA") and one comparing event and fatality counts all actors (excluding "NA"):
+
+
+```{R, echo=TRUE, message=FALSE, warning=FALSE, fig.height=5.5, fig.width=15, fig.show='hide'}
+
+library(RColorBrewer)
+
+# In the ACLED dataset most actors are coded as "actor1" or "actor2". But occasionally there will also be an associate actor1 also involved in the event type or an associate actor2.
+
+
+# "The order of actors has no meaning in the ACLED system, barring cases of ‘Violence against civilians’, in which the victim is always coded as Actor2." (pg. 18). Since actors could be aggressors or victims largely irrespective of whether labeled as actor1, actor2, assoc_actor1 or assoc_actor2 (except in the case of civilians - which are labelled as actor2) I only need to find the total number of events each actor/associate actor was involved in, irrespective of the actor number each was labelled as at the time.
+
+
+# First, I create 4 separate dataframes in which I calculate the number of violent events each actor was involved in: when labeled as actor1, when labeled as actor2, when labeled as assoc_actor1, and when labeled as assoc_actor2. Then, I relabel each actor number as simply "actor", and perform full joins to obtain one dataframe.
+
+events_actors = acled_df[,c('iso3','data_id','event_type','sub_event_type', 'actor1', 'assoc_actor_1', 'actor2', 'assoc_actor_2', 'fatalities')]
+#View(events_actors)
+
+
+# Here, I get rid of observations having sub event types and event types that are not violent in nature according to the ACLED Codebook:
+
+events_actors.v = events_actors %>% subset(sub_event_type != 'Peaceful protest' & sub_event_type != 'Protest with intervention' & event_type != 'Strategic developments')
+#View(events_actors.v)
+
+
+# Number of violent events each actor was involved in when coded as actor1:
+num_event_actors.v_actor1 <- events_actors.v %>% 
+  group_by(actor1) %>% 
+  dplyr::summarise(n1 = n())
+num_event_actors.v_actor1 = arrange(num_event_actors.v_actor1, desc(n1))
+#View(num_event_actors.v_actor1)
+
+
+# Number of violent events each actor was involved in when coded as actor2:
+num_event_actors.v_actor2 <- events_actors.v %>% 
+  group_by(actor2) %>% 
+  dplyr::summarise(n2 = n())
+num_event_actors.v_actor2 = arrange(num_event_actors.v_actor2, desc(n2))
+#View(num_event_actors.v_actor2)
+
+
+# Number of violent events each actor was involved in when coded as assoc_actor_1:
+num_event_actors.v_assoc_actor_1 <- events_actors.v %>% 
+  group_by(assoc_actor_1) %>% 
+  dplyr::summarise(n3 = n())
+num_event_actors.v_assoc_actor_1 = arrange(num_event_actors.v_assoc_actor_1, desc(n3))
+#View(num_event_actors.v_assoc_actor_1)
+
+
+# Number of violent events each actor was involved in when coded as assoc_actor_2:
+num_event_actors.v_assoc_actor_2 <- events_actors.v %>% 
+  group_by(assoc_actor_2) %>% 
+  dplyr::summarise(n4 = n())
+num_event_actors.v_assoc_actor_2 = arrange(num_event_actors.v_assoc_actor_2, desc(n4))
+#View(num_event_actors.v_assoc_actor_2)
+
+
+num_event_actors.v_actor1 = dplyr::rename(num_event_actors.v_actor1, actor = actor1)
+num_event_actors.v_actor2 = dplyr::rename(num_event_actors.v_actor2, actor = actor2)
+num_event_actors.v_assoc_actor_1 = dplyr::rename(num_event_actors.v_assoc_actor_1, actor = assoc_actor_1)
+num_event_actors.v_assoc_actor_2 = dplyr::rename(num_event_actors.v_assoc_actor_2, actor = assoc_actor_2)
+#View(num_event_actors.v_assoc_actor_2)
+
+
+num_event_actors.v_all_actors1 = dplyr::full_join(num_event_actors.v_actor1, num_event_actors.v_actor2, by = "actor")
+
+
+num_event_actors.v_all_actors2 = dplyr::full_join(num_event_actors.v_assoc_actor_1, num_event_actors.v_assoc_actor_2, by = "actor")
+
+
+num_event_actors.v_all_actors = dplyr::full_join(num_event_actors.v_all_actors1, num_event_actors.v_all_actors2, by = "actor")
+#View(num_event_actors.v_all_actors)
+
+
+# Currently, the above dataframe lists the number of violent events each actor in the dataset was involved in in each of the 4 circumstances: when labeled as "actor1," as "actor 2," as "assoc_actor1," and as "assoc_actor2". I therefore need to sum up (row-wise) the total number of events each actor was involved in, and then sort the resulting total from the highest number of events to the least: 
+
+num_event_actors.v_all_actors = num_event_actors.v_all_actors %>%
+  rowwise() %>% 
+  dplyr::mutate(total_events = sum(c_across(n1:n4), na.rm = T)) %>%
+  ungroup()
+#View(num_event_actors.v_all_actors)
+
+
+# VERY IMPORTANT - sort actors in terms of their total number of violent events they were involved in, from most to least:
+num_event_actors.v_all_actors = arrange(num_event_actors.v_all_actors, desc(total_events))
+#View(num_event_actors.v_all_actors)
+
+
+# Up until now, I have calculated for each actor in the dataset the total number of events each was involved in. Now, I need to also calculate the total number of fatalities which occurred in those events in which they were involved. This involves repeating the same coding steps as before, but with respect to summing the number of fatalities when using group_by:
+
+num_fatal_actors.v_actor1 <- events_actors.v %>% 
+  group_by(actor1) %>% 
+  dplyr::summarise(fatalities1 = sum(fatalities))
+num_fatal_actors.v_actor1 = arrange(num_fatal_actors.v_actor1, desc(fatalities1))
+#View(num_fatal_actors.v_actor1)
+
+
+num_fatal_actors.v_actor2 <- events_actors.v %>% 
+  group_by(actor2) %>% 
+  dplyr::summarise(fatalities2 = sum(fatalities))
+num_fatal_actors.v_actor2 = arrange(num_fatal_actors.v_actor2, desc(fatalities2))
+#View(num_fatal_actors.v_actor2)
+
+
+num_fatal_actors.v_assoc_actor_1 <- events_actors.v %>% 
+  group_by(assoc_actor_1) %>% 
+  dplyr::summarise(fatalities3 = sum(fatalities))
+num_fatal_actors.v_assoc_actor_1 = arrange(num_fatal_actors.v_assoc_actor_1, desc(fatalities3))
+#View(num_fatal_actors.v_assoc_actor_1)
+
+num_fatal_actors.v_assoc_actor_2 <- events_actors.v %>% 
+  group_by(assoc_actor_2) %>% 
+  dplyr::summarise(fatalities4 = sum(fatalities))
+num_fatal_actors.v_assoc_actor_2 = arrange(num_fatal_actors.v_assoc_actor_2, desc(fatalities4))
+#View(num_fatal_actors.v_assoc_actor_2)
+
+
+################################
+
+# Rename actor1, actor2, assoc_actor_1, and assoc_actor_2 to actor in each of their respective dataframes in preparation for the next step of using full_join to combine dataframes:
+
+num_fatal_actors.v_actor1 = dplyr::rename(num_fatal_actors.v_actor1, actor = actor1)
+num_fatal_actors.v_actor2 = dplyr::rename(num_fatal_actors.v_actor2, actor = actor2)
+num_fatal_actors.v_assoc_actor_1 = dplyr::rename(num_fatal_actors.v_assoc_actor_1, actor = assoc_actor_1)
+num_fatal_actors.v_assoc_actor_2 = dplyr::rename(num_fatal_actors.v_assoc_actor_2, actor = assoc_actor_2)
+#View(num_fatal_actors.v_assoc_actor_2)
+
+
+# First, join dataframes which previously had actor1 and actor2
+num_fatal_actors.v_all_actors1 = dplyr::full_join(num_fatal_actors.v_actor1, num_fatal_actors.v_actor2, by = "actor")
+#View(num_fatal_actors.v_all_actors1)
+
+
+# Next, join dataframes which previously had assoc_actor_1 and assoc_actor_2
+num_fatal_actors.v_all_actors2 = dplyr::full_join(num_fatal_actors.v_assoc_actor_1, num_fatal_actors.v_assoc_actor_2, by = "actor")
+#View(num_fatal_actors.v_all_actors2)
+
+# Now, join the two newly created dataframes together, which will mean that all actors previously labeled as actor1, actor2, assoc_actor_1 and assoc_actor_2 will be now be included: 
+num_fatal_actors.v_all_actors = dplyr::full_join(num_fatal_actors.v_all_actors1, num_fatal_actors.v_all_actors2, by = "actor")
+#View(num_fatal_actors.v_all_actors)
+
+
+# Now, sum together row-wise the fatality numbers from when actors were previously labeled actor1, actor2, assoc_actor_1, and assoc_actor_2 so that the total number of fatalities are calculated for each actor:
+num_fatal_actors.v_all_actors = num_fatal_actors.v_all_actors %>%
+  rowwise() %>% 
+  dplyr::mutate(total_fatalities = sum(c_across(fatalities1:fatalities4), na.rm = T)) %>%
+  ungroup()
+#View(num_fatal_actors.v_all_actors)
+
+
+
+# VERY IMPORTANT - sort actors in terms of their total number of fatalities, from most to least:
+num_fatal_actors.v_all_actors = arrange(num_fatal_actors.v_all_actors, desc(total_fatalities))
+#View(num_fatal_actors.v_all_actors)
+
+
+
+# Below, I use full_join to combine the two datasets - the one listing the total number of events each actor was involved in and the one listing the total number of fatalities which occurred from these events:
+
+num_event_fatl_actors.v_all_actors = dplyr::full_join(num_event_actors.v_all_actors, num_fatal_actors.v_all_actors, by = "actor")
+#View(num_event_fatl_actors.v_all_actors)
+
+
+# Since the full joined dataframe above includes other variables no longer needed, I now subset the dataframe to include just the actors, total number of events per actor, and total fatalities per actor:
+
+actors_total_events_fatal = dplyr::select(num_event_fatl_actors.v_all_actors, actor, total_events, total_fatalities)
+#View(actors_total_events_fatal)
+
+
+# Now, I create a version of the above dataframe that has no "NA" actors - while keeping both dataframes - as I will be comparing visualizations when "NA" actors are included vs. when they are not. To do so, I must delete the row in which the variable actor is "NA":
+
+actors_total_events_fatal.no_na = actors_total_events_fatal %>%
+  filter(!is.na(actor))
+#View(actors_total_events_fatal.no_na)
+
+
+# Now, as I approach the actual creation of the faceted bar charts, I want to restrict my results to the top 10 actors (when "NA" is included vs. when "NA" is excluded) in terms of the total number of events they were involved in and in terms of the number of fatalities which occurred from these events:
+
+actors_total_fatal_10 = actors_total_events_fatal %>%
+dplyr::top_n(10, total_fatalities)
+
+
+actors_total_fatal_10.no_na = actors_total_events_fatal.no_na %>% dplyr::top_n(10, total_fatalities)
+
+
+actors_total_events_10 = actors_total_events_fatal %>%
+dplyr::top_n(10, total_events)
+
+
+actors_total_events_10.no_na = actors_total_events_fatal.no_na %>%
+dplyr::top_n(10, total_events)
+
+
+
+# I first create the horizontal bar chart (later to be faceted) for the top 10 actor names in terms of total violent event counts when "NA" is included:
+
+plot.top_actors_total_events.nas_too = ggplot(actors_total_events_10, aes(x = reorder(actor, total_events),y = total_events, fill=total_events)) + geom_bar(stat = "identity", width=0.45) + scale_x_discrete("Total Political Violence Events") + scale_y_continuous("Highest Risk Actors") + scale_fill_gradient(low="light grey", high="red", guide=NULL) + theme_wsj() + theme(plot.title = element_text(hjust = 0.5), title =element_text(size=16, color= "steelblue", face='bold'), axis.title.x=element_blank(), axis.title.y=element_blank(), axis.text.x = element_text(size = 13), axis.text.y = element_text(size = 14, face='bold'), legend.title = element_blank(), legend.text = element_text(size = 14)) + labs(title="Nigeria's Highest Risk Actors by Total Number of \nPolitically Violent Events (2019): Missing Actors Included", subtitle="") + coord_flip()
+plot.top_actors_total_events.nas_too
+
+
+```
+
+```{R, echo=TRUE, message=FALSE, warning=FALSE, fig.height=5.5, fig.width=15, fig.show='hide'}
+
+# I next create the horizontal bar chart (later to be faceted) for the top 10 actor names in terms of total violent event counts when "NA" is excluded:
+
+
+plot.top_actors_total_events.no_nas = ggplot(actors_total_events_10.no_na, aes(x = reorder(actor, total_events),y = total_events, fill=total_events)) + geom_bar(stat = "identity", width=0.45) + scale_x_discrete("Total Political Violence Events") + scale_y_continuous("Highest Risk Actors") + scale_fill_gradient(low="light grey", high="red", guide=NULL) + theme_wsj() + theme(plot.title = element_text(hjust = 0.5), title =element_text(size=16, color= "steelblue", face='bold'), axis.title.x=element_blank(), axis.title.y=element_blank(), axis.text.x = element_text(size = 13), axis.text.y = element_text(size = 14, face = 'bold'), legend.title = element_blank(), legend.text = element_text(size = 14)) + labs(title="Nigeria's Highest Risk Actors by Total Number of \nPolitically Violent Events (2019): Missing Actors Excluded", subtitle="") + coord_flip()
+plot.top_actors_total_events.no_nas
+
+
+
+```
+
+```{R, echo=TRUE, message=FALSE, warning=FALSE, fig.height=5.5, fig.width=15, fig.show='hide'}
+
+# I next create the horizontal bar chart (later to be faceted) for the top 10 actor names in terms of total fatalities which occurred from violent events they were involved in when "NA" is included:
+
+plot.top_actors_total_fatal.nas_too = ggplot(actors_total_fatal_10, aes(x = reorder(actor, total_fatalities),y = total_fatalities, fill=total_fatalities)) + geom_bar(stat = "identity", width=0.45) + scale_x_discrete("Total Fatalities from Political Violence") + scale_y_continuous("Highest Risk Actors", breaks = c(0,500,1000,1500,2000,2500,3000,3500,4000,4500,5000,5500,6000,6500,7000,7500,8000)) + scale_fill_gradient(low="light grey", high="red", guide=NULL) + theme_wsj() + theme(plot.title = element_text(hjust = 0.5), title =element_text(size=16, color= "steelblue", face='bold'), axis.title.x=element_blank(), axis.title.y=element_blank(), axis.text.x = element_text(size = 13), axis.text.y = element_text(size = 14, face = 'bold'), legend.title = element_blank(), legend.text = element_text(size = 14), plot.caption = element_text(color = "steelblue", size = 14, face = 'bold', vjust = 0)) + labs(title="Nigeria's Highest Risk Actors by Total Fatalities from \nPolitical Violence (2019): Missing Actors Included", subtitle="", caption = "Source: The ACLED Dataset") + coord_flip()
+plot.top_actors_total_fatal.nas_too
+
+```
+
+```{R, echo=TRUE, message=FALSE, warning=FALSE, fig.height=5.5, fig.width=15, fig.show='hide'}
+
+# Finally, I create the horizontal bar chart (later to be faceted) for the top 10 actor names in terms of total fatalities which occurred from violent events they were involved in when "NA" is excluded:
+
+plot.top_actors_total_fatal.no_nas = ggplot(actors_total_fatal_10.no_na, aes(x = reorder(actor, total_fatalities),y = total_fatalities, fill=total_fatalities)) + geom_bar(stat = "identity", width=0.45) + scale_x_discrete("Total Fatalities from Political Violence") + scale_y_continuous("Highest Risk Actors") + scale_fill_gradient(low="light grey", high="red", guide=NULL) + theme_wsj() + theme(plot.title = element_text(hjust = 0.5), title =element_text(size=16, color= "steelblue", face='bold'), axis.title.x=element_blank(), axis.title.y=element_blank(), axis.text.x = element_text(size = 13), axis.text.y = element_text(size = 14, face = 'bold'), legend.title = element_blank(), legend.text = element_text(size = 14), plot.caption = element_text(color = "steelblue", size = 14, face = 'bold', vjust = 0)) + labs(title="Nigeria's Highest Risk Actors by Total Fatalities from \nPolitical Violence (2019): Missing Actors Excluded", subtitle="", caption = "Source: The ACLED Dataset") + coord_flip()
+plot.top_actors_total_fatal.no_nas
+
+```
+
+$~$
+
+#### Faceted bar chart comparing the top 10 actors (when "NA" actors are included) at risk in terms of the number of politically violent events they were involved in vs. the number of fatalities which occurred from these events:
+
+```{R, echo=TRUE, message=FALSE, warning=FALSE, fig.height=14, fig.width=15}
+
+# Here, I include the two horizontal bar charts in a facet when "NA" is included:
+
+library(ggpubr)
+
+highest_risk_actors <- ggarrange(plot.top_actors_total_events.nas_too, plot.top_actors_total_fatal.nas_too, heights = c(5,5), widths = c(5,5), align = "h", nrow = 2, ncol=1, common.legend = F)
+
+annotate_figure(highest_risk_actors)
+
+
+```
+
+$~$
+
+#### Faceted bar chart comparing the top 10 actors (when "NA" actors are excluded) at risk in terms of the number of politically violent events they were involved in vs. the number of fatalities which occurred from these events:
+
+```{R, echo=TRUE, message=FALSE, warning=FALSE, fig.height=14, fig.width=15}
+
+# Here, I include the two horizontal bar charts in a facet when "NA" is excluded:
+
+highest_risk_actors.no_nas <- ggarrange(plot.top_actors_total_events.no_nas, plot.top_actors_total_fatal.no_nas, heights = c(5,5), widths = c(5,5), align = "h", nrow = 2, ncol=1, common.legend = F)
+
+annotate_figure(highest_risk_actors.no_nas)
+
+
+```
+$~$
+
+#### **Visualization 4:** Create geographical representations of political violence event types across Nigeria in 2019.
+
+$~$
+
+#### Here, I create a facet of density maps showing the distribution of the proportion of events involving political violence from each of the event type categories. To do this, I use stat_density2d() which extropolates a probability density function from the event type data:
+
+$~$
+
+
+```{R, Geographic Profile of Political Violence in Nigeria (2019), echo=TRUE, fig.height=10.5, fig.width=10.5, message=FALSE, warning=FALSE, fig.show='hide'}
+
+library(tidyverse)
+library(ggplot2)
+library(ggthemes)
+library(ggmap)
+library(ggpubr)
+
+# I first create a new subset of the original ACLED dataset to work with, containing lat/long data:
+
+geo_events = acled_df[,c('iso3','data_id','event_type','sub_event_type','admin1','admin2','location','latitude','longitude','fatalities')]
+#View(geo_events)
+
+
+# Here, I delete the non-violent sub event types "peaceful protest" and "protest with intervention."I also delete the non-violent event type "strategic developments":
+
+v.geo_events = geo_events %>% subset(sub_event_type != 'Peaceful protest' & sub_event_type != 'Protest with intervention' & event_type != 'Strategic developments')
+
+#View(v.geo_events)
+
+# Next, I subset this new dataset, creating 5 datasets - 1 for each ACLED event type:
+
+v.geo_events.vac = geo_events %>% subset(event_type == 'Violence against civilians')
+v.geo_events.battles = geo_events %>% subset(event_type == 'Battles')
+v.geo_events.riots = geo_events %>% subset(event_type == 'Riots')
+v.geo_events.protests = geo_events %>% subset(event_type == 'Protests')
+v.geo_events.explosions = geo_events %>% subset(event_type == 'Explosions/Remote violence')
+
+
+# I use get_map from ggmap and stamen maps to create a background map of Nigeria using the country's geographical bounding box coordinates:
+
+map_nigeria = get_map(location=c(2.59170169436, 4.04059418377, 14.7771777686, 13.8659239771), zoom=7, source = "stamen", maptype="terrain")
+
+
+# Map of the distribution of the proportion of events involving violence against civilians in Nigeria in 2019:
+
+map_vac = ggmap(map_nigeria) + plot.new()+ 
+scale_fill_gradient(low="yellow", high="red") + 
+stat_density2d(data=v.geo_events.vac, geom = "polygon", aes(x=longitude, y=latitude,fill=..level.., alpha=..level..)) + 
+guides(alpha="none") +
+guides(size="none") + 
+theme(legend.position="bottom", title =element_text(size=15, color=  "steelblue",face='bold'), axis.title.x=element_blank(),              axis.title.y=element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank(), rect = element_blank(), plot.margin=unit(c(1,0,0,0),"cm")) + 
+labs(title="Events Involving Violence \nAgainst Civilians", subtitle="", caption = "") + 
+guides(fill=guide_legend(title="Proportion of \nAll Attacks on \nCivilians"))
+map_vac
+
+```
+
+```{R, echo=TRUE, fig.height=10.5, fig.width=10.5, message=FALSE, warning=FALSE, fig.show='hide'}
+
+# Map of the distribution of the proportion of battles in Nigeria in 2019:
+
+map_battles = ggmap(map_nigeria) + plot.new()+ 
+scale_fill_gradient(low="yellow", high="red") + 
+stat_density2d(data=v.geo_events.battles, geom = "polygon", aes(x=longitude, y=latitude,fill=..level.., alpha=..level..)) + 
+guides(alpha="none") +
+guides(size="none")  + 
+theme(legend.position="bottom", title =element_text(size=15, color=  "steelblue",face='bold'), axis.title.x=element_blank(),              axis.title.y=element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank(), rect = element_blank(), plot.margin=unit(c(1,0,0,0),"cm")) + 
+labs(title="Battles", subtitle="", caption = "") + 
+guides(fill=guide_legend(title="Proportion of \nAll Battles"))
+map_battles
+
+```
+
+```{R, echo=TRUE, fig.height=10.5, fig.width=10.5, message=FALSE, warning=FALSE, fig.show='hide'}
+
+# Map of the distribution of the proportion of riots in Nigeria in 2019:
+
+map_riots = ggmap(map_nigeria) + plot.new()+ 
+scale_fill_gradient(low="yellow", high="red") + 
+stat_density2d(data=v.geo_events.riots, geom = "polygon", aes(x=longitude, y=latitude,fill=..level.., alpha=..level..)) + 
+guides(alpha="none") +
+guides(size="none")  + 
+theme(legend.position="bottom", title =element_text(size=15, color=  "steelblue",face='bold'), axis.title.x=element_blank(),              axis.title.y=element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank(), rect = element_blank(), plot.margin=unit(c(1,0,0,0),"cm")) + 
+labs(title="Riots", subtitle="", caption = "") + 
+guides(fill=guide_legend(title="Proportion of \nAll Riots"))
+map_riots
+
+```
+
+```{R, echo=TRUE, fig.height=10.5, fig.width=10.5, message=FALSE, warning=FALSE, fig.show='hide'}
+
+# Map of the distribution of the proportion of protests in which excessive force was used by authorities in Nigeria in 2019:
+
+map_protests = ggmap(map_nigeria) + plot.new()+ 
+scale_fill_gradient(low="yellow", high="red") + 
+stat_density2d(data=v.geo_events.protests, geom = "polygon", aes(x=longitude, y=latitude,fill=..level.., alpha=..level..)) + 
+guides(alpha="none") +
+guides(size="none")  + 
+theme(legend.position="bottom", title =element_text(size=15, color=  "steelblue",face='bold'), axis.title.x=element_blank(),              axis.title.y=element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank(), rect = element_blank(), plot.margin=unit(c(0,0,0,0),"cm")) + 
+labs(title="Protests in Which Excessive Force \nAgainst Protesters was Used", subtitle="", caption = "") + 
+guides(fill=guide_legend(title="Proportion of \nAll Protests in \nWhich Excessive \nForce was Used"))
+map_protests
+
+```
+
+```{R, echo=TRUE, fig.height=10.5, fig.width=10.5, message=FALSE, warning=FALSE, fig.show='hide'}
+
+# Map of the distribution of the proportion of events involving explosions/remote violence in Nigeria in 2019:
+
+map_explosions = ggmap(map_nigeria) + plot.new() + 
+scale_fill_gradient(low="yellow", high="red") + 
+stat_density2d(data=v.geo_events.explosions, geom = "polygon", aes(x=longitude, y=latitude,fill=..level.., alpha=..level..)) + 
+guides(alpha="none") +
+guides(size="none")  + 
+theme(legend.position="bottom", title =element_text(size=15, color=  "steelblue",face='bold'), axis.title.x=element_blank(),              axis.title.y=element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank(), rect = element_blank(), plot.margin=unit(c(0,0,0,0),"cm")) + 
+labs(title="Explosions/Remote Violence", subtitle="", caption = "") + 
+guides(fill=guide_legend(title="Proportion of All \nEvents Involving \nExplosions/Remote \nViolence"))
+map_explosions
+
+```
+```{R, echo=TRUE, fig.height=10.5, fig.width=15, message=FALSE, warning=FALSE}
+
+# Placing all maps together in a facet:
+
+map_facet <- ggarrange(map_vac, map_battles, map_riots, map_protests, map_explosions, heights = c(2, 2, 2, 2, 2), widths = c(2,2,2,2,2), align = "h", nrow = 2, ncol=3, common.legend = FALSE, legend="bottom", padding=c(0,0,0,0,0)) + theme(panel.border = element_rect(color = "steelblue", fill = NA, size = 1))
+
+annotate_figure(map_facet, top = text_grob("Distribution of Politically Violent Events by Event Type in Nigeria (2019)", face = "bold", size = 24, color="steelblue", vjust = 0.3), bottom = text_grob("Source: The ACLED Dataset", size = 14, color ="steelblue", face = 'bold'))
+
+```

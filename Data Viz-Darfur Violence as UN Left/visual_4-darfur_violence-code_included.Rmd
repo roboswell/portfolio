@@ -1,0 +1,128 @@
+---
+title: "Proportion of Darfur Civilian Killings by Region"
+subtitle: "(2016 - 2021) - Visual 4"
+author: "Rob Boswell"
+date: "7-27-2023"
+output: 
+  html_document:
+    css: rmd_subtitle_same_size_as_rmd_title.css
+class_options: landscape
+---
+
+```{r echo=TRUE}
+
+library(stringr)
+
+# Get the current page number from the file name
+current_page <- as.numeric(str_extract(knitr::current_input(), "\\d+"))
+
+# Set the total number of pages
+total_pages <- 9
+
+# Generate the URLs for the previous and next pages
+previous_page <- ifelse(current_page > 1, paste0("visual_", current_page - 1, "-darfur_violence-code_included.html"), NA)
+next_page <- ifelse(current_page < total_pages, paste0("visual_", current_page + 1, "-darfur_violence-code_included.html"), NA)
+
+```
+
+<ul class="pager">
+  <li><a href="`r previous_page`">Previous Page</a></li>
+  <li><a href="`r next_page`">Next Page</a></li>
+</ul>
+
+<br>
+
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+library(tidyverse)
+library(ggplot2)
+library(ggthemes)
+library(plotly)
+
+
+setwd("C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project")
+
+ACLED_data <- readxl::read_excel("ACLED-DARFUR-VAC-2008-2021 (After Course Ended-for 2023 Portfolio)-UPDATED VERSION-inter1_numbers_replaced_with_actor_names.xlsx", 
+     col_types = c("date", "numeric", "text", 
+         "text", "text", "text", "text", "text", 
+         "text", "text", "text", "text", "text", 
+         "numeric", "numeric", "text", "text", 
+         "text", "numeric", "numeric"))
+
+fatalities_by_year_region=ACLED_data %>% group_by(year, admin1) %>% tally(fatalities)
+
+df=fatalities_by_year_region %>% 
+  group_by(year) %>% 
+  mutate(pct= prop.table(n) * 100) %>%
+  mutate(admin1 = factor(admin1, levels = c("Central Darfur", "North Darfur", "South Darfur", "East Darfur", "West Darfur"))) %>% #This controls the order of the Darfur regions on the legend 
+  mutate(Percent = round(pct, digits = 2),
+         Region = admin1,
+         Year = year)
+
+df_2016_2021 = subset(df, df$Year != 2008 & df$Year != 2009 & df$Year != 2010 & df$Year != 2011 & df$Year != 2012 & df$Year != 2013 & df$Year != 2014 & df$Year != 2015)
+
+# Define colors corresponding to each group
+colors <- c("Central Darfur" = "maroon1",
+            "North Darfur" = "deepskyblue1",
+            "South Darfur" = "peru",
+            "East Farfur" = "gray65",
+            "West Darfur" = "black")
+
+# Specify the custom labels for the y-axis
+custom_labels <- c("0", "25", "50", "75", "100")
+
+# Create the plot
+gg <- ggplot(df_2016_2021, aes(x = Year, y = Percent, fill = Region)) +
+  geom_col(position = "fill", width = 0.8, size = 1, alpha = 0.7) +
+  scale_fill_manual(values = colors, 
+                    breaks = c("Central Darfur", "North Darfur", "South Darfur", "East Darfur", "West Darfur"),
+                    labels = c("Central Darfur", "North Darfur", "South Darfur", "East Darfur", "West Darfur")) +
+  scale_y_continuous(breaks = seq(0, 1, by = 0.25), labels = custom_labels) +  # Set custom breaks and labels for y-axis
+  scale_x_continuous(breaks = seq(min(df_2016_2021$Year), max(df_2016_2021$Year), by = 1)) +  # Ensure years are displayed without gaps
+  theme_wsj() +
+  theme(legend.position = "top",
+        title = element_text(size = 14.5, color = "steelblue", face = 'bold'),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.x = element_text(size = 12),
+        axis.text.y = element_text(size = 14),
+        legend.text=element_text(size=14, face = 'bold')) +
+  labs(title = "Percentage Breakdown of Darfur Civilian Killings by Region \n(2016 - 2021)",
+       subtitle = "",
+       caption = "") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  guides(fill = guide_legend(title = ""))
+
+```
+
+<center>
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+ggplotly(gg, height = 600, width = 750)
+
+```
+</center>
+
+<br>
+
+#### **Takeaways:** A closer inspection of civilian killings by region within Darfur via the ACLED dataset shows that as UN bases were being withdrawn between 2017 and 2021, the *proportion* of all such killings was shrinking in Central Darfur, but growing in South Darfur in 2018 and 2020, and in West Darfur in 2019 and 2021. By the end of 2020 51% of civilian killings were concentrated in South Darfur, and by the end of 2021 48% of civilian killings were concentrated in West Darfur.
+
+```{r echo=TRUE}
+
+# Get the current page number from the file name
+current_page <- as.numeric(str_extract(knitr::current_input(), "\\d+"))
+
+# Set the total number of pages
+total_pages <- 9
+
+# Generate the URLs for the previous and next pages
+previous_page <- ifelse(current_page > 1, paste0("visual_", current_page - 1, "-darfur_violence-code_included.html"), NA)
+next_page <- ifelse(current_page < total_pages, paste0("visual_", current_page + 1, "-darfur_violence-code_included.html"), NA)
+
+```
+
+<ul class="pager">
+  <li><a href="`r previous_page`">Previous Page</a></li>
+  <li><a href="`r next_page`">Next Page</a></li>
+</ul>

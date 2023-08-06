@@ -1,0 +1,144 @@
+---
+title: 'Interactive Visual: Darfur Civilian Killings by Region (2008 - 2021) - Visual 3'
+author: "Rob Boswell"
+date: "7-27-2023"
+output: html_document
+class_options: landscape
+---
+
+```{r echo=FALSE}
+
+library(stringr)
+
+# Get the current page number from the file name
+current_page <- as.numeric(str_extract(knitr::current_input(), "\\d+"))
+
+# Set the total number of pages
+total_pages <- 9
+
+# Generate the URLs for the previous and next pages
+previous_page <- ifelse(current_page > 1, paste0("visual_", current_page - 1, "-darfur_violence.html"), NA)
+next_page <- ifelse(current_page < total_pages, paste0("visual_", current_page + 1, "-darfur_violence.html"), NA)
+
+```
+
+<ul class="pager">
+  <li><a href="`r previous_page`">Previous Page</a></li>
+  <li><a href="`r next_page`">Next Page</a></li>
+</ul>
+
+<br>
+
+<center>
+```{r echo=FALSE, fig.height=9, fig.width=10, message=FALSE, warning=FALSE}
+
+library(tidyverse)
+library(ggplot2)
+library(ggthemes)
+library(rgdal)
+library(lubridate)
+library(rtweet) 
+library(network) 
+library(igraph)
+library(ggraph) 
+library(ggnetwork) 
+library(GGally)
+library(ggrepel) 
+library(jsonlite) 
+library(intergraph)
+library(svgPanZoom) 
+library(DT)
+library(widgetframe)
+library(viridis)
+library(tmap)
+library(ggmap)
+library(rgdal)
+library(sp)
+library(sf)
+library(tigris)
+options(tigris_use_cache=TRUE)
+options(tigris_class="sf")
+
+setwd("C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project")
+
+
+
+ACLED_data <- readxl::read_excel("ACLED-DARFUR-VAC-2008-2021 (After Course Ended-for 2023 Portfolio)-UPDATED VERSION-inter1_numbers_replaced_with_actor_names.xlsx", 
+     col_types = c("date", "numeric", "text", 
+         "text", "text", "text", "text", "text", 
+         "text", "text", "text", "text", "text", "text", 
+         "numeric", "numeric", "text", "text", 
+         "numeric", "numeric"))
+
+fatalities_by_year_region=ACLED_data %>% group_by(year, admin1) %>% tally(fatalities)
+
+
+df=fatalities_by_year_region %>% group_by(year) %>% mutate(pct= prop.table(n) * 100)
+
+
+d=fatalities_by_year_region
+mins <- group_by(d, admin1) %>% slice(which.min(n))
+maxs <- group_by(d, admin1) %>% slice(which.max(n))
+ends <- group_by(d, admin1) %>% filter(year == max(year))
+d <- d %>% group_by(admin1) %>%
+  mutate(Twenty_Fifth_Percentile = quantile(n, probs = 0.25),
+         Seventy_Fifth_Percentile = quantile(n, probs = 0.75))
+spark = ggplot(d, aes(x=year, y=n)) + 
+  facet_grid(admin1 ~ ., scales = "free_y") + 
+  geom_ribbon(aes(ymin = Twenty_Fifth_Percentile, max = Seventy_Fifth_Percentile), fill = 'grey80') +
+  geom_line(size=0.75) +
+  geom_point(data = mins, col = 'steelblue', alpha=0.5, size=5.8, nudge_y= -0.5, vjust = -0.5) + geom_point(data = maxs, col = 'red', alpha=0.5, size=5.8, nudge_y= 0.5, vjust = 0.5) +
+  geom_text(data = mins, aes(label = n), nudge_y= -0.5, vjust = -0.5) +
+  geom_text(data = maxs, aes(label = n), nudge_y= 0.5, vjust = 0.5) +
+  geom_text(data = ends, aes(label = n), 
+            hjust = 0, nudge_x = 0.7) +
+  geom_text(data = ends, aes(label = admin1), 
+            hjust = 0, nudge_x = 2.2, size=4, fontface="bold") +
+  expand_limits(x = max(d$year) + 
+                  (0.25 * (max(d$year) - min(d$year)))) +
+  scale_x_continuous(breaks = seq(2008, 2021, 2)) +
+  scale_y_continuous(expand = c(0.1, 0)) +
+  theme_tufte(base_size = 15, base_family = "Helvetica") +
+  theme(title =element_text(size=15, color= "steelblue", face='bold'),                         axis.title.x=element_blank(), axis.title.y=element_blank(), axis.text.x             = element_text(size = 11), axis.text.y = element_blank(), axis.ticks =             element_blank(), strip.text = element_blank(),                                     legend.position="none") +
+  labs(title="Civilian Killings by Region in Darfur, Sudan (2008 - 2021)",                  
+            subtitle="", caption = "Source: The ACLED Dataset")
+
+library(plotly)
+
+ggplotly(spark)
+
+```
+</center>
+
+<br>
+
+#### **Takeaways:**  Investigating fatality numbers by region in Darfur reveals noteworthy trends. While true that by 2017 the number of civilian killings within each of Darfur's five regions had subsided since their respective maximums, the number of killings in Central Darfur was higher than its interquartile range, adding questions as to why the UN Security Council was still determined to begin withdrawing the mission that year. 
+
+<br>
+
+#### Additionally, by 2018, killings in West, South, and Central Darfur were near or above their respective seventy-fifth percentile values of their interquartile ranges. Yet, the UN continued to withdraw bases. A noticeable uptick in killings in West Darfur occurred in 2019, above the region's interquartile range.
+
+<br>
+
+#### By the end of 2021, once UNAMID troops had all departed, there were already more civilian killings in West Darfur (155) than at any point since the mission had begun in 2008. With violence levels so high in several regions during the mission's drawdown phase, one might have expected the UN to withdraw its remaining bases at least more slowly to prevent power vaccumes and spikes in violence.
+
+```{r echo=FALSE}
+
+library(stringr)
+
+# Get the current page number from the file name
+current_page <- as.numeric(str_extract(knitr::current_input(), "\\d+"))
+
+# Set the total number of pages
+total_pages <- 9
+
+# Generate the URLs for the previous and next pages
+previous_page <- ifelse(current_page > 1, paste0("visual_", current_page - 1, "-darfur_violence.html"), NA)
+next_page <- ifelse(current_page < total_pages, paste0("visual_", current_page + 1, "-darfur_violence.html"), NA)
+
+```
+
+<ul class="pager">
+  <li><a href="`r previous_page`">Previous Page</a></li>
+  <li><a href="`r next_page`">Next Page</a></li>
+</ul>

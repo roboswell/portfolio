@@ -1,0 +1,120 @@
+---
+title: 'Civilian Killings in Darfur over Time - Too Quick for UNAMID to Withdraw? - Visual 2'
+author: "Rob Boswell"
+date: "7-27-2023"
+output: html_document
+class_options: landscape
+---
+
+```{r echo=FALSE}
+
+library(stringr)
+
+# Get the current page number from the file name
+current_page <- as.numeric(str_extract(knitr::current_input(), "\\d+"))
+
+# Set the total number of pages
+total_pages <- 9
+
+# Generate the URLs for the previous and next pages
+previous_page <- ifelse(current_page > 1, paste0("visual_", current_page - 1, "-darfur_violence.html"), NA)
+next_page <- ifelse(current_page < total_pages, paste0("visual_", current_page + 1, "-darfur_violence.html"), NA)
+
+```
+
+<ul class="pager">
+  <li><a href="`r previous_page`">Previous Page</a></li>
+  <li><a href="`r next_page`">Next Page</a></li>
+</ul>
+
+<br>
+
+
+<center>
+```{r echo=FALSE, fig.height=8, fig.width=8.5, message=FALSE, warning=FALSE}
+
+library(tidyverse)
+library(ggplot2)
+library(ggthemes)
+library(rgdal)
+library(lubridate)
+library(rtweet) 
+library(network) 
+library(igraph)
+library(ggraph) 
+library(ggnetwork) 
+library(GGally)
+library(ggrepel) 
+library(jsonlite) 
+library(intergraph)
+library(svgPanZoom) 
+library(DT)
+library(widgetframe)
+library(viridis)
+library(tmap)
+library(ggmap)
+library(rgdal)
+library(sp)
+library(sf)
+library(tigris)
+options(tigris_use_cache=TRUE)
+options(tigris_class="sf")
+
+
+setwd("C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project/")
+
+
+
+ACLED_data <- readxl::read_excel("ACLED-DARFUR-VAC-2008-2021 (After Course Ended-for 2023 Portfolio).xlsx", col_types = c("date", "numeric", "text", 
+         "text", "text", "text", "text", "text", 
+         "text", "text", "text", "text", "text", 
+         "numeric", "numeric", "text", "text", 
+         "numeric", "numeric"))
+
+
+
+fatalities_by_year=ACLED_data %>% group_by(year) %>% tally(fatalities)
+
+
+fatalities_by_year$image = c("C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project/ak-47_5_thumbnail.png", "C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project/ak-47_5_thumbnail.png", "C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project/ak-47_5_thumbnail.png", "C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project/ak-47_5_thumbnail.png", "C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project/ak-47_5_thumbnail.png", "C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project/ak-47_5_thumbnail.png", "C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project/ak-47_5_thumbnail.png", "C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project/ak-47_5_thumbnail.png", "C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project/ak-47_5_thumbnail.png", "C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project/ak-47_5_thumbnail.png", "C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project/ak-47_5_thumbnail.png", "C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project/ak-47_5_thumbnail.png", "C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project/ak-47_5_thumbnail.png", "C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project/ak-47_5_thumbnail.png")
+
+library("ggimage")
+
+ggplot(fatalities_by_year, aes(x=fatalities_by_year$year, y=fatalities_by_year$n, fill=as.character(year))) + geom_vline(xintercept=as.integer(2017), color = "green4", linetype="dashed", size = 1) + geom_vline(xintercept=as.integer(2019), color = "purple",linetype="dashed", size = 1) + geom_bar(stat="identity", width=0.45) + scale_fill_manual("legend", values = c("2008" = "gray65", "2009" = "gray65", "2010" = "gray65", "2011" = "gray65", "2012" = "gray65", "2013" = "gray65", "2014" = "gray65", "2015" = "gray65", "2016" = "gray65", "2017" = "deepskyblue1", "2018" = "deepskyblue1", "2019" = "deepskyblue1", "2020" = "deepskyblue1", "2021" = "deepskyblue1")) + geom_text(aes(label=n), vjust=1.5, color="red", size=3.2) + geom_image(image=fatalities_by_year$image, size=0.09, nudge_x=-.05, nudge_y=15) +  scale_x_continuous("Year of Mission") + scale_y_continuous("Civilian Killings") + theme_wsj() + theme(title =element_text(size=13, color= "steelblue", face='bold'), axis.title.x=element_blank(), axis.title.y=element_blank(), axis.text.x = element_text(size = 9.7), axis.text.y = element_text(size = 12), legend.position="none") + labs(title="Civilian Killings During Years UNAMID Troops were Present", subtitle="", caption = "Source: The Armed Conflict Location & Event Data Project dataset, dates: Jan. 2008-Dec. 2021") + annotate("text", x= as.numeric(2015.8), y= as.numeric(700), label="The First Year\n UN Bases Began\nClosing", fontface=2, size=3, color="green4") + annotate("text", x= as.numeric(2020.5), y= as.numeric(685), label="The Year the Security\n Council Decided to\n Completely Withdraw\nUNAMID", fontface=2, size=3, color="purple")
+
+```
+</center>
+
+<br>
+
+#### **Takeaways:** In June 2017, the UN Security Council adopted [resolution 2363 (2017)](https://documents-dds-ny.un.org/doc/UNDOC/GEN/N17/191/58/PDF/N1719158.pdf) in which it decided to close down 11 bases in an initial phase, followed by 7 more base closures in a secondary phase. The goal was set to end the mission within 2 years (Source: https://reliefweb.int/report/sudan/unamid-full-exit-darfur-be-completed-within-two-years-fm).
+
+<br>
+
+#### Yet, due to trends in violence at the time this resolution was adopted, could it have been premature and dangerous for the UN to begin withdrawing from Darfur? 552 civilians were killed by state and non-state armed groups in the year prior to the UN adopting resolution 2363. And even though civilian fatalities dropped in 2017, they were still almost as high as when the mission began in 2008. In fact, at no point before 2017 had civilian fatality trends stabilized at low levels.
+
+<br>
+
+#### Retrospectively, we see that between the end of 2020 and the end of 2021 (the time in which the last UN troops in Darfur were departing) there was a 75% increase in civilian killings.
+
+```{r echo=FALSE}
+
+library(stringr)
+
+# Get the current page number from the file name
+current_page <- as.numeric(str_extract(knitr::current_input(), "\\d+"))
+
+# Set the total number of pages
+total_pages <- 9
+
+# Generate the URLs for the previous and next pages
+previous_page <- ifelse(current_page > 1, paste0("visual_", current_page - 1, "-darfur_violence.html"), NA)
+next_page <- ifelse(current_page < total_pages, paste0("visual_", current_page + 1, "-darfur_violence.html"), NA)
+
+```
+
+<ul class="pager">
+  <li><a href="`r previous_page`">Previous Page</a></li>
+  <li><a href="`r next_page`">Next Page</a></li>
+</ul>
+

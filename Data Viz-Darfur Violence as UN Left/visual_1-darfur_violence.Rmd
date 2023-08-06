@@ -1,0 +1,160 @@
+---
+title: 'UNAMID: A Failed Peacekeeping Mission? - Visual 1'
+author: "Rob Boswell"
+date: "7-27-2023"
+output: html_document
+class_options: landscape
+---
+
+```{r echo=FALSE}
+
+library(stringr)
+
+# Get the current page number from the file name
+current_page <- as.numeric(str_extract(knitr::current_input(), "\\d+"))
+
+# Set the total number of pages
+total_pages <- 9
+
+# Generate the URLs for the previous and next pages
+
+next_page <- ifelse(current_page < total_pages, paste0("visual_", current_page + 1, "-darfur_violence.html"), NA)
+
+# I removed the code for "Previous Page" both from the R code above and from the html code below because this is the first page
+
+```
+
+<ul class="pager">
+  <li><a href="`r next_page`">Next Page</a></li>
+</ul>
+
+
+<br>
+
+#### **Introduction:** The UN-African Union Mission in Darfur (UNAMID) opened in 2008, several years after the 2003-2004 genocide in Darfur, Sudan. As seen in the following visual, at the mission's height, over 12,500 troops were stationed in Darfur. The mission officially ended after all UN bases were closed down and troops withdrawn in the middle of 2021. While attacks on civilians (recorded by the ACLED dataset) are displayed below until the end of 2021, UNAMID troop numbers from the Geo-PKO dataset are only published until the end of 2020, even though the last troops left UNAMID on June 30, 2021 in accordance with [UN Security Council resolution 2559 (2020)](https://documents-dds-ny.un.org/doc/UNDOC/GEN/N20/382/73/PDF/N2038273.pdf).
+
+<br>
+
+<center>
+```{R echo=FALSE, fig.height=10, fig.width=12, message=FALSE, warning=FALSE}
+
+
+library(tidyverse)
+library(ggplot2)
+library(ggthemes)
+library(rgdal)
+library(lubridate)
+library(rtweet) 
+library(network) 
+library(igraph)
+library(ggraph) 
+library(ggnetwork) 
+library(GGally)
+library(ggrepel) 
+library(jsonlite) 
+library(intergraph)
+library(svgPanZoom) 
+library(DT)
+library(widgetframe)
+library(viridis)
+library(tmap)
+library(ggmap)
+library(rgdal)
+library(sp)
+library(sf)
+library(tigris)
+options(tigris_use_cache=TRUE)
+options(tigris_class="sf")
+
+
+setwd("C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project")
+
+
+
+ACLED_data <- readxl::read_excel("ACLED-DARFUR-VAC-2008-2021 (After Course Ended-for 2023 Portfolio)-UPDATED VERSION-inter1_numbers_replaced_with_actor_names.xlsx", 
+     col_types = c("date", "numeric", "text", 
+         "text", "text", "text", "text", "text", 
+         "text", "text", "text", "text", "text", 
+         "numeric", "numeric", "text", "text", 
+         "text", "numeric", "numeric"))
+
+geo_pko <- readxl::read_excel("geo_pko.xlsx")
+
+troops_by_date_location = geo_pko %>% group_by(year, month, location) %>% tally(no.troops)
+
+troops_by_date = geo_pko %>% group_by(year, month) %>% tally(no.troops)
+
+
+troops_by_year = troops_by_date %>% group_by(year) %>% summarise(n = mean(n))
+
+
+
+troops_by_year$n = round(troops_by_year$n, digits=0)
+
+
+attacks_by_year=ACLED_data %>% group_by(year) %>% tally(attacks)
+
+
+attacks_by_year=attacks_by_year %>% rename(attacks = n)
+
+library(tidyverse)
+
+troops_by_year=troops_by_year %>% rename(avg_troops = n)
+
+troops_by_year$year = as.character(troops_by_year$year)
+
+attacks_by_year$year = as.character(attacks_by_year$year)
+
+troops_and_attacks_by_year=full_join(troops_by_year, attacks_by_year, by="year")
+
+
+
+library(ggplot2)
+library(ggthemes)
+library(gridExtra)
+library(ggpubr)
+
+a1 <- ggplot(troops_and_attacks_by_year, aes(x=as.numeric(year), y=avg_troops)) + geom_line(lwd=1.6, aes(color = avg_troops, size=3), color="steelblue") + scale_x_continuous("Year", breaks=0:2100) + scale_y_continuous("Average Number of Troops") + theme_wsj() + theme(title =element_text(size=18, color= "steelblue", face='bold'), axis.title.x=element_blank(), axis.title.y=element_blank(), axis.text.x = element_text(size = 9.7), axis.text.y = element_text(size = 12), legend.position="none", plot.caption = element_text(color = "steelblue", face = "bold", size=14)) + geom_vline(xintercept=as.integer(2011), color = "black", linetype="dashed", size = 1.2) + geom_vline(xintercept=as.integer(2015), color = "black", linetype="dashed", size = 1.2) + geom_vline(xintercept=as.integer(2020), color = "black", linetype="dashed", size = 1.2) + labs(title="Average Number of Troops in UNAMID, by Year", caption="")
+
+
+a2 <- ggplot(troops_and_attacks_by_year, aes(x=as.numeric(year), y=attacks)) + geom_line(lwd=1.6, aes(color = attacks, size=3), color="red") + scale_x_continuous("Year", breaks=0:2100) + scale_y_continuous("Number of Attacks on Civilians") + theme_wsj() + theme(title =element_text(size=18, color= "steelblue", face='bold'), axis.title.x=element_blank(), axis.title.y=element_blank(), axis.text.x = element_text(size = 9.7), axis.text.y = element_text(size = 12), legend.position="none", plot.caption = element_text(color = "steelblue", face = "bold", size=14)) + geom_vline(xintercept=as.integer(2011), color = "black", linetype="dashed", size = 1.2) + geom_vline(xintercept=as.integer(2015), color = "black", linetype="dashed", size = 1.2) +
+geom_vline(xintercept=as.integer(2020), color = "black", linetype="dashed", size = 1.2) + labs(title="Number of Attacks on Darfur Civilians during UNAMID, by Year", caption="Sources: 1. Geo-PKO Dataset, v2.1, Uppsala University, 2. The ACLED Dataset")
+
+
+ggarrange(a1, a2, nrow=2, ncol=1, align = "v")
+
+```
+</center>
+
+<br>
+
+#### **Takeaways:** The first vertical line shows that when the number of troops in Darfur climbed near their apex in 2011, attacks on civilians declined to their minimum. Soon after, UNAMID began decreasing the number of peacekeepers, but it can be seen (in between the first and second vertical lines) that as troops were being withdrawn attacks on civilians surged. Seeing this surge in attacks, it might have been expected that the UN would decide to increase troop numbers again; instead, it continued to withdraw even *more* troops. 
+
+<br>
+
+#### By 2015, the number of attacks on civilians reached its highest point (shown at the second vertical line). And while UNAMID began to slightly increase troop numbers that year, within only one year troop numbers began to fall steadily as it became clear that attacks on civilians were starting to decline. Yet, as the rapid decline in attacks on civilians began to taper off by 2018, UNAMID troop numbers continued to plunge.
+
+<br>
+
+#### It is clear that by 2020 (signified by the third vertical line), as very few troops remained, violence against civilians began to surge once again. When the UNAMID mission officially closed at the end of Dec. 2020, there were even *more attacks* being carried out than when the mission had opened, and violence continued to surge thereafter.
+
+```{r echo=FALSE}
+
+library(stringr)
+
+# Get the current page number from the file name
+current_page <- as.numeric(str_extract(knitr::current_input(), "\\d+"))
+
+# Set the total number of pages
+total_pages <- 9
+
+# Generate the URL for the next page
+next_page <- ifelse(current_page < total_pages, paste0("visual_", current_page + 1, "-darfur_violence.html"), NA)
+
+# I removed the code for "Previous Page" both from the R code above and from the html code below because this is the first page
+
+```
+
+<ul class="pager">
+  <li><a href="`r next_page`">Next Page</a></li>
+</ul>
