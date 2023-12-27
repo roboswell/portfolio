@@ -32,14 +32,14 @@ next_page <- ifelse(current_page < total_pages, paste0("visual_", current_page +
 
 ```{r echo=TRUE, fig.height=9, fig.width=10, message=FALSE, warning=FALSE}
 
+# Note: All code, insights shared, and methodological notes in this document and other documents in this portfolio ARE NOT open source and MUST be cited.
+
 library(tidyverse)
 library(ggplot2)
 library(ggthemes)
 library(plotly)
 
 setwd("C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project")
-
-
 
 ACLED_data <- readxl::read_excel("ACLED-DARFUR-VAC-2008-2021 (After Course Ended-for 2023 Portfolio)-UPDATED VERSION-inter1_numbers_replaced_with_actor_names.xlsx", 
      col_types = c("date", "numeric", "text", 
@@ -54,39 +54,57 @@ fatalities_by_year_region=ACLED_data %>% group_by(year, admin1) %>% tally(fatali
 df=fatalities_by_year_region %>% group_by(year) %>% mutate(pct= prop.table(n) * 100)
 
 
-d=fatalities_by_year_region
-mins <- group_by(d, admin1) %>% slice(which.min(n))
-maxs <- group_by(d, admin1) %>% slice(which.max(n))
-ends <- group_by(d, admin1) %>% filter(year == max(year))
-d <- d %>% group_by(admin1) %>%
-  mutate(Twenty_Fifth_Percentile = quantile(n, probs = 0.25),
-         Seventy_Fifth_Percentile = quantile(n, probs = 0.75))
+d <- fatalities_by_year_region %>%
+  rename(Year = year, Fatalities = n) %>%
+  group_by(admin1) %>%
+  mutate(Twenty_Fifth_Percentile = quantile(Fatalities, probs = 0.25),
+         Seventy_Fifth_Percentile = quantile(Fatalities, probs = 0.75))
 
-spark = ggplot(d, aes(x=year, y=n)) + 
-  facet_grid(admin1 ~ ., scales = "free_y") + 
+mins <- d %>%
+  group_by(admin1) %>%
+  slice(which.min(Fatalities))
+
+maxs <- d %>%
+  group_by(admin1) %>%
+  slice(which.max(Fatalities))
+
+ends <- d %>%
+  group_by(admin1) %>%
+  filter(Year == max(Year))
+
+
+spark = ggplot(d, aes(x=Year, y=Fatalities)) +
+  facet_grid(admin1 ~ ., scales = "free_y") + # panel.spacing.y adjusts the vertical space between sparklines in the facet
   geom_ribbon(aes(ymin = Twenty_Fifth_Percentile, max = Seventy_Fifth_Percentile), fill = 'grey80') +
   geom_line(size=0.75) +
-  geom_point(data = mins, col = 'steelblue', alpha=0.5, size=5.8, nudge_y= -0.5, vjust = -0.5) + geom_point(data = maxs, col = 'red', alpha=0.5, size=5.8, nudge_y= 0.5, vjust = 0.5) +
-  geom_text(data = mins, aes(label = n), nudge_y= -0.5, vjust = -0.5) +
-  geom_text(data = maxs, aes(label = n), nudge_y= 0.5, vjust = 0.5) +
-  geom_text(data = ends, aes(label = n), 
-            hjust = 0, nudge_x = 0.7) +
-  geom_text(data = ends, aes(label = admin1), 
-            hjust = 0, nudge_x = 2.2, size=4, fontface="bold") +
-  expand_limits(x = max(d$year) + 
-                  (0.25 * (max(d$year) - min(d$year)))) +
+  geom_point(data = mins, col = 'steelblue', size=8, nudge_y= -0.5, vjust = -0.5) +
+  geom_point(data = maxs, col = 'red', size=8, nudge_y= 0.5, vjust = 0.5) +
+  geom_text(data = mins, aes(label = Fatalities), nudge_y= -0.5, vjust = -0.5, color = "white", size = 4) +
+  geom_text(data = maxs, aes(label = Fatalities), nudge_y= 0.5, vjust = 0.5, color = "white", size = 4) +
+  geom_text(data = ends, aes(label = Fatalities), hjust = 0, nudge_x = 0.7) +
+  geom_text(data = ends, aes(label = admin1), hjust = 0, nudge_x = 2.2, size=4, fontface="bold", color="black") +
+  expand_limits(x = max(d$Year) + (0.25 * (max(d$Year) - min(d$Year)))) +
   scale_x_continuous(breaks = seq(2008, 2021, 2)) +
   scale_y_continuous(expand = c(0.1, 0)) +
   theme_tufte(base_size = 15, base_family = "Helvetica") +
-  theme(title =element_text(size=15, color= "steelblue", face='bold'),                         axis.title.x=element_blank(), axis.title.y=element_blank(), axis.text.x             = element_text(size = 11), axis.text.y = element_blank(), axis.ticks =             element_blank(), strip.text = element_blank(),                                     legend.position="none") +
-  labs(title="Civilian Killings by Region in Darfur, Sudan (2008 - 2021)",                  
-            subtitle="", caption = "Source: The ACLED Dataset")
+  theme(title = element_text(size=15, color= "steelblue", face='bold'),
+        axis.title.x = element_blank(), axis.title.y = element_blank(),
+        axis.text.x = element_text(size = 11), axis.text.y = element_blank(),
+        axis.ticks = element_blank(), strip.text = element_blank(),
+        legend.position="none",
+        panel.spacing.y = unit(2, "lines") # This line sets the vertical spacing between sparklines
+        ) +
+  labs(title="Civilian Killings by Region in Darfur, Sudan (2008 - 2021)",
+       subtitle="", caption = "Source: The ACLED Dataset") +
+  theme(plot.margin = unit(c(1,1,1,1), "lines"), text = element_text(face = "bold")) # Add margins around the plot, adjust the numbers to suit the layout
+
+#theme(text = element_text(face = "bold"))
 
 
 ```
 
 <center>
-```{r echo=TRUE, fig.height=9, fig.width=10, message=FALSE, warning=FALSE}
+```{r echo=TRUE, fig.height=12.5, fig.width=10, message=FALSE, warning=FALSE}
 
 ggplotly(spark)
 

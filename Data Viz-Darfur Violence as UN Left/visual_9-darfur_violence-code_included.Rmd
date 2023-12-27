@@ -1,5 +1,5 @@
 ---
-title: "Perpetrators’ Share of Civilian Killings in South and West Darfur - Visual 9"
+title: "Types of Perpetrators Responsible for Civilian Killings in South and West Darfur - Visual 9"
 author: "Rob Boswell"
 date: "7-27-2023"
 output: html_document
@@ -18,7 +18,7 @@ total_pages <- 9
 # Generate the URLs for the previous and next pages
 previous_page <- ifelse(current_page > 1, paste0("visual_", current_page - 1, "-darfur_violence-code_included.html"), NA)
 
-# I did not include code for "Next Page" because this is the last page
+# I removed the code for "Next Page" both from the R code above and from the html code below because this is the last page
 
 ```
 
@@ -28,8 +28,13 @@ previous_page <- ifelse(current_page > 1, paste0("visual_", current_page - 1, "-
 
 <br>
 
+#### The interactive plot below examines South Darfur and West Darfur with respect to civilian killings broken down by the proportion of overall killings carried out by each type of perpetrator.
 
-```{r Code, message=FALSE, warning=FALSE, echo=TRUE}
+<br>
+
+```{R Perpetrators Share of Civilian Killings in South and West Darfur, message=FALSE, warning=FALSE, echo=TRUE}
+
+# Note: All code, insights shared, and methodological notes in this document and other documents in this portfolio ARE NOT open source and MUST be cited.
 
 library(tidyverse)
 library(ggplot2)
@@ -38,7 +43,7 @@ library(plotly)
 
 setwd("C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project")
 
-ACLED_data <- readxl::read_excel("ACLED-DARFUR-VAC-2008-2021 (After Course Ended-for 2023 Portfolio)-UPDATED VERSION-inter1_numbers_replaced_with_actor_names.xlsx", 
+ACLED_data <- readxl::read_excel("ACLED-DARFUR-VAC-2008-2021-LATEST-inter1_integers_version.xlsx", 
      col_types = c("date", "numeric", "text", 
          "text", "text", "text", "text", "text", 
          "text", "text", "text", "text", "text", 
@@ -51,13 +56,24 @@ acled_2016_2021_west_south = subset(acled_short, acled_short$year != 2008 & acle
 
 fatalities_by_region_year_actor=acled_2016_2021_west_south %>% group_by(admin1, year, inter1) %>% tally(fatalities)
 
-# Your data manipulation code (assuming it's correct)
+
+# The ACLED dataset lists the values of the column inter1 as being between 1 and 8. These values have a specific meaning. 1 corresponds to "State Forces", 2 to "Rebel Groups", 3 to "Political Militias", 4 to "Identity Militias", 5 to "Rioters", 6 to "Protesters", 7 to "Civilians", and 8 to "External/Other Forces". However, I inspected the dataframe acled_2016_2021_west_south from which the grouped dataframe fatalities_by_region_year_actor was created, and found there were no values for the column inter1 between 4 and 8. I.e., only "State Forces", "Political Militias", "Identity Militias", "Rebel Groups", and "External/Other Forces" were responsible for attacks on civilians in the aforementioned dataframes. The code below ensures that these labels for inter1 will appear in the following order on legends of any tables and/or plots: "State Forces", "Political Militias", "Identity Militias", "Rebel Groups", "External/Other Forces"
+
 df2 <- fatalities_by_region_year_actor %>% 
   mutate(pct = prop.table(n) * 100) %>%
-  mutate(inter1 = factor(inter1, levels = c("State Forces", "Political Militias", "Identity Militias", "Rebel Groups", "External/Other Forces"))) %>% #This controls the order of the armed groups on the legend 
-  mutate(Percent = round(pct, digits = 2),
+  mutate(inter1 = factor(inter1, levels = c(1,3,4,2,8), labels = c("State Forces", "Political Militias", "Identity Militias", "Rebel Groups", "External/Other Forces"))) %>% #This controls the order of the armed groups on the legend  
+  mutate(Percent = round(pct, digits = 1),
          Perpetrator = inter1,
          Year = year)
+
+# Note: If the above string values were already in the column inter1 in the original excel file in place of integer values, the code to produce exactly the same order as the order above for legends of any tables or plots based on the grouped dataframe df2 would have been the following instead:
+
+# df2 <- fatalities_by_region_year_actor %>%
+#   mutate(pct = prop.table(n) * 100) %>%
+#   mutate(inter1 = factor(inter1, levels = c(""State Forces", "Political Militias", "Identity Militias", "Rebel Groups", "External/Other Forces"))) %>% #This controls the order of the armed groups on the legend
+#   mutate(Percent = round(pct, digits = 1),
+#          Perpetrator = inter1,
+#          Year = year)
 
 # Define colors corresponding to each group
 colors <- c("State Forces" = "maroon1",
@@ -82,45 +98,959 @@ gg <- ggplot(df2, aes(x = Year, y = Percent, fill = Perpetrator)) +
         title = element_text(size = 16, color = "steelblue", face = 'bold'),
         axis.title.x = element_blank(),
         axis.title.y = element_blank(),
-        axis.text.x = element_text(size = 12), #The years
-        axis.text.y = element_text(size = 14), #The percentages from 0 to 100 on the y-axis
-        strip.text.x = element_text(size=16, face = 'bold'), #"South Darfur" & "West Darfur"
-        legend.text=element_text(size=13)) + #The names of the armed groups
+        axis.text.x = element_text(size = 12),
+        axis.text.y = element_text(size = 14),
+        strip.text.x = element_text(size=16, face = 'bold'),
+        legend.text=element_text(size=13)) +
   labs(title = "Perpetrators' Share of Civilian Killings (2016-2021)",
        subtitle = "Jan. 2016 - Dec. 2021",
        caption = "") +
   guides(fill = guide_legend(title = "")) +
   facet_wrap(~ admin1)
 
-```
-
-<center>
-```{r Perpetrators Share of Civilian Killings in South and West Darfur, message=FALSE, warning=FALSE, echo=TRUE}
-
 ggplotly(gg, height = 600, width = 850)
 
+
 ```
-</center>
 
 <br>
 
-#### **Takeaways:** This interactive plot examines the two regions of Darfur which we have seen particularly problemmatic cases with respect to attacks on and killings of civilians. The plot provides a breakdown of the proportion of violence carried out by different types of armed actors. It is interesting to note that while in 2018 State Forces were responsible for 38% and 43% of civilian killings in South Darfur and West Darfur, respectively, their proportion of the killings in both regions in subsequent years dropped dramatically.  This appears to be a positive development, as it may suggest that the political will to refrain from state sponsored killings may have been increasing. Such political will may reflect changing realities of governance after the revolution between December 2018 and September 2019 which toppled the country's longtime dictator, Omar al-Bashir, and brought a joint civilian-military transitional government to power.
+#### [ACLED's 2021 Codebook](https://acleddata.com/acleddatanew/wp-content/uploads/2021/11/ACLED_Codebook_v1_January-2021.pdf) clarifies that "State Forces" are recognized government function performers, including military and police (pg. 21). It distinguishes "Political Militias" as groups formed for political objectives through violence, aiming to influence governance without overthrowing national power. These militias, often backed by political elites, work with governments or other influential groups for defined goals (pp. 22-23). They may associate with specific identity communities but are distinguished from "identity militias" due to their broader political goals (pg. 23).
 
 <br>
 
-#### At the same time, it is important to keep in mind that in South Darfur, civilian killings by political militias increased from 33% in 2018 to 57% in 2019, and that in West Darfur civilian killings by political militias increased from 4% in 2019 to 68% in 2020. Looking more closely at the raw data involving these political militia killings, I was able to see that the vast majority of them were unable to be identified as linked to the government or opposition, and so it is at least in theory possible that state led killings of civilians remained, carried out by sympathetic political militias acting on behalf of the state who were able to hide their identities.
+#### "Identity Militias," as defined in the ACLED Codebook (pp. 23-24), are armed groups organized around shared characteristics like community, ethnicity, region, religion, or sometimes livelihood. Such groups often include those labeled as 'tribal', 'communal', 'ethnic', 'local', 'clan', and 'religious' and 'caste' militias. Crucially, the Codebook notes (pg. 24) that 'identity militias' frequently engage in 'communal violence', *acting locally to achieve objectives* related to resources, power, security, and retribution.
 
 <br>
 
-#### Also troubling is the trend of the proportion of civilian killings carried out by identity group based militias surging as State Force killings subsided. Identity militia killings of civilians increased from 23% of the overall share in 2019 in South Darfur to 77% in 2020, while identity milita killings of civilians in West Darfur surged from 50% of the overall share in 2018 to 85% in 2019. While the share of civilian killings committed by identity militias decreased to 26% in 2020, they once again dramatically surged to 93% in 2021 as the last UN bases were closing. 
+#### As shown in the above visualizations, in *almost all* cases between 2016 and 2021 in both South Darfur and West Darfur, only state forces, political militias, or identity militias were responsible for killing civilians. 
 
 <br>
 
-#### What can be made of these findings? They may suggest that as UN troops pulled out, and despite potentially improved political will by State Forces to refrain from civilian killings, left to its own devices the Government of Sudan may not have had the capacity on its own to fill the power vacuums that emerged after UN troop and base withdrawals in South and West Darfur to prevent civilian killings. Though not seen in the above interactive visualization, in 2022, in West Darfur over 500 civilian killings occurred, many of which involved the Rizeigat Arab militias in retaliatory attacks against other minority groups like the Gimir and Masalit tribes. One such Rizeigat Arab militia attack on the village of Al-Kereinik in April 2022 was alleged to have been directly supported by the Rapid Support Forces - the leader of whom at that time shared power in Sudan's Transitional Sovereignty Council. (Source: https://acleddata.com/2023/03/03/context-assessment-new-political-deal-amidst-rising-political-disorder-in-sudan/)
+#### In 2018, state forces accounted for 38% and 43% of civilian killings in South Darfur and West Darfur respectively, but these figures significantly decreased in the following years. This decline hints at possible growing political will to avoid obvious state-sponsored killings, potentially influenced by the governance changes following the December 2018 to September 2019 revolution. The revolution ousted longtime dictator Omar al-Bashir and established a joint civilian-military transitional government.
 
 <br>
 
-#### Since civil war broke out in April 2023 between the Sudanese Armed Forces and the Rapid Support Forces, killings of civilans on both sides have increased. Even if the civil war ends soon, unless the Sudanese government receives strong support for protecting civilians from violence in South and West Darfur from either the UN or other entities capable of strengthening the Sudanese government's capacity to protect civilians, identity group and political militias may continue the bloodshed for years to come.
+#### However, civilian killings by political militias in South Darfur rose from 33% in 2018 to 57% in 2019, and in West Darfur, they increased from 4% in 2019 to 68% in 2020. A personal examination of the raw data revealed that all of these killings by political militias are coded as having been conducted by "Unidentified Armed Group (Sudan)". I.e., because their identity could not be established they could not be directly linked to either the government or the opposition. Thus, it is at least possible state-led civilian killings may have continued, but were executed by unidentified political militias loyal to the state, enabling state leaders to maintain plausible deniability.
+
+<br>
+
+#### Troublingly, as civilian killings by state forces declined, those by identity militias surged. In South Darfur, identity militia killings rose from 23% in 2019 to 77% in 2020, and in West Darfur, from 50% in 2018 to 85% in 2019. Although this share dropped to 26% in 2020, it dramatically increased to 93% in 2021 with the closure of the last UN bases.
+
+<br>
+
+#### The spike in killings by identity militias as UN troops withdrew indicates that the Sudanese government, despite a possible increase in political will to avoid obvious civilian killings, might have lacked the capacity and/or desire to fill emerging power vacuums and prevent such violence.
+
+<br>
+
+#### The second interactive table displays the annual number of civilian killings by perpetrator type, not their proportion. It shows that until 2019, South Darfur had more fatalities from identity militias than West Darfur. However, this trend shifted in 2019 with 39 identity militia killings (up from 15 the previous year), and dramatically so in 2021 with 144 such killings. The table also indicates a significant decrease in the proportion of civilian killings by state forces in both South Darfur and West Darfur after 2018.
+
+<br>
+
+```{R Perpetrators Number of Civilian Killings in South and West Darfur, message=FALSE, warning=FALSE, echo=TRUE}
+
+#Delete when done
+filtered_data_for_inspection <- acled_2016_2021_west_south %>%
+  filter(
+    (admin1 == "South Darfur" & (year == 2018 | year == 2019)) |
+    (admin1 == "West Darfur" & (year == 2019 | year == 2020))
+  ) %>%
+    mutate(Perpetrator = factor(inter1, 
+                                levels = c(1, 2, 3, 4, 5, 6, 7, 8), 
+                                labels = c("State Forces", "Rebel Groups", "Political Militias", "Identity Militias", "Rioters", "Protesters", "Civilians", "External/Other Forces"))) %>%
+    select(-inter1) %>%
+    filter(Perpetrator == "Political Militias") %>%
+    mutate(Year = year,
+         Actor = actor1) %>%
+    group_by(admin1, Year, Perpetrator, Actor) %>%                       # Group by admin1, Year, Perpetrator, and Actor
+    summarise(
+      Fatalities = sum(fatalities, na.rm = TRUE),   # Sum fatalities, removing NA values
+      Attacks = sum(attacks, na.rm = TRUE),         # Sum attacks, removing NA values
+      .groups = 'drop'                              # Drop the grouping structure afterwards
+    ) %>%
+    group_by(admin1, Year, Perpetrator, Actor) %>%  # Regroup by 
+    arrange(desc(Fatalities), .by_group = TRUE)
+    
+
+
+df3 <- fatalities_by_region_year_actor %>% 
+  mutate(Fatalities = n) %>%
+  mutate(Perpetrator = factor(inter1, levels = c(1,3,4,2,8), labels = c("State Forces", "Political Militias", "Identity Militias", "Rebel Groups", "External/Other Forces"))) %>%
+  mutate(Year = year)
+ 
+# Define colors corresponding to each group
+colors <- c("State Forces" = "maroon1",
+            "Political Militias" = "deepskyblue1",
+            "Identity Militias" = "peru",
+            "Rebel Groups" = "gray65",
+            "External/Other Forces" = "black")
+
+# Specify the custom labels for the y-axis
+#custom_labels <- c("0", "25", "50", "75", "100")
+
+# Create the plot
+gg2 <- ggplot(df3, aes(x = Year, y = Fatalities, fill = Perpetrator)) +
+  geom_col(position = "stack", width = 0.8, size = 1, alpha = 0.7) +
+  scale_fill_manual(values = colors, 
+                    breaks = c("State Forces", "Political Militias", "Identity Militias", "Rebel Groups", "External/Other Forces"),
+                    labels = c("State Forces", "Political Militias", "Identity Militias", "Rebel Groups", "External/Other Forces")) +
+#  scale_y_continuous(breaks = seq(0, 1, by = 0.25), labels = custom_labels) +  # Set custom breaks and labels for y-axis
+  scale_y_continuous(breaks = seq(min(df3$n), max(df3$n), by = 15)) +
+  scale_x_continuous(breaks = seq(min(df3$year), max(df3$year), by = 1)) +  # Ensure years are displayed without gaps
+  theme_wsj() +
+  theme(legend.position = "top",
+        title = element_text(size = 16, color = "steelblue", face = 'bold'),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.x = element_text(size = 12),
+        axis.text.y = element_text(size = 14),
+        strip.text.x = element_text(size=16, face = 'bold'),
+        legend.text=element_text(size=13)) +
+  labs(title = "Perpetrators' Number of Civilian Killings (2016-2021)",
+       subtitle = "Jan. 2016 - Dec. 2021",
+       caption = "") +
+  guides(fill = guide_legend(title = "")) +
+  facet_wrap(~ admin1)
+
+ggplotly(gg2, height = 600, width = 850)
+
+
+```
+
+<br>
+
+```{R Creating sf Objects and Conducting Spatial Joins, message=FALSE, warning=FALSE, echo=TRUE}
+
+fatalities_region_year_identity_militias = acled_2016_2021_west_south %>%
+  filter(inter1 == "Identity Militias") %>%
+  group_by(admin1, year, actor1) %>%
+  tally(fatalities)
+
+
+library(rgdal)
+library(tidyverse)
+library(tmap)
+library(sp)
+library(sf)
+
+setwd("C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project")
+
+
+darfur_internal<-raster::shapefile("darfur_internal.shp")
+
+# Convert to a simple feature spatial object
+darfur_internal_sf <- sf::st_as_sf(darfur_internal)
+
+original_crs <- st_crs(darfur_internal) #Original CRS is EPSG:4326, i.e., the World Geodetic System 1984 (WGS84), a geographic CRS
+CRS.new <- st_crs("EPSG:20135") #This is a projected CRS well-suited for Darfur
+
+darfur_internal_sf <- st_transform(darfur_internal_sf, crs = CRS.new) # Transform the CRS to EPSG:20135
+
+acled_short = ACLED_data[c("event_date","admin1","year","sub_event_type","actor1","inter1","location","latitude","longitude","attacks","fatalities")] %>%
+    mutate(Perpetrator = factor(inter1, 
+                                levels = c(1, 2, 3, 4, 5, 6, 7, 8), 
+                                labels = c("State Forces", "Rebel Groups", "Political Militias", "Identity Militias", "Rioters", "Protesters", "Civilians", "External/Other Forces"))) #%>%
+    #select(-inter1)
+
+
+acled <- acled_short %>% 
+  mutate(inter1 = factor(inter1, levels = c(1,3,4,2,8), labels = c("State Forces", "Political Militias", "Identity Militias", "Rebel Groups", "External/Other Forces"))) %>% #This assigns the specified armed groups in the labels argument to the integer values in the levels argument. It also controls the order of the armed groups on any legends  
+  mutate(Perpetrator = inter1,
+         Year = year,
+         Actor = actor1)
+
+
+acled_2016 = subset(acled, year == 2016)
+acled_2017 = subset(acled, year == 2017)
+acled_2018 = subset(acled, year == 2018)
+acled_2019 = subset(acled, year == 2019)
+acled_2020 = subset(acled, year == 2020)
+acled_2021 = subset(acled, year == 2021)
+
+
+# Make objects special feature objects and set CRS to the original CRS of the darfur map shapefile - 
+acled_2016_sf <- st_as_sf(acled_2016, coords = c("longitude", "latitude"), crs = original_crs)
+acled_2017_sf <- st_as_sf(acled_2017, coords = c("longitude", "latitude"), crs = original_crs)
+acled_2018_sf <- st_as_sf(acled_2018, coords = c("longitude", "latitude"), crs = original_crs)
+acled_2019_sf <- st_as_sf(acled_2019, coords = c("longitude", "latitude"), crs = original_crs)
+acled_2020_sf <- st_as_sf(acled_2020, coords = c("longitude", "latitude"), crs = original_crs)
+acled_2021_sf <- st_as_sf(acled_2021, coords = c("longitude", "latitude"), crs = original_crs)
+
+# Transform the CRS to EPSG:20135
+acled_2016_sf <- st_transform(acled_2016_sf, crs=CRS.new)
+acled_2017_sf <- st_transform(acled_2017_sf, crs=CRS.new)
+acled_2018_sf <- st_transform(acled_2018_sf, crs=CRS.new)
+acled_2019_sf <- st_transform(acled_2019_sf, crs=CRS.new)
+acled_2020_sf <- st_transform(acled_2020_sf, crs=CRS.new)
+acled_2021_sf <- st_transform(acled_2021_sf, crs=CRS.new)
+
+# At this point, I make "contains" spatial joins with R. See my comments in the code of Visual 6 for more understanding of the following code:
+acled_2016_joined_sf <- sf::st_join(acled_2016_sf, join = st_within, left=FALSE, darfur_internal_sf)
+acled_2017_joined_sf <- sf::st_join(acled_2017_sf, join = st_within, left=FALSE, darfur_internal_sf)
+acled_2018_joined_sf <- sf::st_join(acled_2018_sf, join = st_within, left=FALSE, darfur_internal_sf)
+acled_2019_joined_sf <- sf::st_join(acled_2019_sf, join = st_within, left=FALSE, darfur_internal_sf)
+acled_2020_joined_sf <- sf::st_join(acled_2020_sf, join = st_within, left=FALSE, darfur_internal_sf)
+acled_2021_joined_sf <- sf::st_join(acled_2021_sf, join = st_within, left=FALSE, darfur_internal_sf)
+
+
+
+acled_2016_joined_sf$fatalities <- as.numeric(acled_2016_joined_sf$fatalities)
+acled_2017_joined_sf$fatalities <- as.numeric(acled_2017_joined_sf$fatalities)
+acled_2018_joined_sf$fatalities <- as.numeric(acled_2018_joined_sf$fatalities)
+acled_2019_joined_sf$fatalities <- as.numeric(acled_2019_joined_sf$fatalities)
+acled_2020_joined_sf$fatalities <- as.numeric(acled_2020_joined_sf$fatalities)
+acled_2021_joined_sf$fatalities <- as.numeric(acled_2021_joined_sf$fatalities)
+
+
+fifty_miles_in_meters <- 50 * 1609.344
+
+# Closed South Darfur Bases between 2017 - 2019
+# UN Bases in South Darfur Closed in 2017:
+closed_bases_south_2017 <- readxl::read_excel("closed_bases_south_2017-portfolio_2023.xlsx", 
+     col_types = c("text", "text", 
+         "numeric", "numeric"))
+closed_bases_south_2017_sf=st_as_sf(closed_bases_south_2017, coords = c("longitude", "latitude"), crs = original_crs)
+
+# UN Bases in South Darfur Closed in 2018:
+closed_bases_south_2018 <- readxl::read_excel("closed_bases_south_2018-portfolio_2023.xlsx", 
+     col_types = c("text","text", 
+         "numeric", "numeric"))
+closed_bases_south_2018_sf=st_as_sf(closed_bases_south_2018, coords = c("longitude", "latitude"), crs = original_crs)
+
+# UN Bases in South Darfur Closed in 2019:
+closed_bases_south_2019 <- readxl::read_excel("closed_bases_south_2019-portfolio_2023.xlsx", 
+     col_types = c("text", "text", 
+         "numeric", "numeric"))
+closed_bases_south_2019_sf=st_as_sf(closed_bases_south_2019, coords = c("longitude", "latitude"), crs = original_crs)
+
+# Closed West Darfur Bases between 2017 - 2019
+# UN Bases in West Darfur Closed in 2017:
+closed_bases_west_2017 <- readxl::read_excel("closed_bases_west_2017-portfolio_2023.xlsx", 
+     col_types = c("text", "text", 
+         "numeric", "numeric"))
+closed_bases_west_2017_sf=st_as_sf(closed_bases_west_2017, coords = c("longitude", "latitude"), crs = original_crs)
+
+# UN Bases in West Darfur Closed in 2018:
+closed_bases_west_2018 <- readxl::read_excel("closed_bases_west_2018-portfolio_2023.xlsx", 
+     col_types = c("text", "text", 
+         "numeric", "numeric"))
+closed_bases_west_2018_sf=st_as_sf(closed_bases_west_2018, coords = c("longitude", "latitude"), crs = original_crs)
+
+# UN Bases in West Darfur Closed in 2019:
+closed_bases_west_2019 <- readxl::read_excel("closed_bases_west_2019-portfolio_2023.xlsx", 
+     col_types = c("text", "text", 
+         "numeric", "numeric"))
+closed_bases_west_2019_sf=st_as_sf(closed_bases_west_2019, coords = c("longitude", "latitude"), crs = original_crs)
+
+
+# Transform the following data to be plotted into a Projected CRS (i.e., EPSG:20135) that uses units of measurement of meters rather than degrees
+
+closed_bases_south_2017_sf <- st_transform(closed_bases_south_2017_sf, CRS.new)
+closed_bases_south_2018_sf <- st_transform(closed_bases_south_2018_sf, CRS.new)
+closed_bases_south_2019_sf <- st_transform(closed_bases_south_2019_sf, CRS.new)
+
+closed_bases_west_2017_sf <- st_transform(closed_bases_west_2017_sf, CRS.new)
+closed_bases_west_2018_sf <- st_transform(closed_bases_west_2018_sf, CRS.new)
+closed_bases_west_2019_sf <- st_transform(closed_bases_west_2019_sf, CRS.new)
+
+
+# Create buffer objects around UN bases closed in South Darfur in 2017, 2018, and 2019:
+
+# South Darfur
+# 2017
+closed_bases_south_2017_buffers <- st_buffer(x=closed_bases_south_2017_sf, dist =  fifty_miles_in_meters)
+union_buffers_south.2017 <- st_union(closed_bases_south_2017_buffers)
+
+# 2018
+closed_bases_south_2018_buffers <- st_buffer(x=closed_bases_south_2018_sf, dist =  fifty_miles_in_meters)
+union_buffers_south.2018 <- st_union(closed_bases_south_2018_buffers)
+
+# 2019
+closed_bases_south_2019_buffers <- st_buffer(x=closed_bases_south_2019_sf, dist =  fifty_miles_in_meters)
+union_buffers_south.2019 <- st_union(closed_bases_south_2019_buffers)
+
+
+# West Darfur
+# 2017
+closed_bases_west_2017_buffers <- st_buffer(x=closed_bases_west_2017_sf, dist =  fifty_miles_in_meters)
+union_buffers_west.2017 <- st_union(closed_bases_west_2017_buffers)
+
+# 2018
+closed_bases_west_2018_buffers <- st_buffer(x=closed_bases_west_2018_sf, dist =  fifty_miles_in_meters)
+union_buffers_west.2018 <- st_union(closed_bases_west_2018_buffers)
+
+# 2019
+closed_bases_west_2019_buffers <- st_buffer(x=closed_bases_west_2019_sf, dist =  fifty_miles_in_meters)
+union_buffers_west.2019 <- st_union(closed_bases_west_2019_buffers)
+
+
+```
+
+<br>
+
+```{R Code for 2017 Buffer on Map Calculations of Attacks on Civilians and Fatalities in South Darfur, echo=TRUE, fig.height=18, fig.width=10, message=FALSE, warning=FALSE}
+
+# CALCULATNG ATTACKS ON CIVILIANS & FATALITIES PER YEAR INSIDE 50 MILE RADIUS UNION BUFFERS AROUND SOUTH DARFUR BASES CLOSED IN 2017, 2018, and 2019
+
+# length() calculates the number of civilian attacks
+# sum() calculates the number of fatalities from these attacks
+
+
+acled_data_2016.south_buffers_2017 = sf::st_filter(acled_2016_joined_sf, union_buffers_south.2017, .predicate = st_within)
+
+
+acled_data_2017.south_buffers_2017 = sf::st_filter(acled_2017_joined_sf, union_buffers_south.2017, .predicate = st_within)
+
+
+acled_data_2018.south_buffers_2017 = sf::st_filter(acled_2018_joined_sf, union_buffers_south.2017, .predicate = st_within)
+
+
+acled_data_2019.south_buffers_2017 = sf::st_filter(acled_2019_joined_sf, union_buffers_south.2017, .predicate = st_within)
+
+
+acled_data_2020.south_buffers_2017 = sf::st_filter(acled_2020_joined_sf, union_buffers_south.2017, .predicate = st_within)
+
+
+acled_data_2021.south_buffers_2017 = sf::st_filter(acled_2021_joined_sf, union_buffers_south.2017, .predicate = st_within)
+
+
+acled_data_all_years.south_buffers_2017 = rbind(acled_data_2016.south_buffers_2017, acled_data_2017.south_buffers_2017, acled_data_2018.south_buffers_2017, acled_data_2019.south_buffers_2017, acled_data_2020.south_buffers_2017, acled_data_2021.south_buffers_2017)
+
+
+# Filtering, transforming, summarizing, and then retaining top 2 rows for each year based on fatalities
+violence_per_identity_militia_actor.south_buffers_2017 <- acled_data_all_years.south_buffers_2017 %>%
+  filter(Perpetrator == "Identity Militias", admin1 == "South Darfur") %>%  # Keep only rows where Perpetrator is "Identity Militias" and where admin1 is "South Darfur"
+  mutate(Year = year,                      
+         Actor = actor1) %>%
+  group_by(Year, Actor) %>%                       # Group by Year and Actor
+  summarise(
+    Fatalities = sum(fatalities, na.rm = TRUE),   # Sum fatalities, removing NA values
+    Attacks = sum(attacks, na.rm = TRUE),         # Sum attacks, removing NA values
+    .groups = 'drop'                              # Drop the grouping structure afterwards
+  ) %>%
+  mutate(Buffers = "2017 Closed Base Areas") %>% # Add new column denoting the union buffer
+  group_by(Year) %>%                             # Regroup by Year only
+  arrange(desc(Fatalities), .by_group = TRUE) %>%# Sort within each Year group by Fatalities
+  slice_max(order_by = Fatalities, n = 1, with_ties = FALSE) # Slice the top 2 rows for each Year
+
+# The resulting sf dataframe will keep the top row for each Year in terms of number of fatalities.
+
+
+```
+
+<br>
+
+```{R Code for 2018 Buffer on Map Calculations of Attacks on Civilians and Fatalities in South Darfur, echo=TRUE, fig.height=18, fig.width=10, message=FALSE, warning=FALSE}
+
+
+acled_data_2016.south_buffers_2018 = sf::st_filter(acled_2016_joined_sf, union_buffers_south.2018, .predicate = st_within)
+
+
+acled_data_2017.south_buffers_2018 = sf::st_filter(acled_2017_joined_sf, union_buffers_south.2018, .predicate = st_within)
+
+
+acled_data_2018.south_buffers_2018 = sf::st_filter(acled_2018_joined_sf, union_buffers_south.2018, .predicate = st_within)
+
+
+acled_data_2019.south_buffers_2018 = sf::st_filter(acled_2019_joined_sf, union_buffers_south.2018, .predicate = st_within)
+
+
+acled_data_2020.south_buffers_2018 = sf::st_filter(acled_2020_joined_sf, union_buffers_south.2018, .predicate = st_within)
+
+
+acled_data_2021.south_buffers_2018 = sf::st_filter(acled_2021_joined_sf, union_buffers_south.2018, .predicate = st_within)
+
+
+acled_data_all_years.south_buffers_2018 = rbind(acled_data_2016.south_buffers_2018, acled_data_2017.south_buffers_2018, acled_data_2018.south_buffers_2018, acled_data_2019.south_buffers_2018, acled_data_2020.south_buffers_2018, acled_data_2021.south_buffers_2018)
+
+
+# Filtering, transforming, summarizing, and then retaining top 2 rows for each year based on fatalities
+violence_per_identity_militia_actor.south_buffers_2018 <- acled_data_all_years.south_buffers_2018 %>%
+  filter(Perpetrator == "Identity Militias", admin1 == "South Darfur") %>%  # Keep only rows where Perpetrator is "Identity Militias" and where admin1 is "South Darfur"
+  mutate(Year = year,                      
+         Actor = actor1) %>%
+  group_by(Year, Actor) %>%                       # Group by Year and Actor
+  summarise(
+    Fatalities = sum(fatalities, na.rm = TRUE),   # Sum fatalities, removing NA values
+    Attacks = sum(attacks, na.rm = TRUE),         # Sum attacks, removing NA values
+    .groups = 'drop'                              # Drop the grouping structure afterwards
+  ) %>%
+  mutate(Buffers = "2018 Closed Base Areas") %>% # Add new column denoting the union buffer
+  group_by(Year) %>%                             # Regroup by Year only
+  arrange(desc(Fatalities), .by_group = TRUE) %>%# Sort within each Year group by Fatalities
+  slice_max(order_by = Fatalities, n = 1, with_ties = FALSE) # Slice the top 2 rows for each Year
+
+# The resulting sf dataframe will keep the top row for each Year in terms of number of fatalities.
+
+
+
+```
+
+<br>
+
+```{R Code for 2019 Buffer on Map Calculations of Attacks on Civilians and Fatalities in South Darfur, echo=TRUE, fig.height=18, fig.width=10, message=FALSE, warning=FALSE}
+
+acled_data_2016.south_buffers_2019 = sf::st_filter(acled_2016_joined_sf, union_buffers_south.2019, .predicate = st_within)
+
+
+acled_data_2017.south_buffers_2019 = sf::st_filter(acled_2017_joined_sf, union_buffers_south.2019, .predicate = st_within)
+
+
+acled_data_2018.south_buffers_2019 = sf::st_filter(acled_2018_joined_sf, union_buffers_south.2019, .predicate = st_within)
+
+
+acled_data_2019.south_buffers_2019 = sf::st_filter(acled_2019_joined_sf, union_buffers_south.2019, .predicate = st_within)
+
+
+acled_data_2020.south_buffers_2019 = sf::st_filter(acled_2020_joined_sf, union_buffers_south.2019, .predicate = st_within)
+
+
+acled_data_2021.south_buffers_2019 = sf::st_filter(acled_2021_joined_sf, union_buffers_south.2019, .predicate = st_within)
+
+acled_data_all_years.south_buffers_2019 = rbind(acled_data_2016.south_buffers_2019, acled_data_2017.south_buffers_2019, acled_data_2018.south_buffers_2019, acled_data_2019.south_buffers_2019, acled_data_2020.south_buffers_2019, acled_data_2021.south_buffers_2019)
+
+
+# Filtering, transforming, summarizing, and then retaining top 2 rows for each year based on fatalities
+violence_per_identity_militia_actor.south_buffers_2019 <- acled_data_all_years.south_buffers_2019 %>%
+  filter(Perpetrator == "Identity Militias", admin1 == "South Darfur") %>%  # Keep only rows where Perpetrator is "Identity Militias" and where admin1 is "South Darfur"
+  mutate(Year = year,                      
+         Actor = actor1) %>%
+  group_by(Year, Actor) %>%                       # Group by Year and Actor
+  summarise(
+    Fatalities = sum(fatalities, na.rm = TRUE),   # Sum fatalities, removing NA values
+    Attacks = sum(attacks, na.rm = TRUE),         # Sum attacks, removing NA values
+    .groups = 'drop'                              # Drop the grouping structure afterwards
+  ) %>%
+  mutate(Buffers = "2019 Closed Base Areas") %>% # Add new column denoting the union buffer
+  group_by(Year) %>%                             # Regroup by Year only
+  arrange(desc(Fatalities), .by_group = TRUE) %>%# Sort within each Year group by Fatalities
+  slice_max(order_by = Fatalities, n = 1, with_ties = FALSE) # Slice the top 2 rows for each Year
+
+# The resulting sf dataframe will keep the top row for each Year in terms of number of fatalities
+
+```
+
+<br>
+
+```{R Code for 2017 Buffer on Map Calculations of Attacks on Civilians and Fatalities in West Darfur, echo=TRUE, fig.height=18, fig.width=10, message=FALSE, warning=FALSE}
+
+# CALCULATNG ATTACKS ON CIVILIANS & FATALITIES PER YEAR INSIDE 50 MILE RADIUS BUFFERS AROUND WEST DARFUR BASES CLOSED IN 2017, 2018, and 2019
+
+# length() calculates the number of civilian attacks
+# sum() calculates the number of fatalities from these attacks
+
+
+
+acled_data_2016.west_buffers_2017 = sf::st_filter(acled_2016_joined_sf, union_buffers_west.2017, .predicate = st_within)
+
+
+acled_data_2017.west_buffers_2017 = sf::st_filter(acled_2017_joined_sf, union_buffers_west.2017, .predicate = st_within)
+
+
+acled_data_2018.west_buffers_2017 = sf::st_filter(acled_2018_joined_sf, union_buffers_west.2017, .predicate = st_within)
+
+
+acled_data_2019.west_buffers_2017 = sf::st_filter(acled_2019_joined_sf, union_buffers_west.2017, .predicate = st_within)
+
+
+acled_data_2020.west_buffers_2017 = sf::st_filter(acled_2020_joined_sf, union_buffers_west.2017, .predicate = st_within)
+
+
+acled_data_2021.west_buffers_2017 = sf::st_filter(acled_2021_joined_sf, union_buffers_west.2017, .predicate = st_within)
+
+acled_data_all_years.west_buffers_2017 = rbind(acled_data_2016.west_buffers_2017, acled_data_2017.west_buffers_2017, acled_data_2018.west_buffers_2017, acled_data_2019.west_buffers_2017, acled_data_2020.west_buffers_2017, acled_data_2021.west_buffers_2017)
+
+
+# Filtering, transforming, summarizing, and then retaining top 2 rows for each year based on fatalities
+violence_per_identity_militia_actor.west_buffers_2017 <- acled_data_all_years.west_buffers_2017 %>%
+  filter(Perpetrator == "Identity Militias", admin1 == "West Darfur") %>%  # Keep only rows where Perpetrator is "Identity Militias" and where admin1 is "West Darfur"
+  mutate(Year = year,                      
+         Actor = actor1) %>%
+  group_by(Year, Actor) %>%                         # Group by Year and Actor
+  summarise(
+    Fatalities = sum(fatalities, na.rm = TRUE),     # Sum fatalities, removing NA values
+    Attacks = sum(attacks, na.rm = TRUE),           # Sum attacks, removing NA values
+    .groups = 'drop'                                # Drop the grouping structure afterwards
+  ) %>%
+  mutate(Buffers = "2017 Closed Base Areas") %>%    # Add new column denoting the union buffer
+  group_by(Year) %>%                                # Regroup by Year only
+  arrange(desc(Fatalities), .by_group = TRUE) %>%   # Sort within each Year group by Fatalities
+  slice_max(order_by = Fatalities, n = 1, with_ties = FALSE)  # Slice the top 2 rows for each Year
+
+# The resulting sf dataframe will keep the top row for each Year in terms of number of fatalities.
+
+```
+
+<br>
+
+```{R Code for 2018 Buffer on Map Calculations of Attacks on Civilians and Fatalities in West Darfur, echo=TRUE, fig.height=18, fig.width=10, message=FALSE, warning=FALSE}
+
+
+acled_data_2016.west_buffers_2018 = sf::st_filter(acled_2016_joined_sf, union_buffers_west.2018, .predicate = st_within)
+
+
+acled_data_2017.west_buffers_2018 = sf::st_filter(acled_2017_joined_sf, union_buffers_west.2018, .predicate = st_within)
+
+
+acled_data_2018.west_buffers_2018 = sf::st_filter(acled_2018_joined_sf, union_buffers_west.2018, .predicate = st_within)
+
+
+acled_data_2019.west_buffers_2018 = sf::st_filter(acled_2019_joined_sf, union_buffers_west.2018, .predicate = st_within)
+
+
+acled_data_2020.west_buffers_2018 = sf::st_filter(acled_2020_joined_sf, union_buffers_west.2018, .predicate = st_within)
+
+
+acled_data_2021.west_buffers_2018 = sf::st_filter(acled_2021_joined_sf, union_buffers_west.2018, .predicate = st_within)
+
+acled_data_all_years.west_buffers_2018 = rbind(acled_data_2016.west_buffers_2018, acled_data_2017.west_buffers_2018, acled_data_2018.west_buffers_2018, acled_data_2019.west_buffers_2018, acled_data_2020.west_buffers_2018, acled_data_2021.west_buffers_2018)
+
+
+# Filtering, transforming, summarizing, and then retaining top 2 rows for each year based on fatalities
+violence_per_identity_militia_actor.west_buffers_2018 <- acled_data_all_years.west_buffers_2018 %>%
+  filter(Perpetrator == "Identity Militias", admin1 == "West Darfur") %>%  # Keep only rows where Perpetrator is "Identity Militias" and where admin1 is "West Darfur"
+  mutate(Year = year,                      
+         Actor = actor1) %>%
+  group_by(Year, Actor) %>%                       # Group by Year and Actor
+  summarise(
+    Fatalities = sum(fatalities, na.rm = TRUE),   # Sum fatalities, removing NA values
+    Attacks = sum(attacks, na.rm = TRUE),         # Sum attacks, removing NA values
+    .groups = 'drop'                              # Drop the grouping structure afterwards
+  ) %>%
+  mutate(Buffers = "2018 Closed Base Areas") %>% # Add new column denoting the union buffer
+  group_by(Year) %>%                             # Regroup by Year only
+  arrange(desc(Fatalities), .by_group = TRUE) %>%# Sort within each Year group by Fatalities
+  slice_max(order_by = Fatalities, n = 1, with_ties = FALSE) # Slice the top 2 rows for each Year
+
+# The resulting sf dataframe will keep the top row for each Year in terms of number of fatalities.
+
+```
+
+<br>
+
+```{R Code for 2019 Buffer on Map Calculations of Attacks on Civilians and Fatalities in West Darfur, echo=TRUE, fig.height=18, fig.width=10, message=FALSE, warning=FALSE}
+
+
+acled_data_2016.west_buffers_2019 = sf::st_filter(acled_2016_joined_sf, union_buffers_west.2019, .predicate = st_within)
+
+
+acled_data_2017.west_buffers_2019 = sf::st_filter(acled_2017_joined_sf, union_buffers_west.2019, .predicate = st_within)
+
+
+acled_data_2018.west_buffers_2019 = sf::st_filter(acled_2018_joined_sf, union_buffers_west.2019, .predicate = st_within)
+
+
+acled_data_2019.west_buffers_2019 = sf::st_filter(acled_2019_joined_sf, union_buffers_west.2019, .predicate = st_within)
+
+
+acled_data_2020.west_buffers_2019 = sf::st_filter(acled_2020_joined_sf, union_buffers_west.2019, .predicate = st_within)
+
+
+acled_data_2021.west_buffers_2019 = sf::st_filter(acled_2021_joined_sf, union_buffers_west.2019, .predicate = st_within)
+
+
+acled_data_all_years.west_buffers_2019 = rbind(acled_data_2016.west_buffers_2019, acled_data_2017.west_buffers_2019, acled_data_2018.west_buffers_2019, acled_data_2019.west_buffers_2019, acled_data_2020.west_buffers_2019, acled_data_2021.west_buffers_2019)
+
+
+
+violence_per_identity_militia_actor.west_buffers_2019 <- acled_data_all_years.west_buffers_2019 %>%
+  filter(Perpetrator == "Identity Militias", admin1 == "West Darfur") %>%  # Keep only rows where Perpetrator is "Identity Militias" and where admin1 is "West Darfur"
+  mutate(Year = year,                      
+         Actor = actor1) %>%
+  group_by(Year, Actor) %>%                       # Group by Year and Actor
+  summarise(
+    Fatalities = sum(fatalities, na.rm = TRUE),   # Sum fatalities, removing NA values
+    Attacks = sum(attacks, na.rm = TRUE),         # Sum attacks, removing NA values
+    .groups = 'drop'                              # Drop the grouping structure afterwards
+  ) %>%
+  mutate(Buffers = "2019 Closed Base Areas") %>% # Add new column denoting the union buffer
+  group_by(Year) %>%                             # Regroup by Year only
+  arrange(desc(Fatalities), .by_group = TRUE) %>%# Sort within each Year group by Fatalities
+  slice_max(order_by = Fatalities, n = 1, with_ties = FALSE)        # Slice the top 2 rows for each Year
+
+
+# The resulting sf dataframe will keep the top row for each Year in terms of number of fatalities.
+
+
+```
+
+<br>
+
+```{R Code - Combine Dataframes, echo=TRUE, fig.height=18, fig.width=10, message=FALSE, warning=FALSE}
+
+# Combine all of the resulting sf objects from above, for South Darfur union buffers
+
+violence_per_identity_militia_actor.south_buffers <- rbind(violence_per_identity_militia_actor.south_buffers_2017, violence_per_identity_militia_actor.south_buffers_2018, violence_per_identity_militia_actor.south_buffers_2019) %>%
+  group_by(Year) %>%                             # Regroup by Year only
+  arrange(desc(Fatalities), .by_group = TRUE) %>%# Sort within each Year group by Fatalities
+  slice_max(order_by = Fatalities, n = 1, with_ties = FALSE)  %>%
+  rename(Areas = Buffers) %>%                     # Rename 'Buffer' as 'Area'
+  as.data.frame() %>%                             # Remove 'geometry' column by converting the sf object to a dataframe
+  select(-geometry)
+
+
+# Combine all of the resulting sf objects from above, for West Darfur union buffers
+
+violence_per_identity_militia_actor.west_buffers <- rbind(violence_per_identity_militia_actor.west_buffers_2017, violence_per_identity_militia_actor.west_buffers_2018, violence_per_identity_militia_actor.west_buffers_2019) %>%
+  group_by(Year) %>%                             # Regroup by Year only
+  arrange(desc(Fatalities), .by_group = TRUE) %>%# Sort within each Year group by Fatalities
+  slice_max(order_by = Fatalities, n = 1, with_ties = FALSE)  %>%
+  rename(Areas = Buffers) %>%                      # Rename 'Buffer' as 'Area'
+  as.data.frame() %>%
+  select(-geometry) # Remove 'geometry' column by converting the sf object to a dataframe
+
+combined <- rbind(violence_per_identity_militia_actor.south_buffers, violence_per_identity_militia_actor.west_buffers)
+
+
+```
+
+<br>
+
+#### Because of the substantial spikes observed in identity militia civilian killings since 2020 in South Darfur and since 2019 in West Darfur, the next two tables examine such killings from both regions. To maintain brevity, the focus of each chart is only on the most lethal identity militia each year within any of the union buffers around withdrawn UN bases.
+
+<br>
+
+#### In South Darfur, the first table shows low killings from 2017 to 2019, but a surge in 2020. Of the 73 identity militia killings in all of South Darfur in 2020, 40 (55%) were committed by "Darfur communal militias" within 50 mi of the UN bases closed in 2018. In 2021, of the 38 killings, 14 (37%) were committed by Darfur communal militias near these bases.
+
+<br>
+
+#### Unfortunately, ACLED does not further disaggregate the "Darfur Communal Militia (Sudan)" category, which would otherwise clarify which specific groups within this militia category were responsible for these killings.
+
+<br>
+
+```{R Code - Create Identity Militia Killings Table for South Darfur, echo=TRUE, fig.height=18, fig.width=10, message=FALSE, warning=FALSE}
+
+library(scales)
+library(kableExtra)
+
+# For the following tables, I want to highlight the most important fatality values considering the fatality figures from both the violence_per_identity_militia_actor.south_buffers & violence_per_identity_militia_actor.west_buffers dataframes at the same time. This will help the reader put in context the fatalities shown in any one of the tables with respect to the overall fatality figures from both tables. E.g., we know South Darfur had fewer civilian killings than West Darfur between 2016-2021 in areas within 50 mi of where the UN would eventually withdraw their bases, and I want readers to more easily keep this in mind while viewing both tables.
+
+# Get min, max, and 3rd quantile values for the "Fatalities" column of the combined sf dataframe for scaling
+min_val <- min(combined$Fatalities)
+max_val <- max(combined$Fatalities)
+quantile_val <- quantile(unlist(combined$Fatalities), 0.75) # calculate the 3rd quantile
+
+# Scale the fatality figures from the South Darfur dataframe
+violence_per_identity_militia_actor.south_buffers$Fatalities <- lapply(violence_per_identity_militia_actor.south_buffers$Fatalities, function(x) {
+  if(is.numeric(x)) {
+    cell_spec(x, "html",
+              color = ifelse(x > quantile_val, "white", "black"),
+              background = scales::gradient_n_pal(c("white", "red"))(scales::rescale(x, from = c(min_val, max_val))))
+  } else {
+    x
+  }
+})
+
+
+# This code block will center neither the column names nor the column contents. Since the contents of the column "Attacks" is right aligned (being integers) and since the contents of the column "Areas" is left aligned (being strings), it makes reading the table somewhat difficult.
+
+# library(kableExtra)
+# 
+# violence_per_identity_militia_actor.south_buffers %>%
+#   kbl(caption = "<b>Identity Militias which Killed the Most Civilians near closed UN Bases in South Darfur</b>") %>%
+#   kable_classic(full_width = F, html_font = "Cambria") %>%
+#   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+
+
+# This code block will center both the column names as well as the contents of each column. However, by centering the contents of the column "Actor", it makes the table look somewhat messy since the strings in the rows of the column are not the same length
+
+# library(kableExtra)
+# 
+# violence_per_identity_militia_actor.south_buffers %>%
+#   kbl(caption = "<b>Identity Militias which Killed the Most Civilians near closed UN Bases in South Darfur</b>", 
+#       escape = FALSE, align = c("c", "c", "c", "c", "c")) %>%
+#   kable_classic(full_width = F, html_font = "Cambria") %>%
+#   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+
+
+
+# This code block will center the column names without centering the contents of each column
+
+# library(kableExtra)
+# 
+# # Generate the table and convert to HTML
+# kable_html <- violence_per_identity_militia_actor.south_buffers %>%
+#   kbl(caption = "<b>Identity Militias which Killed the Most Civilians near Closed UN Bases in South Darfur</b>", escape = FALSE) %>%
+#   kable_classic(full_width = F, html_font = "Cambria") %>%
+#   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+# 
+# # Add custom CSS to center the column headers
+# kable_html <- kable_html %>%
+#   row_spec(0, extra_css = "text-align: center;")
+# 
+# # To print the HTML table in RMarkdown or R console
+# kable_html
+
+#This code centers the column names of every column and also centers the column contents of "Fatalities" and "Attacks" in order to make these columns' contents more legible than is the case when these columns' contents are not centered.
+
+library(kableExtra)
+
+violence_per_identity_militia_actor.south_buffers %>%
+  kbl(caption = "<b>Identity Militias which Killed the Most Civilians near Closed UN Bases in South Darfur</b>", 
+      escape = FALSE) %>%
+  kable_classic(full_width = F, html_font = "Cambria") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  row_spec(0, extra_css = "text-align: center;") %>%
+  column_spec(3, extra_css = "text-align: center;") %>%
+  column_spec(4, extra_css = "text-align: center;")
+
+
+```
+
+<br>
+
+#### The table for West Darfur below reveals more about the specific identity militias involved in civilian killings than did the table for South Darfur. In 2021, 144 civilian killings by identity militias occurred in all of West Darfur, with 99 (69%) by Rizeigat Arab militias within 50 mi of the 2018-closed UN bases. In 2019, of the 39 civilian killings by identity militias in all of West Darfur, 37 (95%) were by Maaliya Arab militias, also within 50 mi of these same closed bases.
+
+<br>
+
+
+```{R Code - Create Identity Militia Killings Table for West Darfur, echo=TRUE, fig.height=18, fig.width=10, message=FALSE, warning=FALSE}
+
+# Scale the fatality figures from the West Darfur dataframe
+
+violence_per_identity_militia_actor.west_buffers$Fatalities <- lapply(violence_per_identity_militia_actor.west_buffers$Fatalities, function(x) {
+  if(is.numeric(x)) {
+    cell_spec(x, "html",
+              color = ifelse(x > quantile_val, "white", "black"),
+              background = scales::gradient_n_pal(c("white", "red"))(scales::rescale(x, from = c(min_val, max_val))))
+  } else {
+    x
+  }
+})
+
+
+#This code centers the column names of every column and also centers the column contents of "Fatalities" and "Attacks" in order to make these columns' contents more legible than is the case when these columns' contents are not centered.
+
+violence_per_identity_militia_actor.west_buffers %>%
+  kbl(caption = "<b>Identity Militias which Killed the Most Civilians near Closed UN Bases in West Darfur</b>", 
+      escape = FALSE) %>%
+  kable_classic(full_width = F, html_font = "Cambria") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  row_spec(0, extra_css = "text-align: center;") %>%
+  column_spec(3, extra_css = "text-align: center;") %>%
+  column_spec(4, extra_css = "text-align: center;")
+
+```
+
+<br>
+
+#### In the next 2 tables, I will examine all civilian killings by all identity militias in the years and inside the union buffers found in the prior 2 tables to be especially deadly: South Darfur in 2020 and 2021 within 50 mi of the UN bases withdrawn from South Darfur in 2018, and West Darfur in 2019 and 2021 within 50 mi of the UN bases withdrawn from West Darfur in 2018.
+
+<br>
+
+
+```{R Code - Calculate 2018 Union Buffer Areas as a Percentage of Total S and W Darfur Areas, echo=TRUE, fig.height=18, fig.width=10, message=FALSE, warning=FALSE}
+
+# Create a map sf object of South Darfur
+south_darfur <- darfur_internal_sf %>% 
+  filter(ADM1_EN == "South Darfur")
+
+# Calculate the area of South Darfur
+south_darfur_area <- south_darfur %>%
+  st_area() %>%
+  sum() # Summing in case of multiple geometries
+
+# Calculate the area of the part of the union buffer that is actually inside of South Darfur
+area_of_part_of_union_buffers_south.2018_inside_south_darfur <- st_intersection(union_buffers_south.2018, south_darfur) %>%
+  st_area() %>%
+  sum() # Summing in case of multiple geometries
+
+
+# Calculate percentage and print
+percentage_area_south_darfur_2018_buffers <- area_of_part_of_union_buffers_south.2018_inside_south_darfur / south_darfur_area
+
+# Round the result to one decimal place
+rounded_percentage <- round(percentage_area_south_darfur_2018_buffers * 100, 2)
+
+# Print the result with one decimal place
+print(paste("The area of the 2018 South Darfur 50 mi radius union buffer makes up", rounded_percentage, "percent of the area of all of South Darfur"))
+
+
+# Create a map sf object of West Darfur
+west_darfur <- darfur_internal_sf %>% 
+  filter(ADM1_EN == "West Darfur")
+
+# Calculate the area of the part of the union buffer that is actually inside of West Darfur
+area_of_part_of_union_buffers_west.2018_inside_west_darfur <- st_intersection(union_buffers_west.2018, west_darfur) %>%
+  st_area() %>%
+  sum() # Summing in case of multiple geometries
+
+# Calculate the area of West Darfur
+west_darfur_area <- west_darfur %>%
+  st_area() %>%
+  sum() # Summing in case of multiple geometries
+
+# Calculate percentage and print
+percentage_area_west_darfur_2018_buffers <- area_of_part_of_union_buffers_west.2018_inside_west_darfur / west_darfur_area
+
+# Round the result to one decimal place
+rounded_percentage <- round(percentage_area_west_darfur_2018_buffers * 100, 2)
+
+# Print the result with one decimal place
+print(paste("The area of the 2018 West Darfur 50 mi radius union buffer makes up", rounded_percentage, "percent of the area of all of West Darfur"))
+```
+<br>
+
+#### The area within the union buffer around the 2 2018-withdrawn UN bases comprises 26% of South Darfur's total area (per my calculations). Using this as a benchmark, I will next see whether all identity militia killings falling within the union buffer as percentage of all identity militia killings within all of South Darfur, in 2019 and in 2021, are each greater than 26%. If they are, this provides supporting evidence that identity militia killings in the areas near the withdrawn UN bases were disproportionately high for the areas where UN troops likely would have been able to respond to violence or prevent violence had the bases not been withdrawn.
+
+<br>
+
+#### Afterwards, we will turn to West Darfur, taking the same approach as with South Darfur to establishing a benchmark. The area within the union buffer around the 2 2018-withdrawn UN bases comprises 58% of West Darfur's total area (according to my calculations). We will thus see whether all identity militia killings falling within the union buffer as a percentage of all identity militia killings within all of West Darfur, in 2019 and in 2021, are each greater than 58%.
+
+<br>
+
+
+```{R Code - Create Chart Showing 2020 Numbers of ALL Identity Militia Killings inside 50 Mi Radius Union Buffer for UN Bases Closed in 2018 in South Darfur  , echo=TRUE, fig.height=18, fig.width=10, message=FALSE, warning=FALSE}
+
+violence_per_identity_militia_actor.south_buffers_2018 <- acled_data_all_years.south_buffers_2018 %>%
+  filter(Perpetrator == "Identity Militias", fatalities > 0, year == 2020 | year == 2021, admin1 == "South Darfur") %>%  # Keep only rows where Perpetrator is "Identity Militias", where admin1 is "South Darfur", and where there was at least 1 fatality from the attack, and where year = 2020
+  mutate(Year = year,                      
+         Actor = actor1) %>%
+  group_by(Year, Actor) %>%                       # Group by Year and Actor
+  summarise(
+    Fatalities = sum(fatalities, na.rm = TRUE),   # Sum fatalities, removing NA values
+    Attacks = sum(attacks, na.rm = TRUE),         # Sum attacks, removing NA values
+    .groups = 'drop'                              # Drop the grouping structure afterwards
+  ) %>%
+  mutate(Areas = "2018 Closed Base Areas"         # Add new column denoting the 2018 union buffer
+  ) %>%                     
+  group_by(Year) %>%                              # Regroup by Year only
+  arrange(desc(Fatalities), .by_group = TRUE) %>% # Sort within each Year group by Fatalities
+  #slice_max(order_by = Fatalities, n = 1, with_ties = FALSE) # Slice the top 2 rows for each Year
+  as.data.frame() %>%                             # Convert the sf object to a dataframe
+  select(-geometry)                     # Delete the geometry column
+
+
+# Convert Attacks and Areas to character in the main data frame
+violence_per_identity_militia_actor.south_buffers_2018 <- violence_per_identity_militia_actor.south_buffers_2018 %>%
+  mutate(Attacks = as.character(Attacks),
+         Areas = as.character(Areas))
+
+# Calculate the sum of fatalities for each year and create a summary row with empty strings
+summary_fatalities <- violence_per_identity_militia_actor.south_buffers_2018 %>%
+  group_by(Year) %>%
+  summarise(Fatalities = sum(Fatalities), .groups = 'drop') %>%
+  mutate(Actor = "Total", Attacks = "", Areas = "")
+
+# Append the summary row to the original data frame
+combined_data <- violence_per_identity_militia_actor.south_buffers_2018 %>%
+  bind_rows(summary_fatalities) %>%
+  arrange(Year, is.na(Actor))  # Arrange by Year and place the summary row at the end of each year's data
+
+# Find row numbers for "Total" summary rows
+bold_rows <- which(combined_data$Actor == "Total")
+
+# Version of table that does not center the caption
+# Generate the table with the kableExtra package
+# table_output <- combined_data %>%
+#   kbl(caption = "<b>Civilian Killings by Identity Militia in South Darfur (2020) within 50 Mi of UN Bases Closed in 2018</b>",
+#       escape = FALSE) %>%
+#   kable_classic(full_width = F, html_font = "Cambria") %>%
+#   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+#   row_spec(0, extra_css = "text-align: center;") %>%
+#   column_spec(3, extra_css = "text-align: center;") %>%
+#   column_spec(4, extra_css = "text-align: center;") %>%
+#   row_spec(bold_rows, bold = TRUE)  # Bold the summary rows
+# table_output
+
+# Version of table that centers the caption
+table_output <- combined_data %>%
+  kbl(caption = "<div style='text-align: center;'><b>Civilian Killings by Identity Militias in South Darfur (2020 and 2021) within 50 Mi of UN Bases Closed in 2018</b></div>",
+      escape = FALSE) %>%
+  kable_classic(full_width = F, html_font = "Cambria") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  row_spec(0, extra_css = "text-align: center;") %>%
+  column_spec(3, extra_css = "text-align: center;") %>%
+  column_spec(4, extra_css = "text-align: center;") %>%
+  row_spec(bold_rows, bold = TRUE)  # Bold the summary rows
+table_output
+
+
+```
+
+<br>
+
+#### We can see from the above table that 71 killings (or 97%) of the 73 that occurred in all of South Darfur in 2020 occurred within 50 mi of the bases withdrawn in 2018, as did 26 (or 68%) of the 38 killings in 2021. In both years, these percentages far exceeded the 26% benchmark.
+
+<br>
+
+
+```{R Code - Create Chart Showing 2019 & 2021 Numbers of ALL Identity Militia Killings inside 50 Mi Radius Union Buffer for UN Bases Closed in 2018 in West Darfur, echo=TRUE, fig.height=18, fig.width=10, message=FALSE, warning=FALSE}
+
+violence_per_identity_militia_actor.west_buffers_2018 <- acled_data_all_years.west_buffers_2018 %>%
+  filter(Perpetrator == "Identity Militias", fatalities > 0, year == 2019 | year == 2021, admin1 == "West Darfur") %>%  # Keep only rows where Perpetrator is "Identity Militias", where admin1 is "West Darfur" and where there was at least 1 fatality from the attack, and where year = 2019 or 2021
+  mutate(Year = year,                      
+         Actor = actor1) %>%
+  group_by(Year, Actor) %>%                       # Group by Year and Actor
+  summarise(
+    Fatalities = sum(fatalities, na.rm = TRUE),   # Sum fatalities, removing NA values
+    Attacks = sum(attacks, na.rm = TRUE),         # Sum attacks, removing NA values
+    .groups = 'drop'                              # Drop the grouping structure afterwards
+  ) %>%
+  mutate(Buffers = "2018 Closed Base Areas",
+         Areas = Buffers) %>%  # Add new column denoting the 2018 union buffer
+  group_by(Year) %>%                              # Regroup by Year only
+  arrange(desc(Fatalities), .by_group = TRUE) %>% # Sort within each Year group by Fatalities
+  #slice_max(order_by = Fatalities, n = 1, with_ties = FALSE) # Slice the top 2 rows for each Year
+  as.data.frame() %>%                             # Convert the sf object to a dataframe
+  select(-geometry, -Buffers)
+
+# Convert Attacks and Areas to character in the main data frame
+violence_per_identity_militia_actor.west_buffers_2018 <- violence_per_identity_militia_actor.west_buffers_2018 %>%
+  mutate(Attacks = as.character(Attacks),
+         Areas = as.character(Areas))
+
+# Calculate the sum of fatalities for each year and create a summary row with empty strings
+summary_fatalities <- violence_per_identity_militia_actor.west_buffers_2018 %>%
+  group_by(Year) %>%
+  summarise(Fatalities = sum(Fatalities), .groups = 'drop') %>%
+  mutate(Actor = "Total", Attacks = "", Areas = "")
+
+# Append the summary row to the original data frame
+combined_data <- violence_per_identity_militia_actor.west_buffers_2018 %>%
+  bind_rows(summary_fatalities) %>%
+  arrange(Year, is.na(Actor))  # Arrange by Year and place the summary row at the end of each year's data
+
+# Find row numbers for "Total" summary rows
+bold_rows <- which(combined_data$Actor == "Total")
+
+# Version of table that does not center the caption
+# Generate the table with the kableExtra package
+# table_output <- violence_per_identity_militia_actor.west_buffers_2018 %>%
+#   kbl(caption = "<b>2019 & 2020 Civilian Killings by Identity Militias near Closed UN Bases-West Darfur</b>",
+#       escape = FALSE) %>%
+#   kable_classic(full_width = F, html_font = "Cambria") %>%
+#   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+#   row_spec(0, extra_css = "text-align: center;") %>%
+#   column_spec(3, extra_css = "text-align: center;") %>%
+#   column_spec(4, extra_css = "text-align: center;") %>%
+#   row_spec(bold_rows, bold = TRUE)  # Bold the summary rows
+# table_output
+
+# Version of table that centers the caption
+table_output <- combined_data %>%
+  kbl(caption = "<div style='text-align: center;'><b>Civilian Killings by Identity Militias in West Darfur (2019 & 2021) within 50 Mi of UN Bases Closed in 2018</b></div>",
+      escape = FALSE) %>%
+  kable_classic(full_width = F, html_font = "Cambria") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  row_spec(0, extra_css = "text-align: center;") %>%
+  column_spec(3, extra_css = "text-align: center;") %>%
+  column_spec(4, extra_css = "text-align: center;") %>%
+  row_spec(bold_rows, bold = TRUE)  # Bold the summary rows
+table_output
+
+
+```
+
+<br>
+
+#### From the above chart, we can see that 39 civilian killings by identity militias occurred in 2019 within 50 mi of the UN bases withdrawn from West Darfur in 2018. This constitutes 100% of all 39 civilian killings committed by identity militias in all of West Darfur in 2019.
+
+<br>
+
+#### Further, we also see that 114 (or 79%) of the 144 civilian killings by identity militias in all of West Darfur in 2021 occurred within 50 mi of the UN bases withdrawn in 2018. Thus, in both 2019 and 2021, the benchmark was far surpassed.
+
+<br>
 
 ```{r echo=TRUE}
 
@@ -133,7 +1063,7 @@ total_pages <- 9
 # Generate the URLs for the previous and next pages
 previous_page <- ifelse(current_page > 1, paste0("visual_", current_page - 1, "-darfur_violence-code_included.html"), NA)
 
-# I did not include code for "Next Page" because this is the last page
+# I removed the code for "Next Page" both from the R code above and from the html code below because this is the last page
 
 ```
 

@@ -35,11 +35,7 @@ next_page <- ifelse(current_page < total_pages, paste0("visual_", current_page +
 
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
 
-library(tidyverse)
-library(ggplot2)
-library(ggthemes)
-library(plotly)
-
+# Note: All code, insights shared, and methodological notes in this document and other documents in this portfolio ARE NOT open source and MUST be cited.
 
 setwd("C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project")
 
@@ -49,6 +45,11 @@ ACLED_data <- readxl::read_excel("ACLED-DARFUR-VAC-2008-2021 (After Course Ended
          "text", "text", "text", "text", "text", 
          "numeric", "numeric", "text", "text", 
          "text", "numeric", "numeric"))
+
+library(tidyverse)
+library(ggplot2)
+library(ggthemes)
+library(plotly)
 
 fatalities_by_year_region=ACLED_data %>% group_by(year, admin1) %>% tally(fatalities)
 

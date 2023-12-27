@@ -34,40 +34,16 @@ next_page <- ifelse(current_page < total_pages, paste0("visual_", current_page +
 
 ```{r Maps: 2016-2021, echo=FALSE, fig.height=10.5, fig.width=10.5, message=FALSE, warning=FALSE, include=FALSE}
 
+# Note: All code, insights shared, and methodological notes in this document and other documents in this portfolio ARE NOT open source and MUST be cited.
+
 library(tidyverse)
 library(ggplot2)
-library(ggthemes)
-library(rgdal)
-library(lubridate)
-library(rtweet) 
-library(network) 
-library(igraph)
-library(ggraph) 
-library(ggnetwork) 
-library(GGally)
-library(ggrepel) 
-library(jsonlite) 
-library(intergraph)
-library(svgPanZoom) 
-library(DT)
-library(widgetframe)
-library(viridis)
-library(tmap)
+library(ggraph)
 library(ggmap)
-library(rgdal)
-library(sp)
-library(sf)
 library(ggpubr)
-library(gridExtra)
-library(grid)
-library(lattice)
-library(tigris)
-options(tigris_use_cache=TRUE)
-options(tigris_class="sf")
-
+library(readxl)
 
 setwd("C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project")
-
 
 
 ACLED_data <- readxl::read_excel("ACLED-DARFUR-VAC-2008-2021 (After Course Ended-for 2023 Portfolio)-UPDATED VERSION-inter1_numbers_replaced_with_actor_names.xlsx", 
@@ -89,176 +65,128 @@ acled_2018 = subset(acled_short, year == 2018)
 acled_2019 = subset(acled_short, year == 2019)
 acled_2020 = subset(acled_short, year == 2020)
 acled_2021 = subset(acled_short, year == 2021)
-acled_2022 = subset(acled_short, year == 2022)
 
 
-#Create columns that show which bases existed during which years
+# Create columns that show which bases existed during which years
 
-#2016:
+# 2016:
 
 geo_pko <- readxl::read_excel("active_bases-removed_bases_gone_more_than_6_months-Geo-PKO-v-2-1-2023_portfolio.xlsx")
-
 geo_pko_for_maps_16 = filter(geo_pko, year == 2016)
-
-
 geo_pko_df_16 = geo_pko_for_maps_16[c("year","location","latitude", "longitude")]
-
 geo_pko_16_avg_troops_per_base = geo_pko_for_maps_16 %>% group_by(location) %>% summarise(avg.troops = mean(no.troops, na.rm=T))
-
 geo_pko_df_16 = inner_join(geo_pko_16_avg_troops_per_base, geo_pko_df_16, by="location")
 geo_pko_df_16 = distinct(geo_pko_df_16)
-
 active_bases_2016 = geo_pko_df_16
 
 
 
-#2017
+# 2017
 
 geo_pko_for_maps_17 = filter(geo_pko, year == 2017)
-
-
 geo_pko_df_17 = geo_pko_for_maps_17[c("year","location","latitude", "longitude")]
-
 geo_pko_17_avg_troops_per_base = geo_pko_for_maps_17 %>% group_by(location) %>% summarise(avg.troops = mean(no.troops, na.rm=T))
-
 geo_pko_df_17 = inner_join(geo_pko_17_avg_troops_per_base, geo_pko_df_17, by="location")
 geo_pko_df_17 = distinct(geo_pko_df_17)
-
 active_bases_2017 = geo_pko_df_17
 
-#2018
+# 2018
 
 geo_pko_for_maps_18 = filter(geo_pko, year == 2018)
-
-
 geo_pko_df_18 = geo_pko_for_maps_18[c("year","location","latitude", "longitude")]
-
 geo_pko_18_avg_troops_per_base = geo_pko_for_maps_18 %>% group_by(location) %>% summarise(avg.troops = mean(no.troops, na.rm=T))
-
 geo_pko_df_18 = inner_join(geo_pko_18_avg_troops_per_base, geo_pko_df_18, by="location")
 geo_pko_df_18 = distinct(geo_pko_df_18)
-
-
 active_bases_2018 = geo_pko_df_18
 
-#2019
+# 2019
 
 geo_pko_for_maps_19 = filter(geo_pko, year == 2019)
-
-
 geo_pko_df_19 = geo_pko_for_maps_19[c("year","location","latitude", "longitude")]
-
 geo_pko_19_avg_troops_per_base = geo_pko_for_maps_19 %>% group_by(location) %>% summarise(avg.troops = mean(no.troops, na.rm=T))
-
 geo_pko_df_19 = inner_join(geo_pko_19_avg_troops_per_base, geo_pko_df_19, by="location")
 geo_pko_df_19 = distinct(geo_pko_df_19)
 active_bases_2019 = geo_pko_df_19
 
 
-#2020
+# 2020
 
 geo_pko_for_maps_20 = filter(geo_pko, year == 2020)
-
-
 geo_pko_df_20 = geo_pko_for_maps_20[c("year","location","latitude", "longitude")]
-
 geo_pko_20_avg_troops_per_base = geo_pko_for_maps_20 %>% group_by(location) %>% summarise(avg.troops = mean(no.troops, na.rm=T))
-
 geo_pko_df_20 = inner_join(geo_pko_20_avg_troops_per_base, geo_pko_df_20, by="location")
 geo_pko_df_20 = distinct(geo_pko_df_20)
-
-
 active_bases_2020 = geo_pko_df_20
 
-#2021
+# 2021
 
 geo_pko_for_maps_21 = filter(geo_pko, year == 2021)
-
-
 geo_pko_df_21 = geo_pko_for_maps_21[c("year","location","latitude", "longitude")]
-
 geo_pko_21_avg_troops_per_base = geo_pko_for_maps_21 %>% group_by(location) %>% summarise(avg.troops = mean(no.troops, na.rm=T))
-
 geo_pko_df_21 = inner_join(geo_pko_21_avg_troops_per_base, geo_pko_df_21, by="location")
 geo_pko_df_21 = distinct(geo_pko_df_21)
-
 active_bases_2021 = geo_pko_df_21
 
 
-#2022
-
-geo_pko_for_maps_22 = filter(geo_pko, year == 2022)
+# Note: In my UN "closed bases" files, I do not include sites that were active in July or after of the given year but later closed in that same year since July is the 7th month of the year - meaning such bases were active for more than half of the given year.
 
 
-geo_pko_df_22 = geo_pko_for_maps_22[c("year","location","latitude", "longitude")]
+# Sources for the dates of UN base closures:
+# https://oios.un.org/file/8866/download?token=F6tc9ZI5 (pg. 31) - documents sites closed from 2017-2019 (I consider "team sites" and "section headquarters" as UN bases since troops are normally stationed at these types of compounds)
+# https://www.ecoi.net/en/file/local/2052225/S_2021_470_E.pdf (pg. 24) - documents sites closed in 2021
 
-geo_pko_22_avg_troops_per_base = geo_pko_for_maps_22 %>% group_by(location) %>% summarise(avg.troops = mean(no.troops, na.rm=T))
+# Note: No UN bases were closed in 2020, but were closed in 2021.
 
-geo_pko_df_22 = inner_join(geo_pko_22_avg_troops_per_base, geo_pko_df_22, by="location")
-geo_pko_df_22 = distinct(geo_pko_df_22)
-
-active_bases_2022 = geo_pko_df_22
-
-
-
-#Note: In my 2023 portfolio version of the following UN closed bases files, I do not include sites that were closed in July or after of the given year since July is the 7th month of the year - meaning such bases were active for at least half of the given year.
-
-
-#Sources for the dates of UN base closures:
-#https://oios.un.org/file/8866/download?token=F6tc9ZI5
-#https://www.ecoi.net/en/file/local/2052225/S_2021_470_E.pdf
-#https://peacekeeping.un.org/en/unamid-hands-back-former-iss-compound-to-agricultural-research-centre-el-fasher-north-darfur
-#https://peacekeeping.un.org/en/unamid-expresses-concern-over-allegations-of-improper-team-site-handovers
-
+# Note: Each of the closed base csv files build on each other. E.g., the closed bases file for 2018 includes UN bases that closed in 2017 and 2018. The closed base file for 2019 includes bases that closed in 2017, 2018, and 2019, etc.
 
 closed_bases_2017 <- read_csv("closed_bases_2017-2023_portfolio.csv")
 
 closed_bases_2018 <- read_csv("closed_bases_2018-2023_portfolio.csv")
 
-closed_bases_2019 <- read_csv("closed_bases_2019-2023_portfolio.csv")
+closed_bases_2019 <- read_csv("closed_bases_2019-2023_portfolio.csv") # Section headquarters (where UN troops are stationed) closed in 2019.
 
-closed_bases_2020 <- read_csv("closed_bases_2020-2023_portfolio.csv")
+closed_bases_2020 <- read_csv("closed_bases_2020-2023_portfolio.csv") # No bases (i.e., UN team sites closed in the year 2020, so this is the same as the closed base file for 2019)
 
 closed_bases_2021 <- read_csv("closed_bases_2021-2023_portfolio.csv")
 
-closed_bases_2022 <- read_csv("closed_bases_2022-2023_portfolio.csv")
 
-#MAPS FROM 2016-2021, FACETED
+# MAPS FROM 2016-2021, FACETED
 
-map_darfur <- get_map(location=c(21.71368, 8.64132, 27.58313, 16.12054), zoom=7, source = "stamen", maptype="terrain")
+# You must register a free API key first on https://client.stadiamaps.com/ Once registering your username and password to be able to login to the site, navigate to the "Dashboard". Then go to "Manage Properties". Under "Authentication Configuration", you can generate and view your API key. Once you have your Stadia Maps API key, first use ggmap::register_stadiamaps("YOUR-API-KEY", write=TRUE) to save the API key to your .Renviron file. Then you can proceed with using the following code:
+map_darfur <- get_stadiamap(bbox = c(21.71368, 8.64132, 27.58313, 16.12054), zoom = 7, maptype = 'stamen_terrain')
 
 
 map_2016 = ggmap(map_darfur) + 
-plot.new()+ 
 scale_fill_gradient(low="yellow", high="red") + 
 annotate("text", x= 26.609638, y= 10.817195, label="East Darfur", fontface=2,size=3) + 
-annotate("text", x= 25.556517, y= 16.217571, label="North Darfur",        fontface=2,size=3) + 
+annotate("text", x= 25.0, y= 14.817571, label="North Darfur", fontface=2,size=3) + #16.217571
 annotate("text", x= 24.420469, y= 11.002820, label="South Darfur", fontface=2,size=3) + 
-annotate("text", x= 23.116657, y= 14.519303, label="West Darfur", fontface=2,size=3) + 
+annotate("text", x= 22.8333285, y= 13.670825, label="West Darfur", fontface=2,size=3) + #22.6667, 13.4167 or 14.1
+annotate("text", x= 23.3, y= 12.3833, label="Central Darfur", fontface=2,size=3) + 
 stat_density2d(data=acled_2016, geom = "polygon", aes(x=longitude, y=latitude,fill=..level.., alpha=..level..)) + 
 guides(alpha="none") + 
 geom_point(data = active_bases_2016, mapping = aes(x = longitude, y = latitude, size=1.5, alpha=0.3), shape=22, color="steelblue") +
 guides(size="none")  + 
-theme(legend.position="bottom", title =element_text(size=13, color=  "steelblue",face='bold'), axis.title.x=element_blank(),              axis.title.y=element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank(), rect = element_blank()) + 
+theme(legend.position="bottom", title =element_text(size=13, color=  "steelblue",face='bold'), axis.title.x=element_blank(), axis.title.y=element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank(), rect = element_blank()) + 
 labs(title="2016", subtitle="", caption = "") + 
 guides(fill=guide_legend(title="Concentration of All\nAttacks on Civilians"))
 
 
 
 map_2017 = ggmap(map_darfur) + 
-plot.new()+ 
 scale_fill_gradient(low="yellow", high="red") + 
 annotate("text", x= 26.609638, y= 10.817195, label="East Darfur", fontface=2,size=3) + 
-annotate("text", x= 25.556517, y= 16.217571, label="North Darfur",        fontface=2,size=3) + 
+annotate("text", x= 25.0, y= 14.817571, label="North Darfur", fontface=2,size=3) + 
 annotate("text", x= 24.420469, y= 11.002820, label="South Darfur", fontface=2,size=3) + 
-annotate("text", x= 23.116657, y= 14.519303, label="West Darfur", fontface=2,size=3) + 
+annotate("text", x= 22.8333285, y= 13.670825, label="West Darfur", fontface=2,size=3) + #23.116657
+annotate("text", x= 23.3, y= 12.3833, label="Central Darfur", fontface=2,size=3) + 
 stat_density2d(data=acled_2017, geom = "polygon", aes(x=longitude, y=latitude,fill=..level.., alpha=..level..)) + 
 guides(alpha="none") + 
 geom_point(data = active_bases_2017, mapping = aes(x = longitude, y = latitude, size=1.5, alpha=0.3), shape=22, color="steelblue") + 
-geom_point(data = closed_bases_2018, mapping = aes(x = longitude, y = latitude, size=1.5, alpha=0.3), shape=25, color="darkgreen") +
+geom_point(data = closed_bases_2017, mapping = aes(x = longitude, y = latitude, size=1.5, alpha=0.3), shape=25, color="darkgreen") +
 guides(size="none") +
 guides(size="none")  + 
-theme(legend.position="none", title =element_text(size=13, color=  "steelblue",face='bold'), axis.title.x=element_blank(),              axis.title.y=element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank(), rect = element_blank()) + 
+theme(legend.position="none", title =element_text(size=13, color=  "steelblue",face='bold'), axis.title.x=element_blank(), axis.title.y=element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank(), rect = element_blank()) + 
 labs(title="2017", subtitle="", caption = "") + 
 guides(fill=guide_legend(title="Concentration of All\nAttacks on Civilians"))
 
@@ -266,19 +194,19 @@ guides(fill=guide_legend(title="Concentration of All\nAttacks on Civilians"))
 
 
 map_2018 = ggmap(map_darfur) + 
-plot.new()+ 
 scale_fill_gradient(low="yellow", high="red") + 
 annotate("text", x= 26.609638, y= 10.817195, label="East Darfur", fontface=2,size=3) + 
-annotate("text", x= 25.556517, y= 16.217571, label="North Darfur",        fontface=2,size=3) + 
+annotate("text", x= 25.0, y= 14.817571, label="North Darfur", fontface=2,size=3) + 
 annotate("text", x= 24.420469, y= 11.002820, label="South Darfur", fontface=2,size=3) + 
-annotate("text", x= 23.116657, y= 14.519303, label="West Darfur", fontface=2,size=3) + 
+annotate("text", x= 22.8333285, y= 13.670825, label="West Darfur", fontface=2,size=3) +
+annotate("text", x= 23.3, y= 12.3833, label="Central Darfur", fontface=2,size=3) + 
 stat_density2d(data=acled_2018, geom = "polygon", aes(x=longitude, y=latitude,fill=..level.., alpha=..level..)) + 
 guides(alpha="none") + 
 geom_point(data = active_bases_2018, mapping = aes(x = longitude, y = latitude, size=1.5, alpha=0.5), shape=22, color="steelblue") +
 guides(size="none")  + 
 geom_point(data = closed_bases_2018, mapping = aes(x = longitude, y = latitude, size=1.5, alpha=0.3), shape=25, color="darkgreen") +
 guides(size="none")  +
-theme(legend.position="none", title =element_text(size=13, color=  "steelblue",face='bold'), axis.title.x=element_blank(),              axis.title.y=element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank(), rect = element_blank()) + 
+theme(legend.position="none", title =element_text(size=13, color= "steelblue",face='bold'), axis.title.x=element_blank(), axis.title.y=element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank(), rect = element_blank()) + 
 labs(title="2018", subtitle="", caption = "") + 
 guides(fill=guide_legend(title="Concentration of All\nAttacks on Civilians"))
 
@@ -286,19 +214,19 @@ guides(fill=guide_legend(title="Concentration of All\nAttacks on Civilians"))
 
 
 map_2019 = ggmap(map_darfur) + 
-plot.new()+ 
 scale_fill_gradient(low="yellow", high="red") + 
 annotate("text", x= 26.609638, y= 10.817195, label="East Darfur", fontface=2,size=3) + 
-annotate("text", x= 25.556517, y= 16.217571, label="North Darfur",        fontface=2,size=3) + 
+annotate("text", x= 25.0, y= 14.817571, label="North Darfur", fontface=2,size=3) + 
 annotate("text", x= 24.420469, y= 11.002820, label="South Darfur", fontface=2,size=3) + 
-annotate("text", x= 23.116657, y= 14.519303, label="West Darfur", fontface=2,size=3) + 
+annotate("text", x= 22.8333285, y= 13.670825, label="West Darfur", fontface=2,size=3) +
+annotate("text", x= 23.3, y= 12.3833, label="Central Darfur", fontface=2,size=3) + 
 stat_density2d(data=acled_2019, geom = "polygon", aes(x=longitude, y=latitude,fill=..level.., alpha=..level..)) + 
 guides(alpha="none") + 
 geom_point(data = active_bases_2019, mapping = aes(x = longitude, y = latitude, size=1.5, alpha=0.5), shape=22, color="steelblue") +
 guides(size="none")  + 
 geom_point(data = closed_bases_2019, mapping = aes(x = longitude, y = latitude, size=1.5, alpha=0.3), shape=25, color="darkgreen") +
 guides(size="none")  +
-theme(legend.position="none", title =element_text(size=13, color=  "steelblue",face='bold'), axis.title.x=element_blank(),              axis.title.y=element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank(), rect = element_blank()) + 
+theme(legend.position="none", title =element_text(size=13, color= "steelblue",face='bold'), axis.title.x=element_blank(), axis.title.y=element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank(), rect = element_blank()) + 
 labs(title="2019", subtitle="", caption = "") + 
 guides(fill=guide_legend(title="Concentration of All\nAttacks on Civilians"))
 
@@ -306,63 +234,45 @@ guides(fill=guide_legend(title="Concentration of All\nAttacks on Civilians"))
 
 
 map_2020 = ggmap(map_darfur) + 
-plot.new()+ 
 scale_fill_gradient(low="yellow", high="red") + 
 annotate("text", x= 26.609638, y= 10.817195, label="East Darfur", fontface=2,size=3) + 
-annotate("text", x= 25.556517, y= 16.217571, label="North Darfur",        fontface=2,size=3) + 
+annotate("text", x= 25.0, y= 14.817571, label="North Darfur", fontface=2,size=3) +
 annotate("text", x= 24.420469, y= 11.002820, label="South Darfur", fontface=2,size=3) + 
-annotate("text", x= 23.116657, y= 14.519303, label="West Darfur", fontface=2,size=3) + 
+annotate("text", x= 22.8333285, y= 13.670825, label="West Darfur", fontface=2,size=3) +
+annotate("text", x= 23.3, y= 12.3833, label="Central Darfur", fontface=2,size=3) + 
 stat_density2d(data=acled_2020, geom = "polygon", aes(x=longitude, y=latitude,fill=..level.., alpha=..level..)) + 
 guides(alpha="none") + 
 geom_point(data = active_bases_2020, mapping = aes(x = longitude, y = latitude, size=1.5, alpha=0.5), shape=22, color="steelblue") +
 guides(size="none")  + 
 geom_point(data = closed_bases_2020, mapping = aes(x = longitude, y = latitude, size=1.5, alpha=0.3), shape=25, color="darkgreen") +
 guides(size="none")  +
-theme(legend.position="none", title =element_text(size=13, color=  "steelblue",face='bold'), axis.title.x=element_blank(),              axis.title.y=element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank(), rect = element_blank()) + 
+theme(legend.position="none", title =element_text(size=13, color=  "steelblue",face='bold'), axis.title.x=element_blank(), axis.title.y=element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank(), rect = element_blank()) + 
 labs(title="2020", subtitle="", caption = "") + 
 guides(fill=guide_legend(title="Concentration of All\nAttacks on Civilians"))
 
 
 map_2021 = ggmap(map_darfur) + 
-plot.new()+ 
 scale_fill_gradient(low="yellow", high="red") + 
 annotate("text", x= 26.609638, y= 10.817195, label="East Darfur", fontface=2,size=3) + 
-annotate("text", x= 25.556517, y= 16.217571, label="North Darfur",        fontface=2,size=3) + 
+annotate("text", x= 25.0, y= 14.817571, label="North Darfur", fontface=2,size=3) + 
 annotate("text", x= 24.420469, y= 11.002820, label="South Darfur", fontface=2,size=3) + 
-annotate("text", x= 23.116657, y= 14.519303, label="West Darfur", fontface=2,size=3) + 
+annotate("text", x= 22.8333285, y= 13.670825, label="West Darfur", fontface=2,size=3) +
+annotate("text", x= 23.3, y= 12.3833, label="Central Darfur", fontface=2,size=3) + 
 stat_density2d(data=acled_2021, geom = "polygon", aes(x=longitude, y=latitude,fill=..level.., alpha=..level..)) + 
 guides(alpha="none") + 
 geom_point(data = active_bases_2021, mapping = aes(x = longitude, y = latitude, size=1.5, alpha=0.5), shape=22, color="steelblue") +
 guides(size="none")  + 
 geom_point(data = closed_bases_2021, mapping = aes(x = longitude, y = latitude, size=1.5, alpha=0.3), shape=25, color="darkgreen") +
 guides(size="none")  +
-theme(legend.position="none", title =element_text(size=13, color=  "steelblue",face='bold'), axis.title.x=element_blank(),              axis.title.y=element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank(), rect = element_blank()) + 
+theme(legend.position="none", title =element_text(size=13, color=  "steelblue",face='bold'), axis.title.x=element_blank(), axis.title.y=element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank(), rect = element_blank()) + 
 labs(title="2021", subtitle="", caption = "") + 
 guides(fill=guide_legend(title="Concentration of All\nAttacks on Civilians"))
 
 
-
-map_2022 = ggmap(map_darfur) + 
-plot.new()+ 
-scale_fill_gradient(low="yellow", high="red") + 
-annotate("text", x= 26.609638, y= 10.817195, label="East Darfur", fontface=2,size=3) + 
-annotate("text", x= 25.556517, y= 16.217571, label="North Darfur",        fontface=2,size=3) + 
-annotate("text", x= 24.420469, y= 11.002820, label="South Darfur", fontface=2,size=3) + 
-annotate("text", x= 23.116657, y= 14.519303, label="West Darfur", fontface=2,size=3) + 
-stat_density2d(data=acled_2022, geom = "polygon", aes(x=longitude, y=latitude,fill=..level.., alpha=..level..)) + 
-guides(alpha="none") + 
-geom_point(data = active_bases_2022, mapping = aes(x = longitude, y = latitude, size=1.5, alpha=0.5), shape=22, color="steelblue") +
-guides(size="none")  + 
-geom_point(data = closed_bases_2022, mapping = aes(x = longitude, y = latitude, size=1.5, alpha=0.3), shape=25, color="darkgreen") +
-guides(size="none")  +
-theme(legend.position="none", title =element_text(size=13, color=  "steelblue",face='bold'), axis.title.x=element_blank(),              axis.title.y=element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank(), rect = element_blank()) + 
-labs(title="2020", subtitle="", caption = "") + 
-guides(fill=guide_legend(title="Concentration of All\nAttacks on Civilians"))
 ```
 
 <center>
 ```{r Faceted Maps: 2016-2021, echo=FALSE, fig.height=10.5, fig.width=10.5, message=FALSE, warning=FALSE}
-
 
 
 map_facet <- ggarrange(map_2016, map_2017, map_2018, map_2019, map_2020, map_2021, heights = c(.8, .8, .8, .8, .8, .8), widths = c(.8,.8,.8,.8,.8,.8), align = "h", nrow = 2, ncol=3, common.legend = TRUE, legend="bottom")
@@ -370,29 +280,28 @@ map_facet <- ggarrange(map_2016, map_2017, map_2018, map_2019, map_2020, map_202
 
 annotate_figure(map_facet, top = text_grob("Concentration of All Attacks on Darfur Civilians, 2016-2021", face = "bold", size = 26, color="steelblue", vjust = 0.5), bottom = text_grob("Note: Squares are Active UN Bases. Triangles are Closed Down Bases", size = 12, color ="steelblue"))
 
-#Note: the code for adding a title and text at the bottom of the visual was aided by code found on: https://stackoverflow.com/questions/50783436/ggplot2-multiple-plots-with-shared-legend-one-background-colour-1-main-and-3
-
-
-
+# Note: the code for adding a title and text at the bottom of the visual was aided by code found on: https://stackoverflow.com/questions/50783436/ggplot2-multiple-plots-with-shared-legend-one-background-colour-1-main-and-3
 
 ```
 </center>
 
 <br>
 
-#### **Takeaways:** It can be seen that the density of attacks on civilians prior to the start of closures of UNAMID bases in 2017, and up until 2018, was primarily in the region where the borders of Central, North, and South Darfur meet. However, the concentration of attacks substantially condensed into the northern part of South Darfur in 2019 - the year in which the UN formally decided to withdraw the mission - before suddenly expanding again in 2020 back into Central, North, and West Darfur. The expansion into West Darfur in 2020 appears particularly noteable since there had not been much of a concentration of attacks in West Darfur until that year. 
+#### **Takeaways:** It can be seen that attacks on civilians prior to the start of closures of UNAMID bases in 2017, and up until 2018, was primarily concentrated in the region where the borders of Central, North, and South Darfur meet. However, the concentration of attacks substantially condensed into the southern part of North Darfur in 2019 - the year in which the UN formally decided to withdraw the mission - before suddenly expanding in 2020 mostly into the northeastern part of Central Darfur, but also into West Darfur. The expansion into West Darfur in 2020 is particularly noteable since there had not been much of a concentration of attacks in West Darfur until that year.
 
 <br>
 
-#### It is possible that this expansion may have been partly a result of the UN closing down 8 of its bases in West Darfur from 2017-2019. Potential causes of this alteration in the density deserve more inspection. Back in Visual 3, we saw that an unusually large spike in civilian killings in Western Darfur occured in 2019, and that by 2021 there were more civilian killings there (155) than in any other Darfur region. Although the 2019 and 2021 density maps here do not show the highest concentration of attacks on civilians being in West Darfur, what likely accounts for the discrepancy is that there may have been an overall large number of fatalities, on average, per attack.
+#### In 2021, while the highest density of attacks on civilians shifted to the south-central part of North Darfur, the concentration of attacks in West Darfur grew even stronger. 
 
 <br>
 
-#### In the next visual (Visual 6), I have created a faceted comparison map of Darfur between the years 2016 and 2020, with bubble size representing the number of fatalities per attack on civilians, and with varying shades of green coloring in administrative regions reflecting the average number of UN troops present, in order to discern overall trends.
+#### It is possible that this expansion of the density of attacks into West Darfur may have been partly a result of the UN closing down 8 of its bases in the state from 2017-2019. Potential causes of this change in density deserve more inspection. In Visual 3, we saw an unusually large spike in civilian killings in Western Darfur occur in 2019 (46 killings), and we saw that in 2021 there were more civilian killings there (155) than in any other state in Darfur. Although neither the 2019 nor the 2021 density maps in this visual show the highest concentration of attacks on civilians being in West Darfur, what may account for the apparent discrepancy between this visual and visual 3 is that there was likely a large number of fatalities, on average, per attack in 2019 and 2021. We will investigate this further in Visual 7.
+
+<br>
+
+#### In the next visual (Visual 6), I will create a faceted choropleth map of Darfur comparing the years 2016 and 2020, with bubble size representing the number of fatalities per attack on civilians, and with varying shades of green in administrative regions reflecting the average number of UN troops present, in order to discern overall trends. While it would have been more ideal to map 2021 instead of 2020 in Visual 6, recall that the Geo-PKO dataset which I rely upon for UN troop figures only extends to the year 2020.
 
 ```{r echo=FALSE}
-
-library(stringr)
 
 # Get the current page number from the file name
 current_page <- as.numeric(str_extract(knitr::current_input(), "\\d+"))

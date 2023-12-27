@@ -35,33 +35,11 @@ next_page <- ifelse(current_page < total_pages, paste0("visual_", current_page +
 <center>
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 
+# Note: All code, insights shared, and methodological notes in this document and other documents in this portfolio ARE NOT open source and MUST be cited.
+
 library(tidyverse)
 library(ggplot2)
 library(ggthemes)
-library(rgdal)
-library(lubridate)
-library(rtweet) 
-library(network) 
-library(igraph)
-library(ggraph) 
-library(ggnetwork) 
-library(GGally)
-library(ggrepel) 
-library(jsonlite) 
-library(intergraph)
-library(svgPanZoom) 
-library(DT)
-library(widgetframe)
-library(viridis)
-library(tmap)
-library(ggmap)
-library(rgdal)
-library(sp)
-library(sf)
-library(tigris)
-options(tigris_use_cache=TRUE)
-options(tigris_class="sf")
-library(ggtext)
 library(plotly)
 
 
@@ -132,8 +110,6 @@ ggplotly(gg, height = 600, width = 750)
 #### **Takeaways:** A closer inspection of civilian killings by region within Darfur via the ACLED dataset shows that as UN bases were being withdrawn between 2017 and 2021, the *proportion* of all such killings was shrinking in Central Darfur, but growing in South Darfur in 2018 and 2020, and in West Darfur in 2019 and 2021. By the end of 2020 51% of civilian killings were concentrated in South Darfur, and by the end of 2021 48% of civilian killings were concentrated in West Darfur.
 
 ```{r echo=FALSE}
-
-library(stringr)
 
 # Get the current page number from the file name
 current_page <- as.numeric(str_extract(knitr::current_input(), "\\d+"))

@@ -376,34 +376,26 @@ next_page &lt;- ifelse(current_page &lt; total_pages, paste0(&quot;visual_&quot;
 </li>
 </ul>
 <p><br></p>
-<div id="introduction-the-un-african-union-mission-in-darfur-unamid-opened-in-2008-several-years-after-the-2003-2004-genocide-in-darfur-sudan.-as-seen-in-the-following-visual-at-the-missions-height-over-12500-troops-were-stationed-in-darfur.-the-mission-officially-ended-after-all-un-bases-were-closed-down-and-troops-withdrawn-in-the-middle-of-2021.-while-attacks-on-civilians-recorded-by-the-acled-dataset-are-displayed-below-until-the-end-of-2021-unamid-troop-numbers-from-the-geo-pko-dataset-are-only-published-until-the-end-of-2020-even-though-the-last-troops-left-unamid-on-june-30-2021-in-accordance-with-un-security-council-resolution-2559-2020." class="section level4">
+<div id="introduction-the-un-african-union-mission-in-darfur-unamid-opened-in-2008-several-years-after-the-2003-2004-genocide-in-darfur-sudan.-as-seen-in-the-following-visual-at-the-missions-height-over-12500-troops-were-stationed-in-darfur.-the-mission-officially-ended-at-the-end-of-2020.-while-attacks-on-civilians-recorded-by-the-acled-dataset-are-displayed-below-until-the-end-of-2021-unamid-troop-numbers-from-the-geo-pko-dataset-are-only-published-until-the-end-of-2020-even-though-the-last-troops-left-unamid-on-june-30-2021-in-accordance-with-un-security-council-resolution-2559-2020." class="section level4">
 <h4><strong>Introduction:</strong> The UN-African Union Mission in
 Darfur (UNAMID) opened in 2008, several years after the 2003-2004
 genocide in Darfur, Sudan. As seen in the following visual, at the
 mission’s height, over 12,500 troops were stationed in Darfur. The
-mission officially ended after all UN bases were closed down and troops
-withdrawn in the middle of 2021. While attacks on civilians (recorded by
-the ACLED dataset) are displayed below until the end of 2021, UNAMID
-troop numbers from the Geo-PKO dataset are only published until the end
-of 2020, even though the last troops left UNAMID on June 30, 2021 in
-accordance with <a href="https://documents-dds-ny.un.org/doc/UNDOC/GEN/N20/382/73/PDF/N2038273.pdf">UN
+mission officially ended at the end of 2020. While attacks on civilians
+(recorded by the ACLED dataset) are displayed below until the end of
+2021, UNAMID troop numbers from the Geo-PKO dataset are only published
+until the end of 2020, even though the last troops left UNAMID on June
+30, 2021 in accordance with <a href="https://documents-dds-ny.un.org/doc/UNDOC/GEN/N20/382/73/PDF/N2038273.pdf">UN
 Security Council resolution 2559 (2020)</a>.</h4>
 <p><br></p>
-<pre class="r"><code>library(tidyverse)
+<pre class="r"><code># Note: All code, insights shared, and methodological notes in this document and other documents in this portfolio ARE NOT open source and MUST be cited.
+
+library(tidyverse)
 library(ggplot2)
 library(ggthemes)
-library(rgdal)
-library(lubridate)
-#library(rtweet) 
-#library(network) 
-#library(igraph)
-#library(ggraph) 
-#library(ggnetwork) 
-#library(GGally)
-#library(ggrepel) 
-#library(DT)
-#library(gridExtra)
 library(ggpubr)
+library(gridExtra)
+
 
 setwd(&quot;C:/Users/rsb84/Desktop/RB/COLUMBIA/QMSS/COURSES/Spring_2021/Data Visualization/End_project&quot;)
 
@@ -448,31 +440,32 @@ visual_1 &lt;- ggarrange(a1, a2, nrow=2, ncol=1, align = &quot;v&quot;)</code></
 </center>
 <p><br></p>
 </div>
-<div id="takeaways-the-first-vertical-line-shows-that-when-the-number-of-troops-in-darfur-climbed-near-their-apex-in-2011-attacks-on-civilians-declined-to-their-minimum.-soon-after-unamid-began-decreasing-the-number-of-peacekeepers-but-it-can-be-seen-in-between-the-first-and-second-vertical-lines-that-as-troops-were-being-withdrawn-attacks-on-civilians-surged.-seeing-this-surge-in-attacks-it-might-have-been-expected-that-the-un-would-decide-to-increase-troop-numbers-again-instead-it-continued-to-withdraw-even-more-troops." class="section level4">
+<div id="takeaways-the-first-vertical-line-shows-that-when-the-number-of-troops-in-darfur-climbed-near-their-apex-in-2011-attacks-on-civilians-declined-to-their-minimum.-soon-after-unamid-began-decreasing-the-number-of-peacekeepers.-however-it-can-be-seen-in-between-the-first-and-second-vertical-lines-that-as-troops-were-being-withdrawn-attacks-on-civilians-surged.-seeing-this-surge-in-attacks-it-might-have-been-expected-that-the-un-would-decide-to-increase-troop-numbers-again-instead-it-continued-to-withdraw-even-more-troops." class="section level4">
 <h4><strong>Takeaways:</strong> The first vertical line shows that when
 the number of troops in Darfur climbed near their apex in 2011, attacks
 on civilians declined to their minimum. Soon after, UNAMID began
-decreasing the number of peacekeepers, but it can be seen (in between
-the first and second vertical lines) that as troops were being withdrawn
-attacks on civilians surged. Seeing this surge in attacks, it might have
-been expected that the UN would decide to increase troop numbers again;
-instead, it continued to withdraw even <em>more</em> troops.</h4>
+decreasing the number of peacekeepers. However, it can be seen (in
+between the first and second vertical lines) that as troops were being
+withdrawn attacks on civilians surged. Seeing this surge in attacks, it
+might have been expected that the UN would decide to increase troop
+numbers again; instead, it continued to withdraw even <em>more</em>
+troops.</h4>
 <p><br></p>
 </div>
-<div id="by-2015-the-number-of-attacks-on-civilians-reached-its-highest-point-shown-at-the-second-vertical-line.-and-while-unamid-began-to-slightly-increase-troop-numbers-that-year-within-only-one-year-troop-numbers-began-to-fall-steadily-as-it-became-clear-that-attacks-on-civilians-were-starting-to-decline.-yet-as-the-rapid-decline-in-attacks-on-civilians-began-to-taper-off-by-2018-unamid-troop-numbers-continued-to-plunge." class="section level4">
+<div id="by-2015-the-number-of-attacks-on-civilians-reached-its-highest-point-shown-at-the-second-vertical-line.-and-while-unamid-began-to-slightly-increase-troop-numbers-that-year-within-only-one-year-troop-numbers-began-to-fall-steadily-as-it-became-clear-that-attacks-on-civilians-were-starting-to-decline.-yet-as-the-rapid-decline-in-attacks-on-civilians-began-to-taper-off-by-2018-unamid-troop-numbers-nevertheless-continued-to-plunge." class="section level4">
 <h4>By 2015, the number of attacks on civilians reached its highest
 point (shown at the second vertical line). And while UNAMID began to
 slightly increase troop numbers that year, within only one year troop
 numbers began to fall steadily as it became clear that attacks on
 civilians were starting to decline. Yet, as the rapid decline in attacks
-on civilians began to taper off by 2018, UNAMID troop numbers continued
-to plunge.</h4>
+on civilians began to taper off by 2018, UNAMID troop numbers
+nevertheless continued to plunge.</h4>
 <p><br></p>
 </div>
-<div id="it-is-clear-that-by-2020-signified-by-the-third-vertical-line-as-very-few-troops-remained-violence-against-civilians-began-to-surge-once-again.-when-the-unamid-mission-officially-closed-at-the-end-of-dec.-2020-there-were-even-more-attacks-being-carried-out-than-when-the-mission-had-opened-and-violence-continued-to-surge-thereafter." class="section level4">
-<h4>It is clear that by 2020 (signified by the third vertical line), as
-very few troops remained, violence against civilians began to surge once
-again. When the UNAMID mission officially closed at the end of
+<div id="it-is-clear-that-by-2020-signified-by-the-third-vertical-line-when-very-few-troops-remained-violence-against-civilians-began-to-surge-once-again.-when-the-unamid-mission-officially-closed-at-the-end-of-dec.-2020-there-were-even-more-attacks-being-carried-out-than-when-the-mission-had-opened-and-violence-continued-to-surge-thereafter." class="section level4">
+<h4>It is clear that by 2020 (signified by the third vertical line),
+when very few troops remained, violence against civilians began to surge
+once again. When the UNAMID mission officially closed at the end of
 Dec. 2020, there were even <em>more attacks</em> being carried out than
 when the mission had opened, and violence continued to surge
 thereafter.</h4>
