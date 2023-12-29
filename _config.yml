@@ -1,5 +1,5 @@
 title: Rob Boswell
-logo: https://github.com/roboswell/portfolio/blob/gh-pages/1.png
+logo: /1.png
 description: Data Scientist and International Crisis Forecaster
 show_downloads: false
 remote_theme: pages-themes/minimal@v0.2.0
