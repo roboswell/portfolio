@@ -1050,6 +1050,7 @@ table_output
 <br>
 
 #### We can see from these charts as well as from prior visuals that the evidence supports the theory that one of the factors which played a role in sharp increases in violence against civilians in Darfur was the withdrawal of UN bases as UNAMID closed. Additionally, we have seen there were opportunities when the UN could have recognized rising levels of violence following base withdrawals and slowed the pace of closing the remaining bases in Darfur, but instead chose not to.
+
 <br>
 
 ```{r echo=TRUE}
