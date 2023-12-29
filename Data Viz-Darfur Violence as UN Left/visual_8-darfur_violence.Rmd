@@ -488,11 +488,11 @@ tm_legend(show = FALSE)
 
 <br>
 
-#### **Takeaways:** In each of the visuals below, I have also created 50 mile radius buffers around all UN bases that were withdrawn in South Darfur in 2017, 2018, and 2019. After 2019, no more bases were withdrawn from South Darfur. As with West Darfur in Visual 7, I have also calculated the total attacks on civilians and fatalities from such attacks and plotted them in a heat map table further below for analysis.
+#### In each of the visuals below, I have created 50 mi radius union buffers around all UN bases that were withdrawn in South Darfur in 2017, 2018, and 2019. After 2019, no more bases were withdrawn from South Darfur. As with West Darfur in Visual 7, I have also calculated the total attacks on civilians and fatalities from such attacks inside these union buffers and plotted them in a heat map table further below for analysis.
 
 <br>
 
-#### Whereas in 2016 (the year before the Edd El Fursan and Tulus UN bases were closed) there were 47 attacks on civilians and 58 fatalities from these attacks within 50 miles of these bases, in 2017 there were 25 attacks on civilians and 31 fatalities within 50 miles of these closed bases. This equates to a 46.8% decrease in attacks on civilians and an 87% decrease in civilian killings.
+#### Whereas in 2016 (the year before the Edd El Fursan and Tulus UN bases were closed) there were 47 attacks on civilians and 58 fatalities within 50 mi of these bases, in 2017 there were 25 attacks on civilians (a 47% decrease) and 31 fatalities (an 87% decrease).
 
 
 ```{R Plot Faceted Maps, echo=FALSE, fig.height=6.5, fig.width=10, message=FALSE, warning=FALSE}
@@ -501,7 +501,7 @@ tmap_arrange(t_2016.1, t_2017.1, nrow = 1, ncol = 2, asp=1, outer.margins = 0)
 
 ```
 
-#### Looking at the 2017 vs. 2018 maps below, whereas in 2017 (the year before the Buram and Graida UN compounds were closed) there were 32 attacks on civilians and 28 fatalities from these attacks within a 50 mile radius of these bases, in 2018 there were 27 attacks and 28 fatalities - roughly the same level of violence. A caveat should be noted: Visually, it appears from the map that although troops were withdrawn from the Buram and Graida UN bases in 2018, there were actually more UN troops within the union buffer in 2018 than in 2017. This is likely a result of transfering troops from the closed bases to other nearby bases that were still active.
+#### Looking at the 2017 vs. 2018 maps below, whereas in 2017 (the year before the Buram and Graida UN compounds were closed) there were 32 attacks on civilians and 28 fatalities within a 50 mi radius of these bases, in 2018 there were 27 attacks and 28 fatalities - roughly the same level of violence. A caveat should be noted: it appears from the map that although troops were withdrawn from the Buram and Graida UN bases in 2018, there were actually more UN troops within the union buffer in 2018 than in 2017. This is likely a result of transfering troops from the closed bases to other nearby bases that were still active.
 
 
 ```{R Plot Faceted Maps 2017-2018, echo=FALSE, fig.height=6.5, fig.width=10, message=FALSE, warning=FALSE}
@@ -510,7 +510,7 @@ tmap_arrange(t_2017.2, t_2018.2, nrow = 1, ncol = 2, asp=1, outer.margins = 0)
 
 ```
 
-#### Further, while there were 21 attacks on civilians and 22 fatalities from such attacks in 2018 within 50 miles radius of the Nyala UN compound the year before it was shut down in 2019, in 2019 there were only 10 attacks on civilians and 6 fatalities. This represents a 110% decrease in attacks on civilians and a 267% decrease in civilian killings.
+#### Further, while there were 21 attacks on civilians and 22 fatalities in 2018 within 50 mi radius of the Nyala UN compound before it was shut down, in 2019 there were only 10 attacks on civilians (a 110% decrease) and 6 fatalities (a 267% decrease).
 
 
 ```{R Plot Faceted Maps 2018-2019, echo=FALSE, fig.height=6.5, fig.width=10, message=FALSE, warning=FALSE}
@@ -633,20 +633,15 @@ deaths_2021_buffer_2019 <- sum(fatality_sum_2021.buffer_2019$fatalities)
 
 ```
 
-#### We can see that in South Darfur, these figures do not lend support to the theory that the withdrawal of UN compounds led to increasing patterns of violence against civilians in the immediate term. However, a similar trend as was seen in Visual 7 of West Darfur repeats itself in South Darfur in terms of escalating violence years later and higher than usual fatality per attack ratios. Looking at the table below, when attacks on civilians and fatalities from attacks are calculated in future years one can see that although violence was already prevalent in these areas between 2016 and 2018, in 2020 there was a noticeable increase in civilian killings beyond usual levels within 50 miles of each of the aforementioned South Darfur UN bases withdrawn between 2017-2019. Still, this increase in violence in 2020 was, overall, not as severe as the case of West Darfur in 2021. The relatively high levels of violence against civilians around these bases between 2016-2018 arguably should have raised reservations among UN officials about withdrawing these bases at the pace they did.
+#### We can see that in South Darfur these figures do not lend support to the theory that the withdrawal of UN compounds led to increasing patterns of violence against civilians in the immediate term. However, a similar trend as was seen in Visual 7 in West Darfur repeats itself in South Darfur with escalating violence years later and higher than usual fatality per attack rates. Looking at the table below, when attacks on civilians and fatalities are calculated in future years one can see that although violence was already prevalent in thee area inside these union buffers between the years 2016 and 2018, in the years 2020 and 2021 there was a noticeable increase in civilian killings beyond usual levels. Further, the relatively high levels of violence within all 3 union buffers between the years 2016 and 2018 arguably should have raised reservations among UN officials about withdrawing at the pace they did.
 
 <br>
 
-#### In 2020, within 50 miles of the Edd El Fursan and Tulus UN compounds in South Darfur that were closed in 2017, while there were just 12 attacks on civilians there were 57 civilian killings. Further, within 50 miles of the Buram and Graida UN bases closed in 2018, while there were only 16 attacks on civilians in 2020, there were 78 civilian killings from these attacks. This represents a 179% increase in civilian killings compared to 2018. Additionally, within 50 miles of the Nyala UN compound that closed in 2019, while there were just 10 attacks on civilians in 2020, there were 32 civilian killings. This represents a 417% increase in civilan killings compared to 2019.
+#### In 2020, within 50 mi of the bases that were closed in 2017, there were just 12 attacks on civilians but there were 57 fatalities (an 84% increase compared to 2017), which equates to 4.75 fatalities per attack. Also in 2020, within 50 mi of the bases closed in 2018, there were only 16 attacks but there were 78 fatalities (a 179% increase compared to 2018), which equates to 4.88 fatalities per attack. Additionally, within 50 mi of the UN compound that closed in 2019, while there were just 10 attacks in 2020, but there were 32 fatalities (a 417% increase compared to 2019), which equates to 3.10 fatalities per attack. In 2021 in South Darfur, locations surrounding the UN base withdrawals in 2017 and 2018 had a slight reduction in fatalities per attack, with 1.83 fatalities per attack and 1.73 fatalities per attack, respectively - still higher than usual levels. This patterns of higher than normal fatality per attack ratios is similar to the experience of West Darfur in 2019 and 2021.
 
 <br>
 
-#### Thus, similar to 2021 when areas surrounding closed bases in West Darfur commonly experienced higher than normal fatalities per attack ratios, in 2020, all 3 sets of locations surrounding the South Darfur base withdrawals in 2017, 2018, and 2019 did too, with 4.75 fatalities per attack, 4.88 fatalities per attack, and 3.10 fatalities per attack, respectively. In 2021 in South Darfur, locations surrounding the UN base withdrawals in 2017 and 2018 had a slight reduction in fatalities per attack, with 1.83 fatalities per attack and 1.73 fatalities per attack, respectively - still higher than usual levels.
-
-<br>
-
-#### It must be noted that just as with the case of the spike in West Darfur violence in 2021 following UN base withdrawals, the power vacuum from years of UN base withdrawals is likely only one factor among others in the violence against civilians in 2020 in South Darfur, as other factors have been cited, including intercommunal violence in the aftermath of tribal cattle raiding (https://reliefweb.int/report/sudan/30-people-killed-intercommunal-violence-south-darfur) and land disputes between displaced land owners and those occupying their land (https://www.aljazeera.com/news/2020/7/26/sudan-to-deploy-troops-to-darfur-after-killings-pm-hamdok). 
-
+#### However, just as with the spikes in West Darfur violence in 2019 and 2021 following UN base withdrawals, the power vacuum from years of UN base withdrawals is likely only one of several factors which led to the increase in violence in South Darfur. [Such factors which have been cited include intercommunal violence in retaliation for tribal cattle raiding](https://reliefweb.int/report/sudan/30-people-killed-intercommunal-violence-south-darfur) and [land disputes between displaced land owners and those occupying their land](https://www.aljazeera.com/news/2020/7/26/sudan-to-deploy-troops-to-darfur-after-killings-pm-hamdok). 
 
 <br>
 

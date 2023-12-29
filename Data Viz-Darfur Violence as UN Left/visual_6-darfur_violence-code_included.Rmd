@@ -31,6 +31,21 @@ next_page <- ifelse(current_page < total_pages, paste0("visual_", current_page +
 </ul>
 
 
+<br>
+
+#### In creating a before vs. after UN base withdrawal comparison of violence against civilians, since Geo-PKO data on UNAMID troop numbers only extends to 2020, I will compare Darfur's 2016 and 2020 maps. It is important though to keep in mind from Visual 2 that civilian killings were higher in Darfur as a whole in 2021 than 2020, and from Visual 3 that a significant rise in civilian killings occurred in West Darfur in 2021 compared to 2020.
+
+<br>
+
+#### In the maps below, between 2016 and 2020 the pattern of civilian attacks in Darfur shifted notably. In 2016, the deadliest attacks were highly concentrated at the intersection of Central, South, and North Darfur. However, by 2020 there were more high-fatality attacks in South Darfur, while West Darfur saw a significant rise in generally lower-fatality attacks coinciding with the withdrawal of UN bases and peacekeepers.
+
+<br>
+
+#### Both maps reveal a consistent pattern: administrative districts with the most civilian attacks had UN bases averaging a yearly troop strength of 200 or fewer.
+
+<br>
+
+
 ```{r Code for Maps 2016 vs. 2020 - part 1, echo=TRUE, fig.height=10, fig.width=10, message=FALSE, warning=FALSE}
 
 # Note: All code, insights shared, and methodological notes in this document and other documents in this portfolio ARE NOT open source and MUST be cited.
@@ -315,39 +330,27 @@ grid_map
 
 ```
 
-#### While the previous visuals have used ACLED data to show violence against civilians up to 2021, since Geo-PKO data on UNAMID troops only extends to 2020, I will compare Darfur's 2020 and 2016 maps, noting 2016 as the pre-base phase-out year by the UN. It is important though to keep in mind that from Visual 2 civilian killings were higher in 2021 than 2020, and from Visual 3 that a significant rise in civilian killings occurred in West Darfur in 2021 compared to 2020.
+#### From Visual 3, recall that in 2016 the 3 states with the most civilian killings were Central Darfur (253), South Darfur (139), and North Darfur (114), totaling 506, with West Darfur only having 36. Yet, by 2020, the 3 states with the most killings were South Darfur (95), Central Darfur (35), and West Darfur (31), amounting to 161 fatalities between them - a significant overall decrease from 2016. However, in 2021 West Darfur's civilian killings rose to 155, the highest for any region and a 400% increase from the previous year.
 
 <br>
 
-#### **Takeaways:** Between 2016 and 2020, the pattern of civilian attacks in Darfur shifted notably. In 2016, the deadliest attacks were concentrated at the intersection of Central, South, and North Darfur, with others dispersed across western and southern districts. By 2020, there were more high-fatality attacks in South Darfur, while West Darfur saw a significant rise in lower-fatality attacks, coinciding with the withdrawal of UN bases and peacekeepers.
+#### We can see from the maps above that although fatalities in Central and South Darfur decreased from 2016 to 2020, West Darfur maintained similar fatalities in both years but experienced a sharp increase in 2021, coinciding with UNAMID's complete closure.
 
 <br>
 
-#### Both maps reveal a consistent pattern: administrative districts with the most civilian attacks had UN bases averaging a yearly troop strength of 200 or fewer.
+#### Also, recall that Visual 5's 2016 heat maps show a high concentration of civilian attacks at the junction of Central, South, and North Darfur, regardless of fatality count. By 2020, the highest density of attacks shifted to north-eastern Central Darfur, with a moderate increase in West Darfur.
 
 <br>
 
-#### From Visual 3, we know that in 2016, Central Darfur (253), South Darfur (139), and North Darfur (114) had the most civilian killings, totaling 506, with West Darfur only at 36. Yet, in 2020, the leading regions for civilian fatalities were South Darfur (95), Central Darfur (35), and West Darfur (31), amounting to 161 fatalities - a significant overall decrease from 2016. However, in 2021, West Darfur's civilian deaths rose to 155, the highest for any region and a 400% increase from the previous year.
+#### Visual 5's 2021 Darfur heat map indicated a slight increase in the concentration of civilian attacks in West Darfur compared to 2020. This initially seems unexpected given Visual 3's data showing West Darfur had the highest number of civilian killings of any state in 2021. However, this likely reflects a high fatality rate per attack, despite a less dense concentration of incidents. Similarly, the 2020 heatmap shows a mild concentration of attacks in South Darfur, contrasting with this visual's indication that the most fatal attacks occurred there.
 
 <br>
 
-#### Thus, Central and South Darfur remained in the top 3 for civilian killings in both 2016 and 2020, with West Darfur joining them in 2020. Although fatalities in Central and South Darfur decreased from 2016 to 2020, West Darfur maintained similar numbers in both years but experienced a sharp increase in 2021, coinciding with the year UNAMID finally withdrew from Darfur.
+#### We have until now seen particularly interesting trends in West Darfur and South Darfur; in the next 2 visuals, I will visually compare violence in these 2 states within a 50 mi radius of bases closed from 2017-2019. Specifically, I will show violence levels the year before vs. the year of base withdrawals. Additionally, I will quantitatively measure levels of violence against civilians up until 2021 within these 50 mi radius union buffers to see whether it increased or decreased following base withdrawals.
 
 <br>
 
-#### Also, Visual 5's 2016 heat map shows a high concentration of civilian attacks at the junction of Central, South, and North Darfur, regardless of fatality count. West Darfur saw less concentration in 2016. By 2020, the highest density of attacks shifted to northeastern Central Darfur, with only a moderate increase in West Darfur.
-
-<br>
-
-#### The 2021 Darfur heat map in Visual 5 indicated a slight increase in civilian attack concentrations. This initially seems unexpected, given Visual 3's data showing West Darfur had the highest civilian deaths in 2021. However, this likely reflects a high average fatality rate per attack, despite a less dense concentration of incidents. Similarly, the 2020 heatmap in Visual 5 shows a mild concentration of attacks in South Darfur, contrasting with this visual's indication that the most fatal attacks occurred there.
-
-<br>
-
-#### We have until now seen particularly interesting trends in West Darfur and South Darfur. Therefore, in the next two visuals, I adopt a quantitative approach to analyzing violence against civilians until 2021 within 50 mi around UN bases closed in these 2 regions from 2017-2019. I also visually compare violence trends until the final year UN bases were closed in 2019. The maps in Visual 7 show levels of violence the year before vs. the year of base withdrawals in West Darfur, and the maps in Visual 8 show the same for South Darfur.
-
-<br>
-
-#### The analysis so far lends itself to the view that that the UN should have closed its bases at a slower pace to more carefully assess the response in terms of civilian attacks and fatalities before closing further bases. It thus far seems plausible the withdrawal of UN bases in these 2 regions may have been premature and allowed violence to spread.
+#### The analysis so far lends itself to the view that it is plausible the withdrawal of UN bases in these 2 regions may have been premature and allowed violence to spread.
 
 <br>
 

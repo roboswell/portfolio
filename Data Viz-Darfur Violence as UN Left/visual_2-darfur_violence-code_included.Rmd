@@ -1,5 +1,5 @@
 ---
-title: 'Civilian Killings in Darfur over Time - Too Quick for UNAMID to Withdraw? - Visual 2'
+title: 'Civilian Killings in Darfur over Time - Visual 2'
 author: "Rob Boswell"
 date: "7-27-2023"
 output: html_document
@@ -29,6 +29,9 @@ next_page <- ifelse(current_page < total_pages, paste0("visual_", current_page +
 
 <br>
 
+#### In June 2017, the UN Security Council adopted [Resolution 2363 (2017)](https://documents-dds-ny.un.org/doc/UNDOC/GEN/N17/191/58/PDF/N1719158.pdf) in which it decided to close down bases starting that same year, in multiple phases. [The goal was set to end the mission within 2 years](https://reliefweb.int/report/sudan/unamid-full-exit-darfur-be-completed-within-two-years-fm).
+
+<br>
 
 ```{r echo=TRUE, fig.height=8, fig.width=8.5, message=FALSE, warning=FALSE}
 
@@ -69,15 +72,13 @@ visual_2
 
 <br>
 
-#### **Takeaways:** In June 2017, the UN Security Council adopted [resolution 2363 (2017)](https://documents-dds-ny.un.org/doc/UNDOC/GEN/N17/191/58/PDF/N1719158.pdf) in which it decided to close down 11 bases in an initial phase, followed by 7 more base closures in a secondary phase. [The goal was set to end the mission within 2 years](https://reliefweb.int/report/sudan/unamid-full-exit-darfur-be-completed-within-two-years-fm).
+#### Yet, due to trends in violence at the time this resolution was adopted, the question remains: was it premature for the UN to begin withdrawing from Darfur? 552 civilians were killed by state and non-state armed groups in the year prior to the UN adopting Resolution 2363. And even though civilian fatalities dropped in 2017, they were still almost as high as when the mission began in 2008. In fact, at no point before 2017 did civilian fatality trends stabilized at low levels.
 
 <br>
 
-#### Yet, due to trends in violence at the time this resolution was adopted, the question remains: was it premature and dangerous for the UN to begin withdrawing from Darfur? 552 civilians were killed by state and non-state armed groups in the year prior to the UN adopting resolution 2363. And even though civilian fatalities dropped in 2017, they were still almost as high as when the mission began in 2008. In fact, at no point before 2017 had civilian fatality trends stabilized at low levels.
+#### Retrospectively, we also see that between the end of 2020 and the end of 2021 there was a 75% increase in civilian killings.
 
 <br>
-
-#### Retrospectively, we see that between the end of 2020 and the end of 2021 (the time in which the last UN troops in Darfur were departing) there was a 75% increase in civilian killings.
 
 ```{r echo=TRUE}
 

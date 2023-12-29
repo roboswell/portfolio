@@ -57,7 +57,7 @@ ACLED_data <- readxl::read_excel("ACLED-DARFUR-VAC-2008-2021 (After Course Ended
 acled_short=ACLED_data[c("event_date","year","sub_event_type","actor1","inter1","admin1","admin2","location","latitude","longitude","attacks","fatalities")]
 
 
-# Below, I have created faceted heat density maps which allow for comparisons of the locations where violent attacks on civilians were most concentrated between 2016 and 2021 across Darfur, along with depictions of the locations of both operational and closed down UN bases
+# Below, I have created faceted heat density maps which allow for comparisons of the locations where violent attacks on civilians were most concentrated between 2016 and 2021 across Darfur, along with depictions of the locations of both operational and closed UN bases
 
 acled_2016 = subset(acled_short, year == 2016)
 acled_2017 = subset(acled_short, year == 2017)
@@ -280,6 +280,17 @@ guides(fill=guide_legend(title="Concentration of All\nAttacks on Civilians"))
 
 
 ```
+
+<br>
+
+#### It can be seen that attacks on civilians from 2016 to 2018 were primarily concentrated in the region where the borders of Central, North, and South Darfur meet. However, the concentration of attacks substantially condensed into the southern part of North Darfur in 2019 - the year in which the UN formally decided to withdraw the entire mission - before suddenly expanding in 2020 mostly into the northeastern part of Central Darfur and also into West Darfur. The expansion into West Darfur is particularly noteable since a concentration of attacks there only started emerging in 2019.
+
+<br>
+
+#### In 2021, while the highest density of attacks on civilians shifted to the south-central part of North Darfur, the concentration of attacks in West Darfur still grew stronger. 
+
+<br>
+
 <center>
 
 ```{r Faceted Maps: 2016-2021, echo=TRUE, fig.height=10.5, fig.width=10.5, message=FALSE, warning=FALSE}
@@ -287,26 +298,20 @@ guides(fill=guide_legend(title="Concentration of All\nAttacks on Civilians"))
 map_facet <- ggarrange(map_2016, map_2017, map_2018, map_2019, map_2020, map_2021, heights = c(.8, .8, .8, .8, .8, .8), widths = c(.8,.8,.8,.8,.8,.8), align = "h", nrow = 2, ncol=3, common.legend = TRUE, legend="bottom")
 
 
-annotate_figure(map_facet, top = text_grob("Concentration of All Attacks on Darfur Civilians, 2016-2021", face = "bold", size = 26, color="steelblue", vjust = 0.5), bottom = text_grob("Note: Squares are Active UN Bases. Triangles are Closed Down Bases", size = 12, color ="steelblue"))
+annotate_figure(map_facet, top = text_grob("Concentration of All Attacks on Darfur Civilians, 2016-2021", face = "bold", size = 26, color="steelblue", vjust = 0.5), bottom = text_grob("Note: Squares are Active UN Bases. Triangles are Closed Bases", size = 12, color ="steelblue"))
 
 ```
 </center>
 
 <br>
 
-#### **Takeaways:** It can be seen that attacks on civilians prior to the start of closures of UNAMID bases in 2017, and up until 2018, was primarily concentrated in the region where the borders of Central, North, and South Darfur meet. However, the concentration of attacks substantially condensed into the southern part of North Darfur in 2019 - the year in which the UN formally decided to withdraw the mission - before suddenly expanding in 2020 mostly into the northeastern part of Central Darfur, but also into West Darfur. The expansion into West Darfur in 2020 is particularly noteable since there had not been much of a concentration of attacks in West Darfur until that year.
+#### It is possible this expansion of the density of attacks into West Darfur may partly result from the UN closing 5 of its bases in the state from 2017-2019. Potential causes of this change in density deserve more inspection. In Visual 3, we saw an unusually large spike in civilian killings in Western Darfur (46) in 2019, and we saw that in 2021 there were more civilian killings there (155) than in any other state in Darfur. Although neither the 2019 nor the 2021 density maps in this visual show the highest concentration of attacks on civilians being in West Darfur, what may account for the discrepancy is that there was likely a larger than normal number of fatalities per attack in 2019 and 2021. We will investigate this further in Visual 7.
 
 <br>
 
-#### In 2021, while the highest density of attacks on civilians shifted to the south-central part of North Darfur, the concentration of attacks in West Darfur grew even stronger. 
+#### In the next visual, I will create a faceted choropleth map of Darfur comparing the years 2016 and 2020, with bubble size representing the number of fatalities per attack on civilians, and with varying shades of green in second order administrative districts reflecting the average number of UN troops present. While it would have been more ideal to map 2021 instead of 2020 in Visual 6 to have a proper before vs. after base withdrawal comparison, recall that the Geo-PKO dataset which I rely upon for UN troop figures only extends to 2020.
 
 <br>
-
-#### It is possible that this expansion of the density of attacks into West Darfur may have been partly a result of the UN closing down 8 of its bases in the state from 2017-2019. Potential causes of this change in density deserve more inspection. In Visual 3, we saw an unusually large spike in civilian killings in Western Darfur occur in 2019 (46 killings), and we saw that in 2021 there were more civilian killings there (155) than in any other state in Darfur. Although neither the 2019 nor the 2021 density maps in this visual show the highest concentration of attacks on civilians being in West Darfur, what may account for the apparent discrepancy between this visual and visual 3 is that there was likely a large number of fatalities, on average, per attack in 2019 and 2021. We will investigate this further in Visual 7.
-
-<br>
-
-#### In the next visual (Visual 6), I will create a faceted choropleth map of Darfur comparing the years 2016 and 2020, with bubble size representing the number of fatalities per attack on civilians, and with varying shades of green in administrative regions reflecting the average number of UN troops present, in order to discern overall trends. While it would have been more ideal to map 2021 instead of 2020 in Visual 6, recall that the Geo-PKO dataset which I rely upon for UN troop figures only extends to the year 2020.
 
 ```{r echo=TRUE}
 

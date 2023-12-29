@@ -29,6 +29,9 @@ next_page <- ifelse(current_page < total_pages, paste0("visual_", current_page +
 
 <br>
 
+#### Investigating fatalities by state in Darfur reveals noteworthy trends. While true that by the end of 2017 the number of civilian killings within each of Darfur's five states had subsided since reaching their respective maximums, the number of killings in Central Darfur (95) was higher than its interquartile range. In fact, in 2016 Central Darfur had seen its highest civilian fatality total (253) since the peacekeeping mission had begun. Still, [the UN pressed ahead with withdrawing from 10 UN bases from Darfur in the second half of 2017 alone](https://oios.un.org/file/8866/download?token=F6tc9ZI5). 
+
+<br>
 
 ```{r echo=FALSE, fig.height=9, fig.width=10, message=FALSE, warning=FALSE}
 
@@ -113,15 +116,13 @@ ggplotly(spark)
 
 <br>
 
-#### **Takeaways:**  Investigating fatality numbers by region in Darfur reveals noteworthy trends. While true that by 2017 the number of civilian killings within each of Darfur's five regions had subsided since their respective maximums, the number of killings in Central Darfur was higher than its interquartile range, adding questions as to why the UN Security Council was still determined to begin withdrawing the mission that year. 
+#### Additionally, by the end of 2018, killings in West, South, and Central Darfur (30, 97, and 73, respectively) were near or above their respective seventy-fifth percentile values of their interquartile ranges. Yet, the UN continued to withdraw bases. A noticeable uptick in killings in West Darfur occurred in 2019, 46 fatalities, above the region's interquartile range.
 
 <br>
 
-#### Additionally, by 2018, killings in West, South, and Central Darfur were near or above their respective seventy-fifth percentile values of their interquartile ranges. Yet, the UN continued to withdraw bases. A noticeable uptick in killings in West Darfur occurred in 2019, above the region's interquartile range.
+#### By the end of 2021, once UNAMID troops had all departed, there were already more civilian killings in West Darfur (155) than at any point since the mission had begun in 2008. With violence levels so high in several regions during the mission's drawdown phase, one might have expected the UN to withdraw its remaining bases at least more slowly.
 
 <br>
-
-#### By the end of 2021, once UNAMID troops had all departed, there were already more civilian killings in West Darfur (155) than at any point since the mission had begun in 2008. With violence levels so high in several regions during the mission's drawdown phase, one might have expected the UN to withdraw its remaining bases at least more slowly to prevent power vaccumes and spikes in violence.
 
 ```{r echo=FALSE}
 

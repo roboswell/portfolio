@@ -364,7 +364,7 @@ union_buffers_2019 <- create_union_buffers(2019)
 
 <br>
 
-#### The first visual compares 50 mi radius union buffers around the West Darfur UN bases in Forobaranga and Habila closed in 2017 to 2016, analyzing civilian attacks and fatalities. Visually, 2017 appears to show almost the same number of attacks compared to 2016. But while my calculations reveal 30 attacks in 2016 versus 27 attacks in 2017, there were 24 fatalities in 2016 compared to only 11 fatalities in 2017. Thus, civilian fatalities decreased by 54% after the base closures, suggesting that despite fewer UN troops the closure of these bases in 2017 did not adversely affect civilian security in the area near the bases in the short term.
+#### The first visual compares attack and fatality levels within 50 mi radius union buffers around the West Darfur UN bases in Forobaranga and Habila that were closed in 2017 to 2016 levels. Visually, 2017 appears to show almost the same number of attacks compared to 2016. But my calculations reveal 30 attacks in 2016 compared to 27 in 2017, and 24 fatalities in 2016 compared to only 11 in 2017. Thus, civilian fatalities decreased by 54% after the base closures, suggesting that despite fewer UN troops the closure of these bases did not adversely affect civilian security in the area near the bases in the short term.
 
 <br>
 
@@ -457,7 +457,7 @@ tmap_arrange(t_2016.1, t_2017.1, nrow = 1, ncol = 2, asp=1, outer.margins = 0)
 
 ```
 
-#### In the maps below, I compare violence against civilians levels within 50 mi of the 2 West Darfur UN bases closed in 2018 to 2017 levels. Visually, there appears to be a reduction in civilian attacks but an increase in fatalities. Indeed, my calculations show 44 attacks and 21 fatalities in 2017 near these bases, while in 2018, attacks dropped to 25 (a 43% decrease) as fatalities rose to 31 (a 48% increase). Therefore, the immediate impact of the 2018 base closures on civilian security was more ambiguous compared to the 2017 withdrawals.
+#### In the maps below, I compare violence levels within 50 mi of the 2 West Darfur UN bases closed in 2018 to 2017 levels. Visually, there appears to be a reduction in civilian attacks but an increase in fatalities. Indeed, my calculations show 44 attacks and 21 fatalities in 2017 near these bases, while only 25 attacks in 2018 (a 43% decrease) as fatalities rose to 31 (a 48% increase). Therefore, the immediate impact of the 2018 base closures on civilian security was more ambiguous compared to the 2017 withdrawals.
 
 <br>
 
@@ -519,7 +519,7 @@ tmap_arrange(t_2017.2, t_2018.2, nrow = 1, ncol = 2, asp=1, outer.margins = 0)
 
 ```
 
-#### In the third pair of maps (Darfur in 2018 vs. 2019), when comparing the 50 mi radius union buffer around the UN base in Habila that was withdrawn in 2019, it visually appears there was an increase in attacks and fatalities from 2018 to 2019. Indeed, my calculations show that while there were 13 attacks and 24 killings in 2018, attacks did increase to 19 (46% increase) and fatalities increased to 44 (83% increase) in 2019.
+#### In the third pair of maps (Darfur in 2018 vs. 2019), when comparing the 50 mi radius buffer around the UN base in Habila that was withdrawn in 2019, it visually appears there was an increase in both attacks and fatalities from 2018 to 2019. Indeed, my calculations show that while there were 13 attacks and 24 killings in 2018, attacks increased to 19 (a 46% increase) and fatalities increased to 44 (an 83% increase) in 2019.
 
 <br>
 
@@ -652,15 +652,15 @@ df <- count_attacks_deaths_in_buffers(years, buffer_years, acled_joined_prefix, 
 
 <br>
 
-#### The table below shows calculations of civilian attacks and fatalities within 50 mi of UN bases closed from 2017-2019, comparing violence levels before and after closures from 2016 - 2021. Notably, violence was highest in areas around the bases closed in 2018 and lowest around those closed in 2017 for most of these years, suggesting the 2018 closure areas were already violence-prone before the bases were closed.
+#### The table below shows calculations of civilian attacks and fatalities from 2016 - 2021 within 50 mi of the UN bases closed from 2017-2019. Notably, violence was highest in areas around the bases closed in 2018 and lowest around those closed in 2017 for most of these years; the 2018 closure areas were clearly already violence-prone before their bases were closed.
 
 <br>
 
-#### Still, in 2019, violence increased in areas around the bases closed in 2018 and 2019, and it rose in 2021 in areas around bases closed in 2017, 2018, and 2019. In 2021. The vicinity of the 2017 closures saw 15 attacks and 46 fatalities (44% decrease in attacks, 318% increase in fatalities compared to 2017), the 2018 closure areas had 53 attacks and 133 fatalities (112% increase in attacks, 329% increase in fatalities compared to 2018), and the 2019 closure areas experienced 41 attacks and 124 fatalities (116% increase in attacks, 182% increase in fatalities compared to 2019).
+#### Still, in 2019, violence increased in areas around the bases closed in 2018 and 2019, and violence increased in 2021 in areas around bases closed in 2017, 2018, and 2019. E.g., in the year 2021, the 2017 closure areas saw 15 attacks and 46 fatalities (44% decrease in attacks, 318% increase in fatalities compared to the year 2017), the 2018 closure areas had 53 attacks and 133 fatalities (112% increase in attacks, 329% increase in fatalities compared to the year 2018), and the 2019 closure areas experienced 41 attacks and 124 fatalities (116% increase in attacks, 182% increase in fatalities compared to the year 2019).
 
 <br>
 
-#### As theorized in Visual 5, we can now plainly see that in 2019 and 2021 in West Darfur, areas around closed UN bases showed high civilian fatality rates compared to the number of attacks. In 2019, areas with bases closed in 2018 had 23 attacks and 67 fatalities (2.91 fatalities per attack), and the area around the base closed in 2019 saw 19 attacks and 44 fatalities (2.32 fatalities per attack). In 2021, areas where UN bases closed in 2017, 2018, and 2019 experienced fatality rates of 3.07, 2.51, and 3.02 per attack, respectively. Except for 2018 around the base later closed in 2019, there are no other cases in the years analyzed approaching 2 or more fatalities per attack.
+#### As theorized in Visual 5, we can plainly see that in 2019 and 2021 in West Darfur, areas around closed UN bases showed high civilian fatality rates compared to the number of attacks. In 2019, areas with bases closed in 2018 had 23 attacks and 67 fatalities (2.91 fatalities per attack), and the area around the base closed in 2019 saw 19 attacks and 44 fatalities (2.32 fatalities per attack). In 2021, areas where UN bases closed in 2017, 2018, and 2019 experienced rates of 3.07, 2.51, and 3.02 fatalities per attack, respectively. Except for the year 2018 around the base later closed in 2019, there are no other cases in the years analyzed which approach 2 or more fatalities per attack.
 
 <br>
 
@@ -721,12 +721,12 @@ kable_output
 ```
 
 <br>
-
-#### The spike in 2021 fatalities in West Darfur, while not conclusively linked to the UN base and troop withdrawals from 2017 to 2019, is likely related. Human Rights Watch reports in 2021 attributed the surge in violence to a security vacuum from UN withdrawals, [a decline in human rights monitoring, the Sudanese authorities' failure to protect civilians or provide justice for current and past abuses](https://www.hrw.org/news/2021/12/15/sudan-new-wave-attacks-darfur), [inter-militia violence, and attacks by Arab militias (sometimes with the Sudanese Government's Rapid Support Forces) against non-Arab communities](https://www.hrw.org/news/2023/11/26/violence-west-darfur). The UN also attributed the spike in violence to [unresolved ethnic and tribal tensions and Sudanese authorities' inadequate civilian protection following their departure](https://news.un.org/en/story/2021/01/1082722).
+ 
+#### The spikes in 2019 and 2021 fatalities in West Darfur, while not conclusively linked to the UN base and troop withdrawals from 2017 to 2019, are likely related. Human Rights Watch in 2021 attributed the surge in violence to a security vacuum from UN withdrawals, [a decline in human rights monitoring, the Sudanese authorities' failure to protect civilians or provide justice for current and past abuses](https://www.hrw.org/news/2021/12/15/sudan-new-wave-attacks-darfur), [inter-militia violence, and attacks by Arab militias (sometimes with the Sudanese Government's Rapid Support Forces) against non-Arab communities](https://www.hrw.org/news/2023/11/26/violence-west-darfur). The UN also attributed the spike in violence to [unresolved ethnic and tribal tensions and Sudanese authorities' inadequate civilian protection following UNAMID's departure](https://news.un.org/en/story/2021/01/1082722).
  
 <br>
 
-#### Next, in Visual 8 I will create similar maps to the ones shown here (but with respect to South Darfur) displaying attacks on civilians and fatalities.
+#### Next, in Visual 8 I will create similar maps to the ones shown here (but with respect to South Darfur).
 
 <br>
 

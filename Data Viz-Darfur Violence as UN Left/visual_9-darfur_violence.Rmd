@@ -28,7 +28,7 @@ previous_page <- ifelse(current_page > 1, paste0("visual_", current_page - 1, "-
 
 <br>
 
-#### The interactive plot below examines South Darfur and West Darfur with respect to civilian killings broken down by the proportion of overall killings carried out by each type of perpetrator.
+#### The interactive plot below examines South Darfur and West Darfur with respect to the proportion of all civilian killings carried out by each type of perpetrator.
 
 <br>
 
@@ -119,11 +119,11 @@ ggplotly(gg, height = 600, width = 850)
 
 <br>
 
-#### "Identity Militias," as defined in the ACLED Codebook (pp. 23-24), are armed groups organized around shared characteristics like community, ethnicity, region, religion, or sometimes livelihood. Such groups often include those labeled as 'tribal', 'communal', 'ethnic', 'local', 'clan', and 'religious' and 'caste' militias. Crucially, the Codebook notes (pg. 24) that 'identity militias' frequently engage in 'communal violence', *acting locally to achieve objectives* related to resources, power, security, and retribution.
+#### "Identity Militias," on the other hand, as defined in the ACLED Codebook (pp. 23-24), are armed groups organized around shared characteristics like community, ethnicity, region, religion, or sometimes livelihood. Such groups often include those labeled as 'tribal', 'communal', 'ethnic', 'local', 'clan', and 'religious' and 'caste' militias. Crucially, the Codebook notes (pg. 24) that 'identity militias' frequently engage in 'communal violence', *acting locally to achieve objectives* related to resources, power, security, and retribution.
 
 <br>
 
-#### As shown in the above visualizations, in *almost all* cases between 2016 and 2021 in both South Darfur and West Darfur, only state forces, political militias, or identity militias were responsible for killing civilians. 
+#### As shown in the above visualizations, in *almost all* cases between 2016 and 2021 in both South Darfur and West Darfur, only state forces, political militias, or identity militias killed civilians. 
 
 <br>
 
@@ -131,19 +131,19 @@ ggplotly(gg, height = 600, width = 850)
 
 <br>
 
-#### However, civilian killings by political militias in South Darfur rose from 33% in 2018 to 57% in 2019, and in West Darfur, they increased from 4% in 2019 to 68% in 2020. A personal examination of the raw data revealed that all of these killings by political militias are coded as having been conducted by "Unidentified Armed Group (Sudan)". I.e., because their identity could not be established they could not be directly linked to either the government or the opposition. Thus, it is at least possible state-led civilian killings may have continued, but were executed by unidentified political militias loyal to the state, enabling state leaders to maintain plausible deniability.
+#### However, civilian killings by political militias in South Darfur rose from 33% in 2018 to 57% in 2019, and in West Darfur, they increased from 4% in 2019 to 68% in 2020. A personal examination of the raw data revealed that all of these killings by political militias are coded as having been committed by "Unidentified Armed Group (Sudan)". I.e., because their identity could not be established they could not be directly linked to either the government or the opposition. Thus, it is at least possible state-led civilian killings may have continued, but were executed by unidentified political militias loyal to the state, enabling state leaders to maintain plausible deniability.
 
 <br>
 
-#### Troublingly, as civilian killings by state forces declined, those by identity militias surged. In South Darfur, identity militia killings rose from 23% in 2019 to 77% in 2020, and in West Darfur, from 50% in 2018 to 85% in 2019. Although this share dropped to 26% in 2020, it dramatically increased to 93% in 2021 with the closure of the last UN bases.
+#### Troublingly, as civilian killings by state forces declined, those by identity militias surged. In South Darfur, identity militia killings rose from 23% in 2019 to 77% in 2020, and in West Darfur, from 50% in 2018 to 85% in 2019. Although this share dropped to 26% in 2020, it dramatically increased to 93% in 2021 with the complete withdrawal of the mission.
 
 <br>
 
-#### The spike in killings by identity militias as UN troops withdrew indicates that the Sudanese government, despite a possible increase in political will to avoid obvious civilian killings, might have lacked the capacity and/or desire to fill emerging power vacuums and prevent such violence.
+#### The spike in killings by identity militias as UN troops withdrew indicates that the Sudanese government, despite a possible increase in political will to avoid obvious civilian killings, may have lacked the capacity and/or desire to fill emerging power vacuums and prevent such violence.
 
 <br>
 
-#### The second interactive table displays the annual number of civilian killings by perpetrator type, not their proportion. It shows that until 2019, South Darfur had more fatalities from identity militias than West Darfur. However, this trend shifted in 2019 with 39 identity militia killings (up from 15 the previous year), and dramatically so in 2021 with 144 such killings. The table also indicates a significant decrease in the proportion of civilian killings by state forces in both South Darfur and West Darfur after 2018.
+#### The second interactive table displays the annual number of civilian killings by perpetrator type, not their proportion. It shows that until 2019, South Darfur had more fatalities from identity militias than West Darfur. However, this trend shifted in 2019 with 39 identity militia killings (up from 15 the previous year) in West Darfur, and dramatically so in 2021 with 144 such killings. The table also indicates a significant decrease in the overall number of killings by state forces, especially in South Darfur after 2018.
 
 <br>
 
@@ -702,7 +702,7 @@ combined <- rbind(violence_per_identity_militia_actor.south_buffers, violence_pe
 
 <br>
 
-#### In South Darfur, the first table shows low killings from 2017 to 2019, but a surge in 2020. Of the 73 identity militia killings in all of South Darfur in 2020, 40 (55%) were committed by "Darfur communal militias" within 50 mi of the UN bases closed in 2018. In 2021, of the 38 killings, 14 (37%) were committed by Darfur communal militias near these bases.
+#### In South Darfur, the first table shows low killings from 2017 to 2019, but a surge in 2020. Of the 73 identity militia killings in all of South Darfur in 2020, 40 (55%) were committed by "Darfur communal militias" within 50 mi of the UN bases closed in 2018. In 2021, of the 38 killings, 14 (37%) were committed by Darfur communal militias near these same bases.
 
 <br>
 
@@ -791,7 +791,7 @@ violence_per_identity_militia_actor.south_buffers %>%
 
 <br>
 
-#### The table for West Darfur below reveals more about the specific identity militias involved in civilian killings than did the table for South Darfur. In 2021, 144 civilian killings by identity militias occurred in all of West Darfur, with 99 (69%) by Rizeigat Arab militias within 50 mi of the 2018-closed UN bases. In 2019, of the 39 civilian killings by identity militias in all of West Darfur, 37 (95%) were by Maaliya Arab militias, also within 50 mi of these same closed bases.
+#### The table for West Darfur below reveals more about the specific identity militias involved in civilian killings than does the table for South Darfur. In 2021, 144 civilian killings by identity militias occurred in all of West Darfur, with 99 (69%) by Rizeigat Arab militias within 50 mi of the 2018-closed UN bases. In 2019, of the 39 civilian killings by identity militias in all of West Darfur, 37 (95%) were by Maaliya Arab militias, also within 50 mi of these same closed bases.
 
 <br>
 
@@ -826,7 +826,7 @@ violence_per_identity_militia_actor.west_buffers %>%
 
 <br>
 
-#### In the next 2 tables, I will examine all civilian killings by all identity militias in the years and inside the union buffers found in the prior 2 tables to be especially deadly: South Darfur in 2020 and 2021 within 50 mi of the UN bases withdrawn from South Darfur in 2018, and West Darfur in 2019 and 2021 within 50 mi of the UN bases withdrawn from West Darfur in 2018.
+#### In the next 2 tables, I will examine all civilian killings committed by all identity militias in the years and inside the union buffers found to be especially deadly in the prior 2 tables: South Darfur in 2020 and 2021 within 50 mi of the UN bases withdrawn from South Darfur in 2018, and West Darfur in 2019 and 2021 within 50 mi of the UN bases withdrawn from West Darfur in 2018.
 
 
 ```{R Code - Calculate 2018 Union Buffer Areas as a Percentage of Total S and W Darfur Areas, echo=FALSE, fig.height=18, fig.width=10, message=FALSE, warning=FALSE}
@@ -882,11 +882,11 @@ rounded_percentage <- round(percentage_area_west_darfur_2018_buffers * 100, 2)
 
 <br>
 
-#### The area within the union buffer around the 2 2018-withdrawn UN bases comprises 26% of South Darfur's total area (per my calculations). Using this as a benchmark, I will next see whether all identity militia killings falling within the union buffer as percentage of all identity militia killings within all of South Darfur, in 2019 and in 2021, are each greater than 26%. If they are, this provides supporting evidence that identity militia killings in the areas near the withdrawn UN bases were disproportionately high for the areas where UN troops likely would have been able to respond to violence or prevent violence had the bases not been withdrawn.
+#### The area within the union buffer around the 2 2018-withdrawn UN bases comprises 26% of South Darfur's total area (per my calculations). Using this as a benchmark, I will next see whether all identity militia killings falling within the union buffer as percentage of all identity militia killings within all of South Darfur, in 2019 and in 2021, are each greater than 26%. If they are, this provides supporting evidence that identity militia killings in the areas near the withdrawn UN bases were disproportionately high in the areas where UN troops likely would have been able to respond to violence or prevent violence had the bases not been withdrawn.
 
 <br>
 
-#### Afterwards, we will turn to West Darfur, taking the same approach as with South Darfur to establishing a benchmark. The area within the union buffer around the 2 2018-withdrawn UN bases comprises 58% of West Darfur's total area (according to my calculations). We will thus see whether all identity militia killings falling within the union buffer as a percentage of all identity militia killings within all of West Darfur, in 2019 and in 2021, are each greater than 58%.
+#### Afterwards, we will turn to West Darfur, taking the same approach as with South Darfur in establishing a benchmark. The area within the union buffer around the 2 2018-withdrawn UN bases comprises 58% of West Darfur's total area (according to my calculations). We will thus see whether all identity militia killings falling within the union buffer as a percentage of all identity militia killings within all of West Darfur, in 2019 and in 2021, are each greater than 58%.
 
 <br>
 
@@ -1035,11 +1035,15 @@ table_output
 
 <br>
 
-#### From the above chart, we can see that 39 civilian killings by identity militias occurred in 2019 within 50 mi of the UN bases withdrawn from West Darfur in 2018. This constitutes 100% of all 39 civilian killings committed by identity militias in all of West Darfur in 2019.
+#### From the above chart, we can see that 39 civilian killings were committed by identity militias in 2019 within 50 mi of the UN bases withdrawn from West Darfur in 2018. This constitutes 100% of all civilian killings committed by identity militias in all of West Darfur in 2019.
 
 <br>
 
-#### Further, we also see that 114 (or 79%) of the 144 civilian killings by identity militias in all of West Darfur in 2021 occurred within 50 mi of the UN bases withdrawn in 2018. Thus, in both 2019 and 2021, the benchmark was far surpassed.
+#### We also see that 114 (or 79%) of the 144 civilian killings by identity militias in all of West Darfur in 2021 occurred within 50 mi of the UN bases withdrawn in 2018. Thus, in both 2019 and 2021, the benchmark was far surpassed.
+
+<br>
+
+#### We can see from these charts as well as from prior visuals that the evidence supports the theory that one of the factors which played a role in sharp increases in violence against civilians in Darfur was the withdrawal of UN bases as UNAMID closed. Additionally, we have seen there were opportunities when the UN could have recognized rising levels of violence following base withdrawals and slowed the pace of closing the remaining bases in Darfur, but instead chose not to.
 
 <br>
 

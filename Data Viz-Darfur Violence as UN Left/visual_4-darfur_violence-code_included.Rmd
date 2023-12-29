@@ -32,6 +32,9 @@ next_page <- ifelse(current_page < total_pages, paste0("visual_", current_page +
 
 <br>
 
+#### A closer inspection of civilian killings by state in Darfur via the ACLED dataset shows that as UN bases were being withdrawn between 2017 and 2021, the *proportion* of all such killings was shrinking in Central Darfur, but generally growing in South Darfur and West Darfur. By the end of 2020 51% of civilian killings were concentrated in South Darfur, and by the end of 2021 48% of civilian killings were concentrated in West Darfur.
+
+<br>
 
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
 
@@ -106,8 +109,6 @@ ggplotly(gg, height = 600, width = 750)
 </center>
 
 <br>
-
-#### **Takeaways:** A closer inspection of civilian killings by region within Darfur via the ACLED dataset shows that as UN bases were being withdrawn between 2017 and 2021, the *proportion* of all such killings was shrinking in Central Darfur, but growing in South Darfur in 2018 and 2020, and in West Darfur in 2019 and 2021. By the end of 2020 51% of civilian killings were concentrated in South Darfur, and by the end of 2021 48% of civilian killings were concentrated in West Darfur.
 
 ```{r echo=TRUE}
 

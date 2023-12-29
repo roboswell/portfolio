@@ -1,5 +1,5 @@
 ---
-title: 'UNAMID: A Failed Peacekeeping Mission? - Visual 1'
+title: "UNAMID: Did the UN's Withdrawal from Darfur Lead to More Violence against Civilians?"
 author: "Rob Boswell"
 date: "7-27-2023"
 output: html_document
@@ -31,7 +31,7 @@ next_page <- ifelse(current_page < total_pages, paste0("visual_", current_page +
 
 <br>
 
-#### **Introduction:** The UN-African Union Mission in Darfur (UNAMID) opened in 2008, several years after the 2003-2004 genocide in Darfur, Sudan. As seen in the following visual, at the mission's height, over 12,500 troops were stationed in Darfur. The mission officially ended at the end of 2020. While attacks on civilians (recorded by the ACLED dataset) are displayed below until the end of 2021, UNAMID troop numbers from the Geo-PKO dataset are only published until the end of 2020, even though the last troops left UNAMID on June 30, 2021 in accordance with [UN Security Council resolution 2559 (2020)](https://documents-dds-ny.un.org/doc/UNDOC/GEN/N20/382/73/PDF/N2038273.pdf).
+#### **Introduction:** The UN-African Union Mission in Darfur (UNAMID) opened in 2008 after the 2003-2004 genocide in Darfur, Sudan. As seen in the following visual, at the mission's height over 12,500 troops were stationed in Darfur. The mission officially ended at the end of 2020. While attacks on civilians recorded by the ACLED dataset are displayed below until the end of 2021, UNAMID troop numbers from the Geo-PKO dataset are only published until the end of 2020, even though the last troops left Darfur on June 30, 2021 in accordance with [UN Security Council resolution 2559 (2020)](https://documents-dds-ny.un.org/doc/UNDOC/GEN/N20/382/73/PDF/N2038273.pdf).
 
 <br>
 
@@ -97,15 +97,17 @@ visual_1
 
 <br>
 
-#### **Takeaways:** The first vertical line shows that when the number of troops in Darfur climbed near their apex in 2011, attacks on civilians declined to their minimum. Soon after, UNAMID began decreasing the number of peacekeepers. However, it can be seen (in between the first and second vertical lines) that as troops were being withdrawn attacks on civilians surged. Seeing this surge in attacks, it might have been expected that the UN would decide to increase troop numbers again; instead, it continued to withdraw even *more* troops. 
+#### The first vertical line shows that when the number of troops in Darfur reached near its apex in 2011, attacks on civilians reached their minimum. Soon after, UNAMID began to gradually withdraw peacekeepers. However, it can be seen in between the first and second vertical lines that as troops were being withdrawn attacks on civilians surged. Seeing this surge, it might have been expected that the UN would decide to increase troop numbers again; instead, it continued to withdraw even more. 
 
 <br>
 
-#### By 2015, the number of attacks on civilians reached its highest point (shown at the second vertical line). And while UNAMID began to slightly increase troop numbers that year, within only one year troop numbers began to fall steadily as it became clear that attacks on civilians were starting to decline. Yet, as the rapid decline in attacks on civilians began to taper off by 2018, UNAMID troop numbers nevertheless continued to plunge.
+#### By 2015, the number of attacks on civilians reached its highest point (shown at the second vertical line). And while UNAMID began to slightly increase troop numbers that year, within only one year troop numbers began to fall steadily as it became clear that attacks on civilians were starting to decline. Yet, as the rapid decline in attacks began to taper off by 2018, UNAMID troop numbers nevertheless continued to plunge.
 
 <br>
 
-#### It is clear that by 2020 (signified by the third vertical line), when very few troops remained, violence against civilians began to surge once again. When the UNAMID mission officially closed at the end of Dec. 2020, there were even *more attacks* being carried out than when the mission had opened, and violence continued to surge thereafter.
+#### It is clear that by 2020 (signified by the third vertical line), when very few troops remained, violence against civilians began to surge again. When the UNAMID mission officially closed at the end of Dec. 2020, there were *even more attacks* being carried out than when the mission opened. The remainder of this portfolio project seeks to establish whether there is evidence the UN's withdrawal was premature, and whether it lead to rising violence. It focuses on attack and fatality figures rather than on host state decisions involved in the troop withdrawal process.
+
+<br>
 
 ```{r echo=TRUE}
 
