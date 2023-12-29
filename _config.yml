@@ -1,5 +1,7 @@
 title: Rob Boswell
-logo: https://github.com/roboswell/portfolio/blob/gh-pages/1.png
-description: Data Scientist and International Crisis Forecaster
+logo: /1.png
+description: Data Scientist and International Crisis Researcher
 show_downloads: false
-theme: jeckyll-theme-minimal
+remote_theme: pages-themes/minimal@v0.2.0
+plugins:
+- jekyll-remote-theme # add this line to the plugins list if you already have one
