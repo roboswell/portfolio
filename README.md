@@ -13,7 +13,7 @@
 
 ### Portfolio Projects
 - GIS & Spatial Analysis:
-    - Title: ["Examining Geospatial Covariate Relationships with Civilian Killings in South Sudan’s Civil War"](./GIS/GIS_covariate_relationships-killings-south_sudan.html)
+    - Title: [**"Examining Geospatial Covariate Relationships with Civilian Killings in South Sudan’s Civil War"**](./GIS/GIS_covariate_relationships-killings-south_sudan.html)
         - Focus: Geospatial Statistics
         Technology Used: QGIS, R, GeoDa
         - Contents: Geospatial interpolation, hot spot analysis, Moran's I calculation, Moran's I residual analysis, Lagrange Multiplier (LM) and Robust LM lag and error diagnostics, and Spatial Durbin models.
@@ -25,7 +25,7 @@
         - Technology Used: R Markdown, ggmap, tmap, sp, sf, rgdal, stadia/stamen maps, plotly, dplyr, ggplot2, ggthemes, ggpubr, stringr, scales, and kableExtra
         - Contents: Interactive and static charts, GIS maps, heat map tables, density maps, and union buffers and using statistics within them
 - Natural Language Processing (NLP):
-    - Title: ["Using News Articles on Events in Nigeria in 2019 to Predict Political Violence"](./ML-Predicting%20Violence%20with%20News/Using_Nigerian_News-based_ML_Models_to_Predict_Political_Violence.html)
+    - Title: [**"Using News Articles on Events in Nigeria in 2019 to Predict Political Violence"**](./ML-Predicting%20Violence%20with%20News/Using_Nigerian_News-based_ML_Models_to_Predict_Political_Violence.html)
         - Focus: NLP for Time-Series Forecasting
         - Technology Used: Python, TF-IDF word transformation, NLTK library, Scikit-Learn machine learning models, Scikit-Learn's TimeSeriesSplit, Augmented Dickey-Fuller Test, first-differencing, lags
         - Contents: Converting news articles by publishing date into time-series machine elarning forecasting models. Performance comparison between Ridge, Lasso, Random Forest, and XGBoost regression models
