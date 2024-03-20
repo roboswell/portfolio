@@ -12,6 +12,8 @@
 - Refugee Status Determination (RSD) Intern @ United Nations High Commissioner for Refugees (UNHCR) - Cairo, Egypt - 2016
 
 ### Portfolio Projects
+- GIS & Spatial Analysis:
+    - Title: ["Examining Geospatial Covariate Relationships with Civilian Killings in South Sudan’s Civil War"](./GIS/GIS_covariate_relationships-killings-south_sudan.html)
 - Data Visualization:
     - Title: "UNAMID: Did the UN’s Withdrawal from Darfur Lead to More Violence against Civilians?"
     - [Version not showing code](./Data%20Viz-Darfur%20Violence%20as%20UN%20Left/visual_1-darfur_violence.html)
