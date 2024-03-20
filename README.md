@@ -21,7 +21,7 @@
     - **Title: "UNAMID: Did the UN’s Withdrawal from Darfur Lead to More Violence against Civilians?"**
     - [Version showing all code](./Data%20Viz-Darfur%20Violence%20as%20UN%20Left/visual_1-darfur_violence-code_included.html)
     - [Version not showing code](./Data%20Viz-Darfur%20Violence%20as%20UN%20Left/visual_1-darfur_violence.html)
-            - Focus: GIS Mapping
+        - Focus: GIS Mapping
         - Technology Used: R Markdown, ggmap, tmap, sp, sf, rgdal, stadia/stamen maps, plotly, dplyr, ggplot2, ggthemes, ggpubr, stringr, scales, and kableExtra
         - Contents: Interactive and static charts, GIS maps, heat map tables, density maps, and union buffers and using statistics within them
 - Natural Language Processing (NLP):
