@@ -33,5 +33,5 @@
     - [Primary document (Python)](./NLP/Nigeria_News_LDA_&_Sentiment_Analysis.html)
     - [Visualization for the project (R)](./NLP/Nigeria_News_Sentiment_Analysis-Viz-Created_in_R.html)
         - Focus: Topic Modeling & Sentiment Analysis
-        - Technology Used: Python, R, Excel, NLTK for stopwords, PorterStemmer, and PunktSentenceTokenizer, gensim library for CoherenceModel, LdaModel, and corpora, Jaccard similarity, vaderSentiment library, itertools, ggplot2
+        - Technology Used: Python, R Markdown, Excel, NLTK for stopwords, PorterStemmer, and PunktSentenceTokenizer, gensim library for CoherenceModel, LdaModel, and corpora, Jaccard similarity, vaderSentiment library, itertools, ggplot2
         - Contents: Text data cleaning, Latent Dirichlet Allocation (LDA) topic modeling of Nigerian news article text, VADER (Valence Aware Dictionary for Sentiment Reasoning) sentiment analysis scores for articles containing specific political words, compared across quarters of the year.
