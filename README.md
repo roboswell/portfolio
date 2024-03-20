@@ -16,7 +16,7 @@
     - Title: ["Examining Geospatial Covariate Relationships with Civilian Killings in South Sudan’s Civil War"](./GIS/GIS_covariate_relationships-killings-south_sudan.html)
         - Focus: Geospatial Statistics
         Technology Used: QGIS, R, GeoDa
-        Contents: Geospatial interpolation, hot spot analysis, Moran's I calculation, Moran's I residual analysis, Lagrange Multiplier (LM) and Robust LM lag and error diagnostics, and Spatial Durbin models.
+        - Contents: Geospatial interpolation, hot spot analysis, Moran's I calculation, Moran's I residual analysis, Lagrange Multiplier (LM) and Robust LM lag and error diagnostics, and Spatial Durbin models.
 - Data Visualization:
     - Title: "UNAMID: Did the UN’s Withdrawal from Darfur Lead to More Violence against Civilians?"
     - [Version not showing code](./Data%20Viz-Darfur%20Violence%20as%20UN%20Left/visual_1-darfur_violence.html)
