@@ -19,9 +19,9 @@
         - Contents: Geospatial interpolation, hot spot analysis, Moran's I calculation, Moran's I residual analysis, Lagrange Multiplier (LM) and Robust LM lag and error diagnostics, and Spatial Durbin models.
 - Data Visualization:
     - **Title: "UNAMID: Did the UN’s Withdrawal from Darfur Lead to More Violence against Civilians?"**
-    - [Version not showing code](./Data%20Viz-Darfur%20Violence%20as%20UN%20Left/visual_1-darfur_violence.html)
     - [Version showing all code](./Data%20Viz-Darfur%20Violence%20as%20UN%20Left/visual_1-darfur_violence-code_included.html)
-        - Focus: GIS Mapping
+    - [Version not showing code](./Data%20Viz-Darfur%20Violence%20as%20UN%20Left/visual_1-darfur_violence.html)
+            - Focus: GIS Mapping
         - Technology Used: R Markdown, ggmap, tmap, sp, sf, rgdal, stadia/stamen maps, plotly, dplyr, ggplot2, ggthemes, ggpubr, stringr, scales, and kableExtra
         - Contents: Interactive and static charts, GIS maps, heat map tables, density maps, and union buffers and using statistics within them
 - Natural Language Processing (NLP):
