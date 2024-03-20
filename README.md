@@ -25,13 +25,13 @@
         - Technology Used: R Markdown, ggmap, tmap, sp, sf, rgdal, stadia/stamen maps, plotly, dplyr, ggplot2, ggthemes, ggpubr, stringr, scales, and kableExtra
         - Contents: Interactive and static charts, GIS maps, heat map tables, density maps, and union buffers and using statistics within them
 - Natural Language Processing (NLP):
-    - **Title:** ["Using News Articles on Events in Nigeria in 2019 to Predict Political Violence"](./ML-Predicting%20Violence%20with%20News/Using_Nigerian_News-based_ML_Models_to_Predict_Political_Violence.html)
+    - **Title:** ["Using News Articles on Events in Nigeria in 2019 to Predict Political Violence"](./NLP/Using_Nigerian_News-based_ML_Models_to_Predict_Political_Violence.html)
         - Focus: NLP for Time-Series Forecasting
         - Technology Used: Python, TF-IDF word transformation, NLTK library, Scikit-Learn machine learning models, Scikit-Learn's TimeSeriesSplit, Augmented Dickey-Fuller Test, first-differencing, lags
         - Contents: Converting news articles by publishing date into time-series machine elarning forecasting models. Performance comparison between Ridge, Lasso, Random Forest, and XGBoost regression models
     - **Title: "LDA Topic Modeling & VADER Sentiment Analysis for Political News Articles on Events Related to Nigeria in 2019"**
-    - [Primary document (Python)](./NLP-Topic%20Models%20and%20Sentiment/Nigeria_News_LDA_&_Sentiment_Analysis.html)
-    - [Visualization for the project (R)](./NLP-Topic%20Models%20and%20Sentiment/Nigeria_News_Sentiment_Analysis-Viz-Created-in-R.html)
+    - [Primary document (Python)](./NLP/Nigeria_News_LDA_&_Sentiment_Analysis.html)
+    - [Visualization for the project (R)](./NLP/Nigeria_News_Sentiment_Analysis-Viz-Created_in_R.html)
         - Focus: Topic Modeling & Sentiment Analysis
         - Technology Used: Python, R, Excel, NLTK for stopwords, PorterStemmer, and PunktSentenceTokenizer, gensim library for CoherenceModel, LdaModel, and corpora, Jaccard similarity, vaderSentiment library, itertools, ggplot2
         - Contents: Text data cleaning, Latent Dirichlet Allocation (LDA) topic modeling of Nigerian news article text, VADER (Valence Aware Dictionary for Sentiment Reasoning) sentiment analysis scores for articles containing specific political words, compared across quarters of the year.
