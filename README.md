@@ -37,8 +37,8 @@
         - Contents: Text data cleaning, Latent Dirichlet Allocation (LDA) topic modeling of Nigerian news article text, VADER (Valence Aware Dictionary for Sentiment Reasoning) sentiment analysis scores for articles containing specific political words, compared across quarters of the year.
 
 ### Non-Conflict Data Science Projects
-- Deep Learning for Medical Imaging:
-    - **Title:** ["Comparative Analysis of Deep Learning Models for X-ray Illness Classification"](./Neural%20Network%20Models/X-Ray%20Deep%20Learning%20Classificaton%20Models.html)
+- CNN Deep Learning for Medical Imaging:
+    - **Title:** ["Comparative Analysis of CNN Deep Learning Models for X-ray Illness Classification"](./Neural%20Network%20Models/X-Ray%20Deep%20Learning%20Classificaton%20Models.html)
         - Focus: Deep Learning for Image Classification
         Technology Used: Python, Keras, CNNs, Transfer Learning, ImageDataGenerator, flow_from_directory, EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
         - Contents: Comparing the performance of 8 CNN deep learning models on X-ray images from three classes (COVID-19, viral pneumonia, and healthy). These include transfer learning models (e.g., InceptionV3), and various techniques to improve model generalization and help avoid overfitting (e.g., dropout, batch normalization, early stopping, data augmentation, L1 and L2 regularization, fire modules, and ways of using deep networks effectively). I also demonstrate best practices for structuring filters/kernels, channels, layers, activation functions, pooling, convolutional blocks, and other model components for optimal performance. Metrics include confusion matrixes, accuracy, precision, recall, F1-score, ROC curve, and AUC. Analysis of non-augmented vs. augmented data models with specific augmentation techniques are shown. Architectures and training strategies for each model are detailed.    
