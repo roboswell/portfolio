@@ -24,11 +24,16 @@
         - Focus: GIS Mapping
         - Technology Used: R Markdown, ggmap, tmap, sp, sf, rgdal, stadia/stamen maps, plotly, dplyr, ggplot2, ggthemes, ggpubr, stringr, scales, and kableExtra
         - Contents: Interactive and static charts, GIS maps, heat map tables, density maps, and union buffers and using statistics within them
+- Graph Network Visualization:
+    - **Title:** ["Eastern DRC Conflict Network Graph"](./Network%20Analysis/eastern_drc_conflict_network_graph.html)
+        - Focus: Graph Networks
+        - Technology Used: R Markdown, sf, tidyr, dplyr, htmlwidgets, igraph, and visNetwork    
+        - Contents: Interactive undirected network graph, with nodes weighted by eigenvector centrality, edges weighted by total conflict episodes between node dyads, community clusters determined by the Walktrap graph cluster algorithm, edge type distinguished by color, and pop-up displays of edge attributes as users hover over edges.
 - Natural Language Processing (NLP):
     - **Title:** ["Using News Articles to Predict Political Violence in Nigeria"](./NLP/Using_Nigerian_News-based_ML_Models_to_Predict_Political_Violence.html)
         - Focus: NLP for Time-Series Forecasting
         - Technology Used: Python, TF-IDF word transformation, NLTK library, Scikit-Learn machine learning models, Scikit-Learn's TimeSeriesSplit, Augmented Dickey-Fuller Test, first-differencing, lags
-        - Contents: Converting news articles by publishing date into time-series machine elarning forecasting models. Performance comparison between Ridge, Lasso, Random Forest, and XGBoost regression models
+        - Contents: Converting news articles by publishing date into time-series machine learning forecasting models. Performance comparison between Ridge, Lasso, Random Forest, and XGBoost regression models
     - **Title: "LDA Topic Modeling & VADER Sentiment Analysis for Political News Articles on Nigeria"**
     - [Primary document (Python)](./NLP/Nigeria_News_LDA_&_Sentiment_Analysis.html)
     - [Visualization for the project (R)](./NLP/Nigeria_News_Sentiment_Analysis-Viz-Created_in_R.html)
