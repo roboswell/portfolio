@@ -14909,9 +14909,12 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 <span class="s2"># Create an optional button to use to perform the search</span>
 <span class="s2">search_button = st.button("Search")</span>
 
-<span class="s2">if (prompt1 and 'vectors' in st.session_state) or search_button: # If you enter the prompt, this creates a document chain. This first line ensures the vector embeddings have already been created before user can enter their question</span>
+<span class="s2"># If you enter the prompt, this next code chunk creates a document chain. This first line ensures the vector embeddings have </span>
+<span class="s2"># already been created before user can enter their question</span>
+<span class="s2">if (prompt1 and 'vectors' in st.session_state) or search_button:</span>
 <span class="s2">    document_chain = create_stuff_documents_chain(llm, prompt)</span>
-<span class="s2">    retriever = st.session_state.vectors.as_retriever() # When we use the vectors database as_retriever(), this becomes an interface to retrieve all the data from the database</span>
+<span class="s2">    retriever = st.session_state.vectors.as_retriever() # When we use the vectors database as_retriever(), this becomes an </span>
+<span class="s2">    # interface to retrieve all the data from the database</span>
 <span class="s2">    retrieval_chain = create_retrieval_chain(retriever, document_chain)</span>
 <span class="s2">    response = retrieval_chain.invoke({'input': prompt1})</span>
 <span class="s2">    st.write(response['answer'])</span>
@@ -14932,7 +14935,7 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 
 <span class="s2">completion = client.chat.completions.create(</span>
 <span class="s2">  model="meta/llama-3.1-70b-instruct",</span>
-<span class="s2">  messages=[{"role":"user","content":"List the 5 least wealthy countries in the world, and the documented reasons each of these countries struggles with poverty."}],</span>
+<span class="s2">  messages=[{"role":"user","content":"List the 5 least wealthy countries, and the main reasons each struggles with poverty."}],</span>
 <span class="s2">  temperature=0.2,</span>
 <span class="s2">  top_p=0.7,</span>
 <span class="s2">  max_tokens=1024,</span>
