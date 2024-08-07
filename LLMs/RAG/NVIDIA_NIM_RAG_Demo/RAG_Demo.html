@@ -14697,11 +14697,16 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 <div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Since it is possible that if you run the following code directly inside a Jupyter Notebook cell some packages may unintentionally be installed in different environments, it is best to instead run the following code in the Anaconda prompt, after you create and activate the my_rag_env environment:</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Since it is possible that if you run the following code directly inside a Jupyter Notebook cell some packages may </span>
+<span class="c1"># unintentionally be installed in different environments, it is best to instead run the following code in the Anaconda prompt, </span>
+<span class="c1"># after you create and activate the my_rag_env environment:</span>
 
 <span class="c1"># pip install openai python-dotenv langchain_nvidia_ai_endpoints langchain_community faiss-cpu streamlit jupyter-server-proxy pypdf</span>
 
-<span class="c1"># A more efficient way to do the same thing would be to create a txt file (e.g., "requirements.txt") with each of the above packages listed on a separate line, then save the file, and run this code in the anaconda prompt: pip install -r requirements.txt</span>
+<span class="c1"># A more efficient way to do the same thing would be to create a txt file (e.g., "requirements.txt") with each of the above </span>
+<span class="c1"># packages listed on a separate line, then save the file, and run this code in the anaconda prompt: </span>
+
+<span class="c1"># pip install -r requirements.txt</span>
 </pre></div>
 
      </div>
@@ -14718,7 +14723,8 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Alternatively, using conda install instead of pip install can reduce the likelihood of package dependency conflicts.</span>
-<span class="c1"># First install all packages conda install will permit using conda-forge. For any remaining packages not available in conda-forge, use pip install:</span>
+<span class="c1"># First install all packages conda install will permit using conda-forge. For any remaining packages not available in </span>
+<span class="c1"># conda-forge, use pip install:</span>
 
 <span class="c1"># conda install -c conda-forge openai python-dotenv faiss-cpu streamlit jupyter-server-proxy pypdf</span>
 <span class="c1"># pip install langchain_nvidia_ai_endpoints langchain_community</span>
@@ -14866,7 +14872,10 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 <span class="s2">            # Load the saved FAISS index</span>
 <span class="s2">            st.session_state.vectors = FAISS.load_local(</span>
 <span class="s2">                FAISS_FOLDER_PATH, st.session_state.embeddings, index_name=FAISS_INDEX_NAME, allow_dangerous_deserialization=True</span>
-<span class="s2">            ) # Note: setting allow_dangerous_deserialization=True can be done if you are certain the files you are searching for your context do not contain malicious code (e.g., internal company files). But if searching through pdf files found on the internet, e.g., be careful.</span>
+<span class="s2">            ) </span>
+<span class="s2">            # Note: setting allow_dangerous_deserialization=True can be done if you are certain the files you are searching for </span>
+<span class="s2">            # your context do not contain malicious code (e.g., internal company files are usually safe). But if searching </span>
+<span class="s2">            # through pdf files found on the internet, e.g., be careful.</span>
 <span class="s2">        else:</span>
 <span class="s2">            # If the index doesn't exist, create the embeddings and vector store</span>
 <span class="s2">            st.session_state.embeddings = NVIDIAEmbeddings()  # Will create the embeddings used to convert the text into vectors</span>
