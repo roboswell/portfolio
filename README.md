@@ -47,6 +47,11 @@
         - Focus: Enhancing LLM Performance and Utility for Internal Organizational Tasks
         - Technology Used: Python, NVIDIA NIM, LangChain, Streamlit, IPython.display, NVIDIA Vector Embeddings, FAISS Vector Store, Meta Llama 3.1-8B LLM
         - Contents: Proof-of-concept version of a RAG system for using LLMs to search pdf documents stored on a computer system to provide accurate context when answering a user's chatbot queries.
+- Web Scraping:
+    - **Title:** ["Web Scraping Using Scrapy"](./Web_Scraping/Web_Scraping_Using_Scrapy.html)
+        - Focus: Demonstrating how to scrape text anonymously from embedded URL links located on a user's predetermined URL or list of URLs
+        - Technology Used: Python, Scrapy, TOR
+        - Contents: Web scraping using Scrapy and Tor, extracting data into dictionaries and structured Pandas DataFrames for analysis and processing.        
 - CNN Deep Learning for Imaging:
     - **Title:** ["Comparative Analysis of CNN Deep Learning Models for X-ray Illness Classification"](./Neural%20Network%20Models/X-Ray%20Deep%20Learning%20Classificaton%20Models.html)
         - Focus: Deep Learning for Image Classification
