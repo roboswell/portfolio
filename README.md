@@ -46,7 +46,7 @@
     - **Title:** ["RAG for LLMs"](./LLMs/RAG/NVIDIA_NIM_RAG_Demo/RAG_Demo.html)
         - Focus: Enhancing LLM Performance and Utility for Internal Organizational Tasks
         - Technology Used: Python, NVIDIA NIM, LangChain, Streamlit, IPython.display, NVIDIA Vector Embeddings, FAISS Vector Store, Meta Llama 3.1-8B LLM
-        - Contents: Proof-of-concept version of a RAG system for using LLMs to search pdf documents stored on a computer system to provide accurate context when answering a user's chatbot queries.
+        - Contents: A proof-of-concept for using Retrieval Augmented Generation (RAG) with an LLM to search PDF documents on a computer, providing context for chatbot queries.
 - Web Scraping:
     - **Title:** ["Web Scraping Using Scrapy"](./Web_Scraping/Web_Scraping_Using_Scrapy.html)
         - Focus: Demonstrating how to scrape text anonymously from embedded URL links located on a user's predetermined URL or list of URLs
