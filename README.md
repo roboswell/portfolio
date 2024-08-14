@@ -50,8 +50,8 @@
 - Web Scraping:
     - **Title:** ["Web Scraping Using BeautifulSoup"](./Web_Scraping/Web_Scraping_Using_BeautifulSoup-v2.html)
         - Focus: Illustrating how to scrape text and tables anonymously from embedded URL links located within URLs placed in a user's predefined list.
-        - Technology Used: Python, BeautifulSoup, TOR, Regular Expression (ReGex), IPython.display
-        - Contents: Web scraping using BeautifulSoup and TOR, and structuring originating URLs, scraped URLs, text and tables from scraped URLs in Pandas DataFrames for analysis. Extensive cleaning of scraped text via ReGex. Viewing styled Pandas dataframes. Viewing scraped tables in html.
+        - Technology Used: Python, BeautifulSoup, TOR, Regular Expression (regex), IPython.display
+        - Contents: Web scraping using BeautifulSoup and TOR, and structuring originating URLs, scraped URLs, text and tables from scraped URLs in Pandas DataFrames for analysis. Extensive cleaning of scraped text via regex. Viewing styled Pandas DataFrames. Viewing scraped tables in html.
     - **Title:** ["Web Scraping Using Scrapy"](./Web_Scraping/Web_Scraping_Using_Scrapy.html)
         - Focus: Demonstrating how to scrape text anonymously from embedded URL links located on a user's predetermined URL or list of URLs
         - Technology Used: Python, Scrapy, TOR
