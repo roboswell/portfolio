@@ -51,11 +51,7 @@
     - **Title:** ["Web Scraping Using BeautifulSoup"](./Web_Scraping/Web_Scraping_Using_BeautifulSoup.html)
         - Focus: Illustrating how to scrape text and tables anonymously from embedded URL links located within URLs placed in a user's predefined list.
         - Technology Used: Python, BeautifulSoup, TOR, Regular Expression (regex), IPython.display
-        - Contents: Web scraping using BeautifulSoup and TOR, and structuring originating URLs, scraped URLs, text and tables from scraped URLs in Pandas DataFrames for analysis. Extensive cleaning of scraped text via regex. Viewing styled Pandas DataFrames. Viewing scraped tables in html.
-    - **Title:** ["Web Scraping Using Scrapy"](./Web_Scraping/Web_Scraping_Using_Scrapy.html)
-        - Focus: Demonstrating how to scrape text anonymously from embedded URL links located on a user's predetermined URL or list of URLs
-        - Technology Used: Python, Scrapy, TOR
-        - Contents: Web scraping using Scrapy and TOR, extracting data into dictionaries and structured Pandas DataFrames for analysis.        
+        - Contents: Web scraping using BeautifulSoup and TOR, and structuring originating URLs, scraped URLs, text and tables from scraped URLs in Pandas DataFrames for analysis. Extensive cleaning of scraped text via regex. Viewing styled Pandas DataFrames. Viewing scraped tables in html.     
 - CNN Deep Learning for Imaging:
     - **Title:** ["Comparative Analysis of CNN Deep Learning Models for X-ray Illness Classification"](./Neural%20Network%20Models/X-Ray%20Deep%20Learning%20Classificaton%20Models.html)
         - Focus: Deep Learning for Image Classification
