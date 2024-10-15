@@ -13,7 +13,7 @@
 
 ### Conflict Data Science Projects
 - GIS & Spatial Analysis:
-    - **Title:** ["Predicting Attacks on Civilians in the Eastern Democratic Republic of Congo"](./ML-Geospatial%20Violence%20Forecast-E%20DRC/part_1-spatial_forecast-east_drc-attacks_on_civilians.html)
+    - **Title:** ["Predicting Attacks on Civilians in the Eastern Democratic Republic of Congo" (5 Pages)](./ML-Geospatial%20Violence%20Forecast-E%20DRC/part_1-spatial_forecast-east_drc-attacks_on_civilians.html)
         - Focus: Geospatial Machine Learning
         - Technology Used: R Markdown, QGIS, mlr3, spatially aware cross-validation, XGBoost, Random Forest, Support Vector Machines, PCA, multi-objective tuning, hyperband, nsga2R, sf, raster, terra, spdep, blockCV, ggplot2, rayshader, pROC, PRROC, caret, data.tables, future (parallel processing)
         - Contents: Geospatial machine learning model creation and performance comparison, feature engineering, creating dynamically weighted and asymmetrically penalized metrics for highly skewed data, spatial weight matrix creation, feature selection, feature importance, creating maps with fishnet grid cell observations, kernel density estimation heatmaps, Global and Local Moran's I calculation, variogram analysis for determining the range of spatial autocorrelation, and data visualization of 2D and 3D maps, bar charts, histograms, risk category distribution charts, ROC Curves, and Precision-Recall Curves.
@@ -22,7 +22,7 @@
         - Technology Used: QGIS, R, GeoDa
         - Contents: Geospatial interpolation, hot spot analysis, Moran's I calculation, Moran's I residual analysis, Lagrange Multiplier (LM) and Robust LM lag and error diagnostics, and Spatial Durbin models.
 - Data Visualization Storytelling:
-    - **Title: "UNAMID: Did the UN’s Withdrawal from Darfur Lead to More Violence against Civilians?"**
+    - **Title: "UNAMID: Did the UN’s Withdrawal from Darfur Lead to More Violence against Civilians?" (9 Pages)**
     - [Version showing all code](./Data%20Viz-Darfur%20Violence%20as%20UN%20Left/visual_1-darfur_violence-code_included.html)
     - [Version not showing code](./Data%20Viz-Darfur%20Violence%20as%20UN%20Left/visual_1-darfur_violence.html)
         - Focus: GIS Mapping
