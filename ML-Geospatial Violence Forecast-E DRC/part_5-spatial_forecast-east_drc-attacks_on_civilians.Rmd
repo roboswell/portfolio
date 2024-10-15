@@ -1,0 +1,866 @@
+---
+title: "Predicting Attacks on Civilians in the Eastern Democratic Republic of Congo: Classification Metrics & Conclusion"
+author: "Rob Boswell"
+date: "10-15-2024"
+output:
+  html_document:
+    css: header_styles.css
+---
+
+```{r echo=FALSE}
+
+library(stringr)
+
+# Get the current page number from the file name
+current_page <- as.numeric(str_extract(knitr::current_input(), "\\d+"))
+
+# Set the total number of pages
+total_pages <- 5
+
+# Generate the URLs for the previous and next pages
+previous_page <- ifelse(current_page > 1, paste0("part_", current_page - 1, "-spatial_forecast-east_drc-attacks_on_civilians.html"), NA)
+
+# I do not include code for "Next Page" both for the R code above and for the html code below because this is the last page
+
+```
+
+<ul class="pager">
+  <li><a href="`r previous_page`" style="color: crimson;">Previous Page</a></li>
+</ul>
+
+<br>
+
+### **Transforming Results into Classification Metrics:**
+
+<br>
+
+#### We cannot simply go by how the predictions appear on the map. We need to obtain a more thoroughly grounded empirical understanding of how accurate these predictions are. To do so, let's now view the prediction results in terms of binary classification metrics instead of regression metrics. I will calculate - for each of the 20 territories - the percentage of grid cells in which - when actual ground truth attack values occur, predicted attack values occur as well. Those grid cells having no actual attacks that also have no predicted attacks will also be considered a match.
+
+<br>
+
+#### This helps us get a sense of the spatial accuracy level of predicted attack locations and predicted non-attack locations. As shown in the code chunk output, initially, the results seem impressive. The percentage of matches by territory range from 80% to 100%. The mean is 96.2% and the median is 98.3%. However, given the extreme class imbalance, most grid cells have an actual value of 'no attacks', so predicting 'no attacks' correctly in most cells leads to our high overall percentage of correct matches. Focusing too much on grid cells with no attacks inflates the level of accuracy. Thus, we need to find better ways of assessing how well our models are performing, especially for grid cells with predicted 'attacks'.
+
+<br>
+
+```{r Calculate Spatial Accuracy of Predictions, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# Load necessary libraries
+library(dplyr)
+
+final_net.sf.attacks_test <- readRDS(file = "final_net.sf.attacks_test-after_adding_HiSig_and_HiSig.dist.rds")
+
+combined_predictions <- readRDS("combined_models_predictions_across_territories.rds")
+
+# Merge predictions with test data based on uniqueID
+data_combined <- final_net.sf.attacks_test %>%
+  left_join(combined_predictions, by = "uniqueID") %>%
+  dplyr::select(uniqueID, NAME_3, countAttacks, Predicted_Value)
+
+# Define presence of attacks
+data_combined <- data_combined %>%
+  mutate(
+    actual_presence = ifelse(countAttacks >= 1, 1, 0),
+    predicted_presence = ifelse(Predicted_Value >= 0.5, 1, 0)
+  )
+
+# saveRDS(data_combined, "data_combined.rds")
+# data_combined <- readRDS("data_combined.rds")
+
+# For each territory, calculate the percentage of grid cells where actual attacks occurred and predicted attacks also occurred
+
+results_code <- data_combined %>%
+  group_by(NAME_3) %>%  # Group data by territory
+  summarise(
+    total_grid_cells = n(),  # Total number of uniqueID-based grid cells in each territory
+    matched_cells = sum(ifelse(
+      (actual_presence == 1 & predicted_presence == 1) | 
+      (actual_presence == 0 & predicted_presence == 0), 1, 0
+    )),
+    percentage_correct = (matched_cells / total_grid_cells) * 100  # Calculate percentage of matched grid cells
+  ) %>%
+  as.data.frame() %>%
+  dplyr::select(-geometry)
+
+
+# Display the results
+print(results_code)
+
+# > print(results_code)
+#      NAME_3 total_grid_cells matched_cells percentage_correct
+# 1       Aru              334           333           99.70060
+# 2      Beni              380           359           94.47368
+# 3    Bukavu               20            16           80.00000
+# 4     Djugu              427           412           96.48712
+# 5      Fizi              656           644           98.17073
+# 6      Goma               38            34           89.47368
+# 7     Idjwi               40            40          100.00000
+# 8     Irumu              365           355           97.26027
+# 9    Kabare              230           229           99.56522
+# 10   Kalehe              227           224           98.67841
+# 11   Lubero              765           760           99.34641
+# 12   Mahagi              266           262           98.49624
+# 13  Mambasa             1477          1472           99.66148
+# 14   Masisi              167           148           88.62275
+# 15   Mwenga              478           473           98.95397
+# 16 Rutshuru              263           241           91.63498
+# 17 Shabunda             1030          1028           99.80583
+# 18    Uvira              159           153           96.22642
+# 19 Walikale             1043          1041           99.80825
+# 20  Walungu               44            43           97.72727
+
+print(mean(results_code$percentage_correct))
+# > print(mean(results_code$percentage_correct))
+# [1] 96.20467
+
+print(median(results_code$percentage_correct))
+# > print(median(results_code$percentage_correct))
+# [1] 98.33349
+
+```
+
+<br>
+
+#### First, when we compare the number of grid cells in the entire test set period in which actual attacks vs. predicted attacks occured, we find they are fairly similar (136 actual vs. 156 predicted). Likewise, the overall number of actual attacks (268) is fairly similar to the overall number of predicted attacks (237).
+
+<br>
+
+#### So, our models slightly overpredict the total number of grid cell locations where attacks on civilians occur, but they slightly underpredict the overall number of attacks.
+
+<br>
+
+```{r Compare Actual vs. Predicted Test Set Attack Locations and Attack Numbers, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+print(sum(data_combined$actual_presence))
+# > print(sum(data_combined$actual_presence))
+# [1] 136
+
+print(sum(data_combined$predicted_presence))
+# > print(sum(data_combined$predicted_presence))
+# [1] 156
+
+print(sum(data_combined$countAttacks))
+# > print(sum(data_combined$countAttacks))
+# [1] 268
+
+print(sum(custom_round(data_combined$Predicted_Value)))
+# > print(sum(custom_round(data_combined$Predicted_Value)))
+# [1] 237
+
+```
+
+<br>
+
+#### However, when we start to look at other classification metrics we can see there are some significant problems with the predictions.
+
+<br>
+
+#### **Precision:**
+
+<br>
+
+#### Precision is the ratio of the number of true positives to the sum of true positives and false positives. In our case, it tells us the proportion of locations where one or more attacks were predicted to occur and actually did, relative to the total number of locations where one or more attacks were predicted (including both those that occurred and those which failed to occur). It measures how accurate our positive predictions are in terms of attack locations. It helps answer, "When the model predicted an attack, how often was it right?" In the output in the code chunk below, you can see that - besides those territories that had a precision of NA because both the total predicted and total actual attack locations were 0, the precision values range widely from 0 to 100, with a mean of 49.1 and a median of 42.4.
+
+<br>
+
+#### The mean precision of 49.15% suggests that, on average, about half of the predicted positives across the regions are correct. The median precision of 42.41% indicates that the middle value of the precision distribution is even lower than the mean. Given the highly skewed nature of my data, many regions have few or no true positives, making it difficult for the model to achieve high precision in most areas. The model seems to perform reasonably well in a few regions but struggles in others.
+
+<br>
+
+
+```{r Precision, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# Precision
+
+results_precision <- data_combined %>%
+  group_by(NAME_3) %>%
+  summarise(
+    total_predicted_positive = sum(predicted_presence == 1),
+    true_positives = sum(predicted_presence == 1 & actual_presence == 1),
+    precision = (true_positives / total_predicted_positive) * 100
+  ) %>%
+  as.data.frame() %>%
+  dplyr::select(-geometry)
+
+print(results_precision)
+
+# > print(results_precision)
+#      NAME_3 total_predicted_positive true_positives precision
+# 1       Aru                        1              0   0.00000
+# 2      Beni                       29             13  44.82759
+# 3    Bukavu                        2              0   0.00000
+# 4     Djugu                       16              6  37.50000
+# 5      Fizi                       11              5  45.45455
+# 6      Goma                        8              6  75.00000
+# 7     Idjwi                        0              0       NaN
+# 8     Irumu                       13             11  84.61538
+# 9    Kabare                        0              0       NaN
+# 10   Kalehe                        3              1  33.33333
+# 11   Lubero                        5              2  40.00000
+# 12   Mahagi                        1              1 100.00000
+# 13  Mambasa                       11              7  63.63636
+# 14   Masisi                       20              5  25.00000
+# 15   Mwenga                        5              2  40.00000
+# 16 Rutshuru                       17              6  35.29412
+# 17 Shabunda                        2              0   0.00000
+# 18    Uvira                        6              6 100.00000
+# 19 Walikale                        5              3  60.00000
+# 20  Walungu                        1              1 100.00000
+
+print(mean(results_precision$precision, na.rm = TRUE))
+# > print(mean(results_precision$precision, na.rm = TRUE))
+# [1] 49.14785
+
+print(median(results_precision$precision, na.rm = TRUE))
+# > print(median(results_precision$precision, na.rm = TRUE))
+# [1] 42.41379
+
+```
+<br>
+
+#### **Recall:**
+
+<br>
+
+#### Recall measures the ratio of true positives correctly predicted by the model relative to the total actual positives (true positives + false negatives). In our case, it indicates the proportion of actual attack locations correctly predicted, without considering false predictions in non-attack locations. I.e., unlike our original accuracy code, which looked at the accuracy of predictions both for cases where the actual ground truth values were positive and where actual values were zero, recall calculates the accuracy of predictions only for grid cells where actual values were positive. It helps answer, "How many of the real attacks did the model correctly predict?"
+
+<br>
+
+#### Interpretation: A higher recall indicates that the models are effective at detecting actual attacks across the territories. It maximizes true positives (correctly predicted attack locations) while minimizing false negatives (missed attack locations).
+
+<br>
+
+#### There are a couple of reasons recall is more important to pay attention to in our case than precision:
+
+<br>
+
+#### **1. Rare Events:** Because attacks on civilians are a rare phenomenon across the grid cells, our dataset is highly imbalanced, with many more areas where no attacks occur compared to areas where attacks happen. Recall is crucial because it ensures you capture as many rare actual attack locations as possible, even at the cost of some false positives.
+
+<br>
+
+#### **2. Costs of Missing Atacks:** In humanitarian contexts, the cost of missing an actual attack (false negative) is much higher than predicting an attack where none occur (false positive). Recall takes false negatives into account, but not false positives.
+
+<br>
+
+#### Our predictions show good recall in several regions (Walikale, Mambasa, Goma, and Beni) but inconsistent or poor recall across the others. Since our dataset has spatial autocorrelation and is skewed towards non-attack locations, this variability in recall is not unusual. However, regions with low or zero recall, where the model misses attacks, are concerning and should be a focus for further improvement. 
+
+<br>
+
+```{r Recall, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# Recall
+
+results_recall <- data_combined %>%
+  group_by(NAME_3) %>%
+  summarise(
+    total_actual_positive = sum(actual_presence == 1),
+    true_positives = sum(predicted_presence == 1 & actual_presence == 1),
+    recall = (true_positives / total_actual_positive) * 100
+  ) %>%
+  as.data.frame() %>%
+  dplyr::select(-geometry)
+
+print(results_recall)
+# > print(results_recall)
+#      NAME_3 total_actual_positive true_positives    recall
+# 1       Aru                     0              0       NaN
+# 2      Beni                    18             13  72.22222
+# 3    Bukavu                     2              0   0.00000
+# 4     Djugu                    11              6  54.54545
+# 5      Fizi                    11              5  45.45455
+# 6      Goma                     8              6  75.00000
+# 7     Idjwi                     0              0       NaN
+# 8     Irumu                    19             11  57.89474
+# 9    Kabare                     1              0   0.00000
+# 10   Kalehe                     2              1  50.00000
+# 11   Lubero                     4              2  50.00000
+# 12   Mahagi                     5              1  20.00000
+# 13  Mambasa                     8              7  87.50000
+# 14   Masisi                     9              5  55.55556
+# 15   Mwenga                     4              2  50.00000
+# 16 Rutshuru                    17              6  35.29412
+# 17 Shabunda                     0              0       NaN
+# 18    Uvira                    12              6  50.00000
+# 19 Walikale                     3              3 100.00000
+# 20  Walungu                     2              1  50.00000
+
+
+print(mean(results_recall$recall, na.rm = TRUE))
+# > print(mean(results_recall$recall, na.rm = TRUE))
+# [1] 50.20392
+
+print(median(results_recall$recall, na.rm = TRUE))
+# > print(median(results_recall$recall, na.rm = TRUE))
+# [1] 50
+
+```
+
+<br>
+
+#### The Receiver Operating Characteristic curve (ROC curve) is plotted below, and the Area Under the ROC curve is calculated to be 0.877. Two different metrics are plotted on the ROC curve across many thresholds. On the X-axis, the specificity metric is calculated. Specificity (which is equal to 1 - the false positive rate) measures the proportion of true negatives (i.e., the percentage of non-attack locations that were correctly identified by the models). I.e., `Specificity = the number of true negatives (correctly predicted non-attack locations) / (the number of true negatives + the number of false positives - non-attack locations falsely predicted to be attack locations)`. 
+
+<br>
+
+#### On the Y-axis, Sensitivity (which is the same thing as Recall and the True Positive Rate) is measured. As previously defined, `Sensitivity/Recall = the number of true positives (correctly predicted attack locations) / the total number of actual attack locations (which is the same as the number of True Positives + the number of false negatives - locations incorrectly predicted to be non-attack locations)`.
+
+<br>
+
+#### Moving left on the ROC curve means decreasing the false positive rate (FPR), which also means increases specificity (correctly identifying non-attacks). This generally happens when the threshold is high, leading to fewer positive predictions overall (fewer attacks predicted). As you move left on the X-axis, the model is more conservative in its predictions, but it may miss some true positives (attacks).
+
+<br>
+
+#### As you move up on the Y-axis, the model becomes more aggressive in predicting attack locations, identifying more actual attack locations - thus increasing the true positive rate (TPR) - but potentially increasing false positives (non-attack grid cells incorrectly classified as attack grid cells) at the same time.
+
+<br>
+
+#### Additionally, the Area Under the ROC Curve (AUROC) score quantifies the overall ability of the model to distinguish between the two classes (actual attacks vs. non-attacks). An AUROC score of 0.5 is equal to random guessing, resulting from the area under the diagonal line. A score of 1 results from perfect models able to perfectly distinguish between positive and negative classes, resulting from a curve that hugs the top-left corner (i.e., high sensitivity and high specificity). An AUROC score of 0.877 means that the model has a very good ability to discriminate between grid cells where attacks actually occur and those where they do not.
+
+<br>
+
+```{r ROC Curve and AUC Score, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# Area Under the ROC Curve:
+
+library(pROC)
+
+# Compute ROC curve
+roc_obj <- roc(response = data_combined$actual_presence, predictor = data_combined$Predicted_Value)
+
+# saveRDS(roc_obj, "roc_obj.rds")
+
+# Calculate AUROC
+auc_value <- auc(roc_obj)
+
+# Print AUROC
+print(paste("Area Under the ROC Curve (AUROC):", round(auc_value, 4)))
+
+# [1] "Area Under the ROC Curve (AUROC): 0.877"
+
+# Plot ROC curve
+plot(roc_obj, main = "ROC Curve")
+
+```
+
+<br>
+
+```{r ROC Curve and AUC Score - Plot, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=TRUE, echo=FALSE, out.width="100%", fig.align='center'}
+
+roc_obj <- readRDS("roc_obj.rds")
+
+# Plot ROC curve
+plot(roc_obj, main = "ROC Curve")
+
+```
+
+<br>
+
+#### The rosy picture of impressive performance needs more contextual understanding. We will next look at the Precision-Recall (PR) curve. Because of their overabundance, true negatives dominate the calculation of the ROC AUC score, inflating it and potentially providing over-optimistic results. In contrast, the Area under the Precision-Recall Curve (AUPRC) focuses on the performance of the positive class (attack locations), which is more informative in our case. Additionally, by focusing on precision and recall, AUPRC shows whether our models struggle to balance false positives (non-attack locations falsely predicted to be attack locations) and false negatives (attack locations falsely predicted to be non-attack locations).
+
+<br>
+
+#### A PR curve plots Precision on the Y-axis and Recall on the X-axis. It helps visualize the average trade-off between Precision and Recall for different thresholds when predicting binary outcomes, such as attack location vs. non-attack location. In this context:
+
+<br>
+
+#### Precision (positive predictive value) is the ratio of true positive predictions (correctly predicted attack locations) to all positive predictions (true positives + false positives). Recall (previously defined) is the ratio of true positive predictions to all actual positives (true positives + false negatives).
+
+<br>
+
+#### The AUPRC score represents a summary of the PR curve, measuring the average trade-off between Precision and Recall across all thresholds. In an ideal scenario, AUPRC = 1 would indicate perfect precision and recall. A random classifier would achieve an AUPRC value close to the prevalence of the positive class, which in our case is the proportion of grid cells with attacks (around 0.017, according to my calculations in the code chunk below).
+
+<br>
+
+#### Given that a random classifier would have an AUPRC of approximately 0.017, the fact that our model achieves an AUPRC of **0.4835** is a **substantial improvement** over the baseline. While this AUPRC might seem low in absolute terms, it is actually **strong performance** relative to the prevalence of the positive class. Here is why:
+
+<br>
+
+#### - AUPRC of 0.4835 is much higher than 0.017 (the baseline for a random classifier). This indicates that the model is capable of significantly better-than-random predictions for attack locations, despite the class imbalance. However, the model's performance is still far from perfect (AUPRC = 1), reflecting the ongoing challenge of improving precision and recall given the imbalance.
+
+<br>
+
+#### **Analysis of the PR Curve:**
+
+<br>
+
+#### - *Initial High Precision at Low Recall:* The model starts with high precision when recall is low, correctly identifying a few attack locations but missing most of them.
+
+<br>
+
+#### - *Rapid Drop in Precision:* As recall increases, precision quickly declines due to a rise in false positives, as the model begins to misclassify non-attack locations as attacks. This drop occurs when recall is roughly between 0.1 and 0.5, and then even more dramatically after recall reaches around 0.75.
+
+<br>
+
+#### - *Low Precision at Higher Recall:* Precision remains low for much of the curve as the model tries to capture more true positives but generates many false positives, common in highly imbalanced datasets.
+
+<br>
+
+#### **Key Takeaway:**
+
+<br>
+
+#### With an AUPRC of 0.4835, the model significantly outperforms the random baseline (AUPRC ≈ 0.016), capturing useful patterns but struggling with precision as recall increases. The sharp precision drop as recall rises is expected in imbalanced contexts, as predicting more true positives leads to an increase in false positives.
+
+<br>
+
+```{r Precision-Recall Curve and Area Under the Precision-Recall Curve Scores, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# First, let's calculate the percentage of attack grid cells among all grid cells in our map:
+
+# Calculate the total number of rows in data_combined
+total_rows <- nrow(data_combined)
+
+# Calculate the number of rows where countAttacks is equal to 1 or higher
+count_greater_than_or_equal_1 <- sum(data_combined$countAttacks >= 1)
+
+# Calculate the ratio
+attck_cell_ratio <- count_greater_than_or_equal_1 / total_rows
+
+# Print the result
+print(attck_cell_ratio)
+# > print(attck_cell_ratio)
+# [1] 0.01617315
+
+# Next, let's plot the Precision-Recall Curve and calculate the PRAUC
+
+library(PRROC)
+
+labels <- as.numeric(as.character(data_combined$actual_presence))
+
+# Understanding Why It is Best Not to Use Regression Predicted Values for the Precision-Recall Curve:
+
+# The Precision-Recall (PR) curve is a classification metric that requires:
+# 
+# Continuous scores representing the likelihood of the positive class.
+# Higher scores indicating a higher probability of being in the positive class.
+
+# Problems in Our Case:
+# - Negative Predicted Values: Negative values from our regression model do not intuitively represent probabilities or likelihoods, although they will not result in an inaccurate Area Under the Precision-Recall Curve (AUPRC) score.
+# - Inconsistent Score Interpretations: If higher scores correspond to higher predicted counts (and hence higher likelihood of attacks), negative scores complicate this interpretation.
+# - They will result in a threshold color gradient legend that ranges from the most negative value to the most positive value.
+
+# Alternative: Apply a Sigmoid Function
+
+# - Transform Predictions: Use a sigmoid function to map predicted values to a (0, 1) range. The Precision-Recall (PR) curve depends on the ranking of scores, not their absolute values. Since the sigmoid transformation preserves the ranking, the PR curve remains unchanged. Since the PR curve will not change, the AUPRC score will remain the same.
+
+# Note: It would not be a good idea to convert all negative predicted values to zeroes before applying the sigmoid function, despite the fact that negative predictions are logically are essentially predicting zeroes. The reason is that doing so would artificially assign all negative predictions a 50% probability since values of 0 have a sigmoid probability of 50%, which may not correctly reflect a given prediction's true likelihood of an attack. This can lead to potential misrankings of risks made by the predictions. A predicted value that is more negative than another negative predicted value should receive a higher risk. Keeping all negative values as they are and then applying the sigmoid function preserves the risk levels of every prediction.
+
+# Predicted scores
+scores <- data_combined$Predicted_Value
+
+scores_transformed <- 1 / (1 + exp(-scores))
+
+# Compute Precision-Recall curve
+pr <- pr.curve(scores.class0 = scores_transformed[labels == 1],
+               scores.class1 = scores_transformed[labels == 0],
+               curve = TRUE)
+
+# scores.class0 argument must take the positive class (presence of attacks)
+# scores.class1 argument must take the negative class (absence of attacks)
+
+# scores_transformed[labels == 1] contains predicted values for grid cells where attacks actually occurred.
+
+# scores_transformed[labels == 0] contains predicted values for grid cells where attacks did not actually occur.
+
+saveRDS(pr, "pr.rds")
+
+# Print AUPRC
+print(paste("Area Under the Precision-Recall Curve (AUPRC):", round(pr$auc.integral, 4)))
+# [1] "Area Under the Precision-Recall Curve (AUPRC): 0.4835"
+
+# Output plot to file
+# png("Precision-Recall Curve.png", width = 800, height = 800)
+
+# Plot the Precision-Recall Curve
+plot(pr, main = "Precision-Recall Curve\n(Color Gradient: Thresholds at which Precision & Recall are Computed)")
+
+```
+
+<br>
+
+```{r Precision-Recall Curve and Area Under the Precision-Recall Curve Scores - Plot, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=TRUE, echo=FALSE, out.width="100%", fig.align='center'}
+
+knitr::include_graphics("Precision-Recall Curve.png")
+
+```
+
+<br>
+
+#### The "Beta" value in the F1-Beta score indicates the relative importance of recall over precision. For example, using 1 for β in the F1-β score places 1 times more weight on recall than precision, meaning equal weight on recall and precision. Later, we will increase β.
+
+<br>
+
+#### In general, a F1-Beta score of 0.5137 suggests that, for the chosen Beta value. The models achieve moderate performance, slightly better than random (which would have occurred if the F1-Beta score were 0.5). Still, this is not a good performance level. The models struggle with too many false positives/false attack location predictions (low precision) and false negatives/false non-attack location predictons (low recall).
+
+<br>
+
+```{r F1-Beta Scores, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# Calculating F1-Beta Scores
+
+library(caret)
+
+# Create a confusion matrix
+conf_mat <- confusionMatrix(factor(data_combined$predicted_presence),
+                            factor(data_combined$actual_presence),
+                            positive = "1")
+
+# Extract precision and recall
+precision <- conf_mat$byClass['Precision']
+recall <- conf_mat$byClass['Recall']
+
+# Specify beta value (e.g., beta = 1 for standard F1 score)
+beta <- 1
+
+# Calculate F1-Beta score
+f1_beta_score <- (1 + beta^2) * (precision * recall) / ((beta^2 * precision) + recall)
+
+# Print F1-Beta score
+print(paste("F1-Beta Score (beta =", beta, "):", round(f1_beta_score, 4)))
+# [1] "F1-Beta Score (beta = 1 ): 0.5137"
+
+```
+
+<br>
+
+#### The F2-Beta score places four times as much emphasis on recall than on precision. This means that while both precision and recall are considered, recall is given significantly more importance. Thus, the F2 score prioritizes minimizing false negatives/false non-attack location predictons (increasing recall) over minimizing false positives/false attack location predictions (increasing precision).
+
+<br>
+
+#### The F2-Beta score (0.5357) reveals that our models perform slightly better than our F1-Beta score (0.5137) when prioritizing recall, which as mentioned earlier is useful if capturing as many true positives (true attack locations) as possible and minimizing false negatives (false non-attack locations) is important. 
+
+<br>
+
+```{r F2-Beta Scores, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# Calculating F2-Beta Scores
+
+library(caret)
+
+# Create a confusion matrix
+conf_mat <- confusionMatrix(factor(data_combined$predicted_presence),
+                            factor(data_combined$actual_presence),
+                            positive = "1")
+
+# Extract precision and recall
+precision <- conf_mat$byClass['Precision']
+recall <- conf_mat$byClass['Recall']
+
+# Specify beta value (e.g., β = 2: Recall is given four times the weight of precision)
+beta <- 2
+
+# Calculate F1-Beta score
+f2_beta_score <- (1 + beta^2) * (precision * recall) / ((beta^2 * precision) + recall)
+
+# Print F1-Beta score
+print(paste("F2-Beta Score (beta =", beta, "):", round(f2_beta_score, 4)))
+# [1] "F2-Beta Score (beta = 2 ): 0.5357"
+
+```
+
+<br>
+
+#### Next, we will compute the ROC AUC, AUPRC, F1-Beta, and F2-Beta scores for each of the 20 territories. We can see from the output that the **territories with the best performing models** include **Goma** (0.954 ROC AUC, 0.869 AUPRC, 0.750 F1-Beta, and 0.750 F2-Beta), **Irumu** (0.981 ROC AUC, 0.876	AUPRC, 0.688 F1-Beta,	and 0.618 F2-Beta), and **Walikale** (0.999	ROC AUC, 0.904 AUPRC, 0.750 F1-Beta, and 0.882 F2-Beta). 
+
+<br>
+
+#### **Territories with models performing decently** include **Beni** (0.973 ROC AUC, 0.521 AUPRC, 0.553 F1-Beta, and 0.644 F2-Beta), **Uvira** (0.822 ROC AUC, 0.634 AUPRC, 0.667 F1-Beta, and 0.556 F2-Beta), **Mambasa** (0.992 ROC AUC, 0.563 AUPRC, 0.737 F1-Beta, and 0.814 F2-Beta), and **Walungu** (0.881 ROC AUC, 0.565 AUPRC, 0.667 F1-Beta, and 0.556 F2-Beta).
+
+<br>
+
+#### Some of the models used for the above specific territories (especially those with AUPRC scores above 0.6 that also perform well in terms of minimizing absolute differences between actual values and predicted values) could begin to be used in production as they are now, although improving their performance - especially at the grid cell-level - is very important. These likely include the first SVM's model for Goma (absolute difference of 3), the second SVM's model for Irumu (absolute difference of 5), and the Random Forest model using `repeated_spcv_block` cross-validation for Uvira (absolute difference of 2), all 3 of which are among 10 territories experiencing the most attacks.
+
+<br>
+
+#### However, most of the other territories have **models with mixed or mostly poor classification metric results**, such as **Rutshuru** (0.669 ROC AUC, 0.328 AUPRC, 0.353 F1-Beta, and 0.353 F2-Beta), **Fizi** (0.802 ROC AUC, 0.315 AUPRC, 0.455 F1-Beta, and 0.455 F2-Beta), and **Masisi** (0.647 ROC AUC, 0.311 AUPRC, 0.345 F1-Beta, and 0.446 F2-Beta), **among others**.
+
+<br>
+
+<details>
+  <summary style="font-size: 18px; color: crimson; font-weight: bold; margin-bottom: 60px; text-decoration: underline;">Click here to expand the code and see the output</summary>
+
+```{r Classification Metrics across All Territories, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# Load necessary library
+library(pROC)
+library(dplyr)
+
+# Initialize an empty data frame to store AUROC results
+results_auroc <- data.frame(NAME_3 = character(), AUROC = numeric(), stringsAsFactors = FALSE)
+
+# Get unique territories
+territories <- unique(data_combined$NAME_3)
+
+# Loop over each territory
+for (territory in territories) {
+  # Subset data for the current territory
+  territory_data <- data_combined %>% filter(NAME_3 == territory)
+  
+  # Check if there are both positive and negative classes
+  if (length(unique(territory_data$actual_presence)) > 1) {
+    # Compute ROC curve
+    roc_obj <- roc(response = territory_data$actual_presence, predictor = territory_data$Predicted_Value)
+    
+    # Calculate AUROC
+    auc_value <- auc(roc_obj)
+  } else {
+    # Assign NA if only one class is present
+    auc_value <- NA
+  }
+  
+  # Append results
+  results_auroc <- rbind(results_auroc, data.frame(NAME_3 = territory, AUROC = auc_value, stringsAsFactors = FALSE))
+}
+
+# Load necessary library
+library(PRROC)
+library(dplyr)
+
+# Initialize an empty data frame to store AUPRC results
+results_auprc <- data.frame(NAME_3 = character(), AUPRC = numeric(), stringsAsFactors = FALSE)
+
+# Get unique territories
+territories <- unique(data_combined$NAME_3)
+
+# Loop over each territory
+for (territory in territories) {
+  # Subset data for the current territory
+  territory_data <- data_combined %>% filter(NAME_3 == territory)
+  
+  # Check if both classes are present
+  if (length(unique(territory_data$actual_presence)) > 1) {
+    # Convert actual_presence to numeric
+    labels <- as.numeric(as.character(territory_data$actual_presence))
+    scores <- territory_data$Predicted_Value
+    
+    # Compute Precision-Recall curve
+    pr <- pr.curve(scores.class0 = scores[labels == 1],
+                   scores.class1 = scores[labels == 0],
+                   curve = FALSE)
+    
+    # Get AUPRC
+    auprc_value <- pr$auc.integral
+  } else {
+    # Assign NA if only one class is present
+    auprc_value <- NA
+  }
+  
+  # Append results
+  results_auprc <- rbind(results_auprc, data.frame(NAME_3 = territory, AUPRC = auprc_value, stringsAsFactors = FALSE))
+}
+
+# Load necessary library
+library(caret)
+library(dplyr)
+
+# Initialize an empty data frame to store F1-Beta results
+results_f1_beta <- data.frame(NAME_3 = character(), F1_Beta = numeric(), stringsAsFactors = FALSE)
+
+# Get unique territories
+territories <- unique(data_combined$NAME_3)
+
+# Loop over each territory
+for (territory in territories) {
+  # Subset data for the current territory
+  territory_data <- data_combined %>% filter(NAME_3 == territory)
+  
+  # Check if both classes are present
+  if (length(unique(territory_data$actual_presence)) > 1) {
+    # Create confusion matrix
+    conf_mat <- confusionMatrix(factor(territory_data$predicted_presence),
+                                factor(territory_data$actual_presence),
+                                positive = "1")
+    
+    # Extract precision and recall
+    precision <- conf_mat$byClass['Precision']
+    recall <- conf_mat$byClass['Recall']
+    
+    # Handle cases where precision or recall is NA or NaN
+    if (is.na(precision) | is.na(recall) | is.nan(precision) | is.nan(recall) | (precision == 0 & recall == 0)) {
+      f1_beta_score <- NA
+    } else {
+      # Specify beta value
+      beta <- 1
+      
+      # Calculate F1-Beta score
+      f1_beta_score <- (1 + beta^2) * (precision * recall) / ((beta^2 * precision) + recall)
+    }
+  } else {
+    # Assign NA if only one class is present
+    f1_beta_score <- NA
+  }
+  
+  # Append results
+  results_f1_beta <- rbind(results_f1_beta, data.frame(NAME_3 = territory, F1_Beta = as.numeric(f1_beta_score), stringsAsFactors = FALSE))
+}
+
+# Load necessary library
+library(caret)
+library(dplyr)
+
+# Initialize an empty data frame to store F2-Beta results
+results_f2_beta <- data.frame(NAME_3 = character(), F2_Beta = numeric(), stringsAsFactors = FALSE)
+
+# Get unique territories
+territories <- unique(data_combined$NAME_3)
+
+# Loop over each territory
+for (territory in territories) {
+  # Subset data for the current territory
+  territory_data <- data_combined %>% filter(NAME_3 == territory)
+  
+  # Check if both classes are present
+  if (length(unique(territory_data$actual_presence)) > 1) {
+    # Create confusion matrix
+    conf_mat <- confusionMatrix(factor(territory_data$predicted_presence),
+                                factor(territory_data$actual_presence),
+                                positive = "1")
+    
+    # Extract precision and recall
+    precision <- conf_mat$byClass['Precision']
+    recall <- conf_mat$byClass['Recall']
+    
+    # Handling cases where precision or recall is NA or NaN. 
+    # NA means Not Available in R (representing missing or undefined data), and NaN means not a number (representing an undefined or unrepresentable value resulting from an invalid mathematical operation, such as 0/0). Only in the Bukavu territory are both the precision and recall values zero rather than NaN (as in the case of some other territories). Division by Zero: When both precision and recall are zero, the calculation of the F1-Beta score involves dividing zero by zero, which results in NaN (0/0 is undefined and results in NaN in R). However, in the code below We will change these NaN values to NA for consistency in the output.
+    
+    if (is.na(precision) | is.na(recall) | is.nan(precision) | is.nan(recall) | (precision == 0 & recall == 0)) {
+      f2_beta_score <- NA
+    } else {
+      # Specify beta value
+      beta <- 2
+      
+      # Calculate F2-Beta score
+      f2_beta_score <- (1 + beta^2) * (precision * recall) / ((beta^2 * precision) + recall)
+    }
+  } else {
+    # Assign NA if only one class is present
+    f2_beta_score <- NA
+  }
+  
+  # Append results
+  results_f2_beta <- rbind(results_f2_beta, data.frame(NAME_3 = territory, F2_Beta = as.numeric(f2_beta_score), stringsAsFactors = FALSE))
+}
+
+# Combine all results into one data frame
+results_combined <- results_auroc %>%
+  left_join(results_auprc, by = "NAME_3") %>%
+  left_join(results_f1_beta, by = "NAME_3") %>%
+  left_join(results_f2_beta, by = "NAME_3")
+
+# Sort results_combined by NAME_3 in alphabetical order
+results_combined_sorted <- results_combined %>%
+  arrange(NAME_3) %>%
+  mutate(Territory = NAME_3) %>%
+  dplyr::select(Territory, everything(), -NAME_3)
+
+# Display the sorted results
+print(results_combined_sorted)
+# > print(results_combined_sorted)
+#    Territory     AUROC      AUPRC   F1_Beta   F2_Beta
+# 1        Aru        NA         NA        NA        NA
+# 2       Beni 0.9732965 0.52056725 0.5531915 0.6435644
+# 3     Bukavu 0.8055556 0.06099891        NA        NA
+# 4      Djugu 0.9851399 0.57756502 0.4444444 0.5000000
+# 5       Fizi 0.8023961 0.31469429 0.4545455 0.4545455
+# 6       Goma 0.9541667 0.86893537 0.7500000 0.7500000
+# 7      Idjwi        NA         NA        NA        NA
+# 8      Irumu 0.9809857 0.87615465 0.6875000 0.6179775
+# 9     Kabare 0.9126638 0.02272153        NA        NA
+# 10    Kalehe 0.9577778 0.53649344 0.4000000 0.4545455
+# 11    Lubero 0.8628449 0.40988808 0.4444444 0.4761905
+# 12    Mahagi 0.6812261 0.60763569 0.3333333 0.2380952
+# 13   Mambasa 0.9921290 0.56282903 0.7368421 0.8139535
+# 14    Masisi 0.6469761 0.31052692 0.3448276 0.4464286
+# 15    Mwenga 0.9765295 0.24563139 0.4444444 0.4761905
+# 16  Rutshuru 0.6690579 0.32795512 0.3529412 0.3529412
+# 17  Shabunda        NA         NA        NA        NA
+# 18     Uvira 0.8222789 0.63377255 0.6666667 0.5555556
+# 19  Walikale 0.9996795 0.90410598 0.7500000 0.8823529
+# 20   Walungu 0.8809524 0.56494312 0.6666667 0.5555556
+
+```
+
+<br>
+
+---
+
+### **Main Project Takeaways:**
+
+<br>
+
+#### The primary takeaway from this project is that in spatial environments with highly skewed data and spatial autocorrelation, combining multiple models using a variety of spatial cross-validation strategies that performed optimally in different administrative districts from each other can be a more effective strategy than trying to identify one optimal model. This is due to territorial specificity and model diversity, where regions like the Eastern DRC exhibit unique characteristics that vary across space (e.g., varying conflict levels or socioeconomic conditions). By selecting the best-performing model for each territory, this approach avoids the limitations of a single model, leading to better predictions.
+
+<br>
+
+#### Using held-out test data and spatial cross-validation mitigates overfitting concerns, while model diversity captures different aspects of the data. It is quite possible that if I had more time to create even more diverse models (e.g., models using algorithms like ridge and lasso regression, K-nearest neighbors regression, Bayesian spatial regression, and various deep learning algorithms) absolute differences between ground truth and predicted values across all territories would have been even smaller.
+
+<br>
+
+#### This project also highlights the importance of not simply relying on regression metrics even though this is a regression problem. After regression machine learning model predictions are made, calculating various classification metrics can help pinpoint areas the models struggle with, and help to better identify if certain models that were used for particular regions in a map are ready for use in production.  
+
+---
+
+### **Future Directions:**
+
+<br>
+
+#### To further seek to improve prediction performance not only at the territory level but also at the grid cell-level, several advanced modeling strategies should be applied. These methods focus on capturing fine-grained spatial heterogeneity and local variations that are often missed by models optimized only for administrative units:
+
+<br>
+
+##### - **Geographically Weighted Regression (GWR):** Account for spatial non-stationarity by allowing model parameters to vary across space, providing local estimates for each grid cell.
+
+##### - **Hierarchical Models:** Use multilevel models to capture both territorial effects and grid cell-level variations by including random effects at multiple spatial scales.
+
+##### - **Convolutional Neural Networks (CNNs):** Treat grid cells as pixels in an image to capture local spatial patterns and dependencies, improving grid-level predictions.
+
+##### - **Kriging and Geostatistics:** Apply techniques like ordinary kriging to predict unsampled locations by leveraging the spatial autocorrelation structure, offering both predictions and uncertainty estimates.
+
+##### - **Bayesian Spatial Models (e.g., R-INLA):** Use Bayesian approaches to model spatial dependencies, capturing fixed effects and spatially structured random effects at the grid cell-level.
+
+##### - **Agent-Based and Cellular Automata Models:** For dynamic spatial phenomena, simulate behavior over time and space to capture local interactions affecting grid cell outcomes.
+
+##### - **Spatiotemporal Models:** Incorporate time to account for temporal shifts in spatial patterns, using time-series analysis in combination with spatial modeling.
+
+##### - **More Spatial Features:** Use more spatial features such as latitude, longitude, spatially aggregated features (e.g., the number of attack grid cells or total number of attacks in the territory administrative district in which each given grid cell is located, divided by the total number of grid cells in the given territory), and spatial lags. Spatial lag features are values from neighboring or surrounding geographical units that are used as features to improve predictions for a given location. They capture spatial dependency, assuming that outcomes in one location are influenced by outcomes in nearby locations. In the context of our data, spatial lag features would account for the influence that neighboring grid cells have on a given grid cell’s likelihood of experiencing an attack.
+
+<div style="margin-left: 30px; font-size:16px;">
+
+Examples include: 
+
+- *A lag variable averaging the number of actual attack locations or averaging the number of attacks from nearby grid cells*.
+
+
+- *Lag variables averaging the values of other features in neighboring cells surrounding each grid cell location*.
+
+
+- *A spatial-temporal lag variable calculating the average predicted values from neighboring grid cells (and/or the average number of attacks) from prior time-steps*. This would necessitate modifying my dataset to include spatial-temporal data for all of my features and target variable, and would require the use of cross-validation strategies appropriate for spatial-temporal data.
+
+</div>
+
+##### - **High-Resolution Covariates:** Use fine-grained auxiliary data (e.g., land use, land cover, proximity to terrain features like rivers, satellite imagery) to explain local variations and improve grid-level predictions of attacks.
+
+##### - **Spatial Smoothing:** Apply smoothing techniques to reduce noise, allowing the model to focus on meaningful spatial trends, which is especially helpful for highly skewed data. Smoothing can also help deal with spatial autocorrelation by smoothing over local variability that might otherwise lead to overfitting.
+
+<br>
+
+#### By integrating these approaches, future models can capture fine-grained spatial relationships, leading to more accurate predictions across *both territory- and grid cell-levels*. Emphasizing local spatial patterns and incorporating high-resolution data will refine the models for more reliable outcomes across the spatial domain.
+
+<br>
+
+```{r echo=FALSE}
+
+# Get the current page number from the file name
+current_page <- as.numeric(str_extract(knitr::current_input(), "\\d+"))
+
+# Set the total number of pages
+total_pages <- 5
+
+# Generate the URLs for the previous and next pages
+previous_page <- ifelse(current_page > 1, paste0("part_", current_page - 1, "-spatial_forecast-east_drc-attacks_on_civilians.html"), NA)
+
+# I do not include code for "Next Page" both for the R code above and for the html code below because this is the last page
+
+```
+
+<ul class="pager">
+  <li><a href="`r previous_page`" style="color: crimson;">Previous Page</a></li>
+</ul>
