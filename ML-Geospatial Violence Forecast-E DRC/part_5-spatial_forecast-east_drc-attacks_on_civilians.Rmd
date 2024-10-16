@@ -570,7 +570,7 @@ print(paste("F2-Beta Score (beta =", beta, "):", round(f2_beta_score, 4)))
 
 <br>
 
-#### However, most of the other territories have **models with mixed or mostly poor classification metric results**, such as **Rutshuru** (0.669 ROC AUC, 0.328 AUPRC, 0.353 F1-Beta, and 0.353 F2-Beta), **Fizi** (0.802 ROC AUC, 0.315 AUPRC, 0.455 F1-Beta, and 0.455 F2-Beta), and **Masisi** (0.647 ROC AUC, 0.311 AUPRC, 0.345 F1-Beta, and 0.446 F2-Beta), **among others**.
+#### However, most of the other territories have **models with mixed or mostly poor classification performance**, such as **Rutshuru** (0.669 ROC AUC, 0.328 AUPRC, 0.353 F1-Beta, and 0.353 F2-Beta), **Fizi** (0.802 ROC AUC, 0.315 AUPRC, 0.455 F1-Beta, and 0.455 F2-Beta), and **Masisi** (0.647 ROC AUC, 0.311 AUPRC, 0.345 F1-Beta, and 0.446 F2-Beta), **among others**.
 
 <br>
 
