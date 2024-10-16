@@ -519,7 +519,7 @@ geospatial data.</h4>
 <p><br></p>
 </div>
 <div id="balancing-different-types-of-errors" class="section level4">
-<h4>1) Balancing Different Types of Errors:</h4>
+<h4><strong>1) Balancing Different Types of Errors:</strong></h4>
 </div>
 <div id="with-single-objective-tuning-the-model-may-focus-excessively-on-optimizing-a-specific-type-of-error-such-as-minimizing-overall-error-e.g.-using-rmse-which-penalizes-larger-errors-due-to-the-squaring-of-residuals-and-emphasizes-reducing-significant-mispredictions-or-absolute-differences-e.g.-using-mae-which-averages-the-magnitude-of-errors-evenly-across-all-predictions-and-provides-a-balanced-view-of-typical-errors-but-may-underemphasize-the-impact-of-larger-deviations-at-the-expense-of-other-important-error-characteristics." class="section level4">
 <h4>With single-objective tuning, the model may focus excessively on
@@ -545,7 +545,7 @@ the overall skew towards zero in the dataset.</h4>
 <p><br></p>
 </div>
 <div id="mitigating-the-impact-of-imbalanced-data" class="section level4">
-<h4>2) Mitigating the Impact of Imbalanced Data:</h4>
+<h4><strong>2) Mitigating the Impact of Imbalanced Data:</strong></h4>
 </div>
 <div id="with-highly-imbalanced-data-focusing-solely-on-one-metric-like-dynamically-weighted-rmse-could-cause-the-model-to-overly-prioritize-reducing-large-errors-in-cells-with-high-values-potentially-at-the-expense-of-capturing-smaller-but-more-frequent-errors-in-the-zero-valued-cells." class="section level4">
 <h4>With highly imbalanced data, focusing solely on one metric (like
@@ -568,7 +568,7 @@ without neglecting the majority of cells with zero values.</h4>
 <p><br></p>
 </div>
 <div id="improving-spatial-generalization" class="section level4">
-<h4>3) Improving Spatial Generalization:</h4>
+<h4><strong>3) Improving Spatial Generalization:</strong></h4>
 </div>
 <div id="my-spatial-data-likely-exhibits-spatial-autocorrelation-meaning-nearby-locations-are-likely-to-have-similar-values.-multi-objective-tuning-can-ensure-that-the-model-generalizes-well-across-various-spatial-regions-not-just-fitting-to-one-region-or-spatial-pattern." class="section level4">
 <h4>My spatial data likely exhibits spatial autocorrelation, meaning
@@ -586,7 +586,7 @@ performance.</h4>
 <p><br></p>
 </div>
 <div id="addressing-heteroscedasticity" class="section level4">
-<h4>4) Addressing Heteroscedasticity:</h4>
+<h4><strong>4) Addressing Heteroscedasticity:</strong></h4>
 </div>
 <div id="my-data-likely-exhibits-heteroscedasticity-where-the-variance-of-target-values-differs-across-regions-e.g.-some-regions-might-have-more-variability-in-target-values-than-others.-single-objective-tuning-may-not-adequately-capture-this-variability." class="section level4">
 <h4>My data likely exhibits heteroscedasticity, where the variance of
@@ -609,7 +609,7 @@ adapting to local variability in the target variable.</h4>
 Tuning:</strong></h3>
 <p><br></p>
 <div id="dynamic-quantile-loss" class="section level4">
-<h4>1. Dynamic Quantile Loss:</h4>
+<h4><strong>1. Dynamic Quantile Loss:</strong></h4>
 </div>
 <div id="quantile-loss-is-often-useful-when-you-want-to-penalize-underestimations-or-overestimations-differently.-it-can-tune-the-model-to-minimize-specific-types-of-errors-e.g.-more-focus-on-underprediction-which-might-be-more-critical-in-certain-regions.-however-in-my-case-i-set-the-argument-τ-tau-equal-to-0.5-which-means-underpredictions-and-overpredictions-are-penalized-the-same.-it-prioritizes-reducing-errors-in-the-rare-regionsgrid-cells-where-the-target-value-is-greater-than-0-encouraging-better-performance." class="section level4">
 <h4>Quantile loss is often useful when you want to penalize
@@ -649,7 +649,7 @@ errors in check.</h4>
 <p><br></p>
 </div>
 <div id="dynamic-huber-loss" class="section level4">
-<h4>2. Dynamic Huber Loss:</h4>
+<h4><strong>2. Dynamic Huber Loss:</strong></h4>
 </div>
 <div id="huber-loss-is-a-combination-of-mean-squared-error-mse-and-mean-absolute-error-mae-designed-to-handle-both-small-and-large-errors-in-a-more-balanced-way.-it-is-particularly-useful-for-making-a-model-robust-to-outliers-while-still-penalizing-smaller-errors-effectively.-the-key-idea-is-that" class="section level4">
 <h4>Huber Loss is a combination of Mean Squared Error (MSE) and Mean
@@ -678,7 +678,7 @@ minimize small errors.</h4>
 <p><br></p>
 </div>
 <div id="dynamic-root-mean-squared-error-rmse" class="section level4">
-<h4>3. Dynamic Root Mean Squared Error (RMSE):</h4>
+<h4><strong>3. Dynamic Root Mean Squared Error (RMSE):</strong></h4>
 </div>
 <div id="rmse-emphasizes-larger-errors-more-than-mae-making-it-suitable-for-scenarios-where-large-errors-are-especially-problematic.-in-my-spatial-context-this-helps-reduce-large-errors-in-regions-with-rare-events-target-values-0-which-might-be-overlooked-by-simpler-metrics-like-mae." class="section level4">
 <h4>RMSE emphasizes larger errors more than MAE, making it suitable for
@@ -695,7 +695,7 @@ metrics that focus on average or scaled errors.</h4>
 <p><br></p>
 </div>
 <div id="dynamic-mean-absolute-error-mae" class="section level4">
-<h4>4. Dynamic Mean Absolute Error (MAE):</h4>
+<h4><strong>4. Dynamic Mean Absolute Error (MAE):</strong></h4>
 </div>
 <div id="this-metric-is-mentioned-above.-also-note-that-mae-provides-a-clear-measure-of-the-average-error-and-is-less-sensitive-to-outliers-than-rmse.-it-is-particularly-useful-for-understanding-the-typical-prediction-error-in-geospatial-data." class="section level4">
 <h4>This metric is mentioned above. Also note that MAE provides a clear
@@ -705,7 +705,7 @@ error in geospatial data.</h4>
 <p><br></p>
 </div>
 <div id="dynamic-mean-absolute-scaled-error-mase" class="section level4">
-<h4>5. Dynamic Mean Absolute Scaled Error (MASE):</h4>
+<h4><strong>5. Dynamic Mean Absolute Scaled Error (MASE):</strong></h4>
 </div>
 <div id="scale-independent-error-measurement-mase-scales-errors-relative-to-a-naive-forecast-making-it-suitable-for-datasets-with-varying-target-values.-this-helps-ensure-that-the-model-is-not-just-minimizing-errors-for-the-majority-of-0-valued-cells-but-also-improving-performance-for-the-minority-class." class="section level4">
 <h4>Scale-independent error measurement: MASE scales errors relative to
@@ -716,7 +716,7 @@ the minority class.</h4>
 <p><br></p>
 </div>
 <div id="outlier-robustness" class="section level4">
-<h4><strong>Outlier Robustness:</strong></h4>
+<h4><strong><em>Outlier Robustness:</em></strong></h4>
 </div>
 <div id="most-robust-dynamic-huber-loss" class="section level4">
 <h4>- Most robust: Dynamic Huber Loss</h4>

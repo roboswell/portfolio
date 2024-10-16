@@ -169,7 +169,7 @@ knitr::include_graphics("eastern_drc_map.3d.zoom_70.png")
 
 <br>
 
-#### 1) Balancing Different Types of Errors:
+#### **1) Balancing Different Types of Errors:**
 
 #### With single-objective tuning, the model may focus excessively on optimizing a specific type of error, such as minimizing overall error (e.g., using RMSE, which penalizes larger errors due to the squaring of residuals and emphasizes reducing significant mispredictions) or absolute differences (e.g., using MAE, which averages the magnitude of errors evenly across all predictions and provides a balanced view of typical errors but may underemphasize the impact of larger deviations), at the expense of other important error characteristics.
 
@@ -179,7 +179,7 @@ knitr::include_graphics("eastern_drc_map.3d.zoom_70.png")
 
 <br>
 
-#### 2) Mitigating the Impact of Imbalanced Data:
+#### **2) Mitigating the Impact of Imbalanced Data:**
 
 #### With highly imbalanced data, focusing solely on one metric (like dynamically weighted RMSE) could cause the model to overly prioritize reducing large errors in cells with high values, potentially at the expense of capturing smaller but more frequent errors in the zero-valued cells.
 
@@ -189,7 +189,7 @@ knitr::include_graphics("eastern_drc_map.3d.zoom_70.png")
 
 <br>
 
-#### 3) Improving Spatial Generalization:
+#### **3) Improving Spatial Generalization:**
 
 #### My spatial data likely exhibits spatial autocorrelation, meaning nearby locations are likely to have similar values. Multi-objective tuning can ensure that the model generalizes well across various spatial regions, not just fitting to one region or spatial pattern.
 
@@ -199,7 +199,7 @@ knitr::include_graphics("eastern_drc_map.3d.zoom_70.png")
 
 <br>
 
-#### 4) Addressing Heteroscedasticity:
+#### **4) Addressing Heteroscedasticity:**
 
 #### My data likely exhibits heteroscedasticity, where the variance of target values differs across regions (e.g., some regions might have more variability in target values than others). Single-objective tuning may not adequately capture this variability.
 
@@ -213,7 +213,7 @@ knitr::include_graphics("eastern_drc_map.3d.zoom_70.png")
 
 <br>
 
-#### 1. Dynamic Quantile Loss:
+#### **1. Dynamic Quantile Loss:**
 
 #### Quantile loss is often useful when you want to penalize underestimations or overestimations differently. It can tune the model to minimize specific types of errors (e.g., more focus on underprediction, which might be more critical in certain regions). However, in my case, I set the argument τ (tau) equal to 0.5, which means underpredictions and overpredictions are penalized the same. It prioritizes reducing errors in the rare regions/grid cells where the target value is greater than 0, encouraging better performance.
 
@@ -227,7 +227,7 @@ knitr::include_graphics("eastern_drc_map.3d.zoom_70.png")
 
 <br>
 
-#### 2. Dynamic Huber Loss:
+#### **2. Dynamic Huber Loss:**
 
 #### Huber Loss is a combination of Mean Squared Error (MSE) and Mean Absolute Error (MAE), designed to handle both small and large errors in a more balanced way. It is particularly useful for making a model robust to outliers while still penalizing smaller errors effectively. The key idea is that:
 
@@ -245,7 +245,7 @@ knitr::include_graphics("eastern_drc_map.3d.zoom_70.png")
 
 <br>
 
-#### 3. Dynamic Root Mean Squared Error (RMSE):
+#### **3. Dynamic Root Mean Squared Error (RMSE):**
 
 #### RMSE emphasizes larger errors more than MAE, making it suitable for scenarios where large errors are especially problematic. In my spatial context, this helps reduce large errors in regions with rare events (target values > 0), which might be overlooked by simpler metrics like MAE.
 
@@ -255,19 +255,19 @@ knitr::include_graphics("eastern_drc_map.3d.zoom_70.png")
 
 <br>
 
-#### 4. Dynamic Mean Absolute Error (MAE):
+#### **4. Dynamic Mean Absolute Error (MAE):**
 
 #### This metric is mentioned above. Also note that MAE provides a clear measure of the average error and is less sensitive to outliers than RMSE. It is particularly useful for understanding the typical prediction error in geospatial data.
 
 <br>
 
-#### 5. Dynamic Mean Absolute Scaled Error (MASE):
+#### **5. Dynamic Mean Absolute Scaled Error (MASE):**
 
 #### Scale-independent error measurement: MASE scales errors relative to a naive forecast, making it suitable for datasets with varying target values. This helps ensure that the model is not just minimizing errors for the majority of 0-valued cells but also improving performance for the minority class.
 
 <br>
 
-#### **Outlier Robustness:**
+#### ***Outlier Robustness:***
 
 #### - Most robust: Dynamic Huber Loss
 
