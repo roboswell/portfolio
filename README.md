@@ -15,7 +15,7 @@
 - GIS & Spatial Analysis:
     - **Title:** ["Predicting Attacks on Civilians in the Eastern Democratic Republic of Congo" (5 Pages)](./ML-Geospatial%20Violence%20Forecast-E%20DRC/part_1-spatial_forecast-east_drc-attacks_on_civilians.html)
         - Focus: Geospatial Machine Learning
-        - Technology Used: R Markdown, QGIS, mlr3, spatially aware cross-validation, XGBoost, Random Forest, Support Vector Machines, PCA, multi-objective tuning, hyperband, nsga2R, sf, raster, terra, spdep, blockCV, ggplot2, rayshader, pROC, PRROC, caret, data.tables, future (parallel processing)
+        - Technology Used: R Markdown, QGIS, mlr3, spatially aware cross-validation, XGBoost, Random Forest, Support Vector Machines, Principal Component Analysis, multi-objective tuning, hyperband, nsga2R, sf, raster, terra, spdep, blockCV, ggplot2, rayshader, pROC, PRROC, caret, data.tables, future (parallel processing)
         - Contents: Geospatial machine learning model creation and performance comparison, feature engineering, creating dynamically weighted and asymmetrically penalized metrics for highly skewed data, spatial weight matrix creation, feature selection, feature importance, creating maps with fishnet grid cell observations, kernel density estimation heatmaps, Global and Local Moran's I calculation, variogram analysis for determining the range of spatial autocorrelation, and data visualization of 2D and 3D maps, bar charts, histograms, risk category distribution charts, ROC Curves, and Precision-Recall Curves.
     - **Title:** ["Examining Geospatial Covariate Relationships with Civilian Killings in South Sudan’s Civil War"](./GIS/GIS_covariate_relationships-killings-south_sudan.html)
         - Focus: Geospatial Statistics
