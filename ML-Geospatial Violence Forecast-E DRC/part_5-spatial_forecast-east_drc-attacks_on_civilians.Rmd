@@ -47,6 +47,8 @@ previous_page <- ifelse(current_page > 1, paste0("part_", current_page - 1, "-sp
 # Load necessary libraries
 library(dplyr)
 
+setwd("C:/Users/rsb84/Desktop/RB/ds_projects/GIS/DRC/")
+
 final_net.sf.attacks_test <- readRDS(file = "final_net.sf.attacks_test-after_adding_HiSig_and_HiSig.dist.rds")
 
 combined_predictions <- readRDS("combined_models_predictions_across_territories.rds")
@@ -316,7 +318,7 @@ print(median(results_recall$recall, na.rm = TRUE))
 
 <br>
 
-```{r ROC Curve and AUC Score, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+```{r ROC Curve and AUC Score, cache=TRUE, cache.lazy=FALSE, fig.height=6, fig.width=6, eval=FALSE, echo=TRUE}
 
 # Area Under the ROC Curve:
 
@@ -336,18 +338,18 @@ print(paste("Area Under the ROC Curve (AUROC):", round(auc_value, 4)))
 # [1] "Area Under the ROC Curve (AUROC): 0.877"
 
 # Plot ROC curve
-plot(roc_obj, main = "ROC Curve")
+plot(roc_obj, main = "ROC Curve (AUC = 0.877)", cex.main = 0.8, "cex.lab" = 0.8)
 
 ```
 
 <br>
 
-```{r ROC Curve and AUC Score - Plot, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=TRUE, echo=FALSE, out.width="100%", fig.align='center'}
+```{r ROC Curve and AUC Score - Plot, cache=TRUE, cache.lazy=FALSE, fig.height=6, fig.width=6, eval=TRUE, echo=FALSE, out.width="100%", fig.align='center'}
 
 roc_obj <- readRDS("roc_obj.rds")
 
 # Plot ROC curve
-plot(roc_obj, main = "ROC Curve")
+plot(roc_obj, main = "ROC Curve (AUC = 0.877)", cex.main = 0.8, "cex.lab" = 0.8)
 
 ```
 
@@ -401,7 +403,7 @@ plot(roc_obj, main = "ROC Curve")
 
 <br>
 
-```{r Precision-Recall Curve and Area Under the Precision-Recall Curve Scores, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+```{r Precision-Recall Curve and Area Under the Precision-Recall Curve Scores, cache=TRUE, cache.lazy=FALSE, fig.height=10, fig.width=10, eval=FALSE, echo=TRUE}
 
 # First, let's calculate the percentage of attack grid cells among all grid cells in our map:
 
@@ -422,6 +424,7 @@ print(attck_cell_ratio)
 # Next, let's plot the Precision-Recall Curve and calculate the PRAUC
 
 library(PRROC)
+library(fields)
 
 labels <- as.numeric(as.character(data_combined$actual_presence))
 
@@ -470,13 +473,14 @@ print(paste("Area Under the Precision-Recall Curve (AUPRC):", round(pr$auc.integ
 # png("Precision-Recall Curve.png", width = 800, height = 800)
 
 # Plot the Precision-Recall Curve
-plot(pr, main = "Precision-Recall Curve\n(Color Gradient: Thresholds at which Precision & Recall are Computed)")
+plot(pr, main = "Precision-Recall Curve\n(Color Gradient: Thresholds at which Precision & Recall are Computed)", cex.main = 1.3, cex.lab = 1.2, cex.axis = 1.2)
+
 
 ```
 
 <br>
 
-```{r Precision-Recall Curve and Area Under the Precision-Recall Curve Scores - Plot, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=TRUE, echo=FALSE, out.width="100%", fig.align='center'}
+```{r Precision-Recall Curve and Area Under the Precision-Recall Curve Scores - Plot, cache=TRUE, cache.lazy=FALSE, fig.height=6, fig.width=6, eval=TRUE, echo=FALSE, out.width="100%", fig.align='center'}
 
 knitr::include_graphics("Precision-Recall Curve.png")
 
