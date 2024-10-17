@@ -56,12 +56,12 @@
         - Focus: Illustrating how to scrape text and tables anonymously from embedded URL links located within URLs placed in a user's predefined list.
         - Technology Used: Python, BeautifulSoup, TOR, Regular Expression (regex), IPython.display
         - Contents: Web scraping using BeautifulSoup and TOR, and structuring originating URLs, scraped URLs, text and tables from scraped URLs in Pandas DataFrames for analysis. Extensive cleaning of scraped text via regex. Viewing styled Pandas DataFrames. Viewing scraped tables in html.     
-- CNN Deep Learning for Imaging:
+- Convolutional Neural Networks (CNNs) for Image Classification:
     - **Title:** ["Comparative Analysis of CNN Deep Learning Models for X-ray Illness Classification"](./Neural%20Network%20Models/X-Ray%20Deep%20Learning%20Classificaton%20Models.html)
-        - Focus: Deep Learning for Image Classification
+        - Focus: Deep Learning for Medical Image Classification
         - Technology Used: Python, Keras, CNNs, Transfer Learning, ImageDataGenerator, flow_from_directory, EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
         - Contents: Comparing the performance of 8 CNN deep learning models on X-ray images from three classes (COVID-19, viral pneumonia, and healthy). These include transfer learning models (e.g., InceptionV3), and various techniques to improve model generalization and help avoid overfitting (e.g., dropout, batch normalization, early stopping, data augmentation, L1 and L2 regularization, fire modules, and ways of using deep networks effectively). I also demonstrate best practices for structuring filters/kernels, channels, layers, activation functions, pooling, convolutional blocks, and other model components for optimal performance. Metrics include confusion matrixes, accuracy, precision, recall, F1-score, ROC curve, and AUC. Analysis of non-augmented vs. augmented data models with specific augmentation techniques are shown. Architectures and training strategies for each model are detailed.
-- RNN Sequential Models:
+- Recurrent Neural Network (RNN) Models:
     - **Title:** ["Sequential RNN Text Classification Models for Twitter COVID-19 Misinformation Detection"](./Neural%20Network%20Models/Sequential_RNN_Text_Classification_Models_for_Twitter_Misinformation_Detection.html)
         - Focus: RNN Sequential Models for Text Classification
         - Technology Used: Python, Pandas, NumPy, TensorFlow (TF), Keras, TF/Keras functions (Tokenizer, pad_sequences, Sequential, Embedding, Dense, Flatten, LSTM, GRU, Bidirectional, ModelCheckpoint, ReduceLROnPlateau, RMSprop), Scikit-Learn metrics, one-hot encoding.
