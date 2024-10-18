@@ -1,0 +1,327 @@
+---
+title: "Eastern DRC Conflict Network Graph"
+author: "Rob Boswell"
+date: "07-19-2024"
+output: html_document
+---
+
+```{r setup, message = FALSE, results = TRUE, warning= FALSE}
+options(scipen=9999)
+
+library(tidyverse)
+library(sf)
+library(tidyr)
+library(ggplot2)
+library(dplyr)
+library(readxl)
+library(igraph)
+library(visNetwork)
+
+source("https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/functions.r")
+
+# Note: All code, images, visualizations, insights shared, and methodological notes in this document and other documents in this portfolio ARE NOT open source and MUST be cited.
+
+```
+<br>
+
+### **Overview:**
+
+#### For decades, violence against civilians in the Eastern Democratic Republic of Congo (DRC) has been commonplace. The conflict in Eastern DRC remains one of the world's most complex and enduring humanitarian crises, with a devastating impact on civilians. The interplay of local grievances, national politics, and international support for armed groups in the Eastern DRC makes it a challenging scenario for conflict resolution and peace-building efforts. It is deeply rooted in a mix of historical, political, ethnic, and economic factors. It also has been fueled by competition over the Eastern DRC's land and rich natural resources - including gold, diamonds, and cobalt - by a variety of armed militias over time. 
+
+<br>
+
+#### As of the latest reports, there are approximately [120 armed groups active in eastern Congo's Ituri, North Kivu, South Kivu, and Tanganyika provinces](https://www.hrw.org/world-report/2023/country-chapters/democratic-republic-congo). These groups include fighters from neighboring countries such as Rwanda, Uganda, and Burundi. Many commanders of these groups have been implicated in war crimes, including massacres, sexual violence, recruiting children, pillaging, and attacks on schools and hospitals. [Between January and late October 2023, various armed actors killed at least 2,446 civilians](https://www.hrw.org/world-report/2023/country-chapters/democratic-republic-congo) in South Kivu, North Kivu, and Ituri provinces.
+
+<br>
+
+### **Portfolio Project:**
+
+#### This project creates a network graph analyzing interactions between actors involved in violent conflict in the Eastern DRC, between 19 Jan. 2018 and 31 Dec. 2023. The data comes from the [ACLED conflict dataset](https://acleddata.com/). Please see the [ACLED codebook](https://acleddata.com/acleddatanew/wp-content/uploads/dlm_uploads/2023/06/ACLED_Codebook_2023.pdf) for more information about the variables used in this network graph as needed. The edges of the graph are eighted by the total number of recorded conflict events between any two parties (nodes), and as you hover over the edges it interactively displays records on the types and number of conflict events recorded between the two parties during above date range, including the total number of fatalities that occurred together from these conflict events.
+
+<br>
+
+#### The nodes are weighted by the eigenvector centrality of any given node. Eigenvector centrality is a measure of the influence of a node in a network. Nodes with higher eigenvector centrality scores are considered more influential or important within the network, as they are connected to other high-scoring nodes. This measure provides a nuanced understanding of node importance, reflecting the quality of connections rather than just quantity. In short, eigenvector centrality measures the influence of a node in a network by considering not only the number of connections a node has (its degree) to other ally or enemy actor nodes, but also the importance of the nodes to which it is connected. In other words, a node's eigenvector centrality is determined by the centralities of its neighbors, and those neighbors' centralities are, in turn, influenced by their neighbors, and so on.
+
+<br>
+
+#### I use a network clustering algorithm from the igraph library, Walktrap (cluster_walktrap() function), to determine communities of conflict nodes in the folowing network graph. The cluster_walktrap() algorithm uses hierarchical clustering based on random walks to detect communities. The idea is that short random walks are more likely to stay within the same community due to the higher density of edges within communities compared to between communities. The algorithm aims to maximize modularity, ensuring a strong community structure. The steps parameter controls the length of the random walks and can influence the granularity of the detected communities. The cluster_walktrap() function is useful for finding community structures in networks where the connections within groups are denser than connections between groups, leveraging the properties of random walks to achieve this.
+
+<br>
+
+#### Red edges connect actor nodes that are recorded in the ACLED dataset as being in conflict with one another. Blue edges connect actor nodes recorded in the dataset as being allied together in conflicts with other parties.
+
+<br>
+
+#### The final dynamic network graph is created using the visNetwork R library. It is helpful in several respects: 1) The user can select by ID (i.e., select a particular conflict actor they are interested in) and the actor node of interest can be seen with its edges to other conflict actor nodes. 2) The user can select by group (i.e., select groups determined by the clustering community identification algorithm to be be important), and investigate the group as a whole as well as its connections to other conflict parties more easily. 3) When hovering over the edges, pop up boxes appear that allow the user to inspect numbers of various conflict events and fatalities from these events that have occurred between any two actors. 4) When working with large networks like this one, it helps that visNetwork allows the user to move nodes around so that other actor node names can be more clearly seen.
+
+<br>
+
+```{r Eastern DRC Province Map, echo = TRUE, message = FALSE, results = TRUE, warning= FALSE, cache=TRUE, fig.height=9, fig.width=9}
+
+setwd("C:/Users/rsb84/Desktop/RB/ds_projects/GIS/DRC/")
+
+# Load the map shapefile
+e_drc_adm3_map <- sf::st_read("COD_adm/east_drc_adm3_most_violent_provinces.shp")
+
+e_drc_adm3_map <- sf::st_set_crs(e_drc_adm3_map, 4326)
+
+# Create a second order administrative map from the above third order administrative map
+e_drc_adm2_map <- e_drc_adm3_map %>%
+  group_by(NAME_2) %>%
+  summarise(geometry = st_union(geometry)) %>%
+  ungroup()
+
+# Replace "Nord-Kivu" with "North-Kivu" and "Sud-Kivu" with "South-Kivu", their English equivalents
+e_drc_adm2_map <- e_drc_adm2_map %>%
+  mutate(NAME_2 = case_when(
+    NAME_2 == "Nord-Kivu" ~ "North-Kivu",
+    NAME_2 == "Sud-Kivu" ~ "South-Kivu",
+    TRUE ~ NAME_2
+  ))
+
+projected_crs <- "+proj=tmerc +lat_0=-0.6888125 +lon_0=29.0698245 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
+
+e_drc_adm2_map <- st_transform(e_drc_adm2_map, crs = projected_crs)
+e_drc_adm3_map <- st_transform(e_drc_adm3_map, crs = projected_crs)
+
+ggplot() + 
+  geom_sf(data=e_drc_adm3_map, fill=NA, color = "white", linewidth = 0.3) +
+  geom_sf(data = e_drc_adm2_map, fill = NA, color = "black", linewidth = 0.8) +
+  geom_sf_label(data = e_drc_adm2_map, aes(label = NAME_2), color = "#DC143C", size = 6, nudge_x = 0.1, nudge_y = 0.1) +
+  labs(title="Eastern DRC Provinces") +
+  mapTheme() +
+  theme(plot.title = element_text(face = "bold"))
+
+
+```
+
+```{r Eastern DRC Territory Map, message = FALSE, results = TRUE, warning= FALSE, cache=TRUE, fig.height=9.5, fig.width=9.5}
+
+library(ggrepel)
+
+e_drc_adm3_map_centroids <- st_centroid(e_drc_adm3_map)
+
+# Plotting the map with label repelling
+ggplot() + 
+  geom_sf(data=e_drc_adm3_map, fill=NA, color = "white", linewidth = 0.3) +
+  geom_sf(data = e_drc_adm2_map, fill = NA, color = "black", linewidth = 0.8) +
+  ggrepel::geom_text_repel(data = e_drc_adm3_map_centroids, 
+                  aes(label = NAME_3, geometry = geometry), 
+                  stat = "sf_coordinates", 
+                  color = "#DC143C", # Set label color here
+                  size = 6,
+                  fontface = "bold") +
+  labs(title="Eastern DRC Territories") +
+  mapTheme() +
+  theme(plot.title = element_text(face = "bold"))
+
+```
+
+```{r First Steps to Prepare for the Network Graph, message = FALSE, results = TRUE, warning= FALSE, cache=TRUE, fig.height=9.5, fig.width=9.5}
+
+# Load the data
+acled <- readxl::read_excel("2018-01-19-2023-12-31-DRC-ACLED.xlsx",
+     col_types = c("text", "date", "text",
+         "text", "text", "text", "text", "text",
+         "text", "text", "text", "text", "text",
+         "text", "text", "text", "text", "text",
+         "text", "text", "text", "text", "numeric",
+         "numeric", "text", "text", "text", "text",
+         "numeric", "text", "text"))
+
+# Transform inter1 and inter2 to factors
+acled$inter1 <- factor(acled$inter1, 
+                         levels = c(1, 2, 3, 4, 5, 6, 7, 8), 
+                         labels = c("State Forces", "Rebel Groups", "Political Militias", "Identity Militias", "Rioters", "Protesters", "Civilians", "External/Other Forces"))
+
+acled$inter2 <- factor(acled$inter2, 
+                         levels = c(1, 2, 3, 4, 5, 6, 7, 8), 
+                         labels = c("State Forces", "Rebel Groups", "Political Militias", "Identity Militias", "Rioters", "Protesters", "Civilians", "External/Other Forces"))
+
+# I want to create a variable for actors (either perpetrators or victims) engaged in either battles, explosions/remote violence, or violence against civilians.
+
+# Subset to violent events
+violent_events <- subset(acled, event_type %in% c('Battles', 'Explosions/Remote violence', 'Violence against civilians'))
+
+# Ensure that both inter1 and inter2 have the same attributes
+violent_events$inter1 <- factor(violent_events$inter1, levels = levels(acled$inter1))
+violent_events$inter2 <- factor(violent_events$inter2, levels = levels(acled$inter2))
+
+# Convert violent_events to expanded format
+violent_events.expanded <- tidyr::gather(data = violent_events, key = "actor_type", value = "actor", actor1, assoc_actor_1, actor2, assoc_actor_2)
+
+# Remove rows with NA values in the 'actor' column
+violent_events.expanded <- violent_events.expanded[!is.na(violent_events.expanded$actor), ]
+
+# Split the actor column on the ";" and trim whitespace
+violent_events.expanded.split <- violent_events.expanded %>%
+  separate_rows(actor, sep = ";") %>%
+  mutate(actor = trimws(actor))
+
+# Convert to sf object and transform to the projected CRS
+violent_events.expanded.split <- st_as_sf(
+  violent_events.expanded.split, 
+  coords = c("longitude", "latitude"), 
+  crs = 4326
+)
+violent_events.expanded.split <- st_transform(violent_events.expanded.split, st_crs(projected_crs))
+
+# Subset to the Territory Having the Most Conflict Events. This is to keep the size of the network graph manageable
+
+violent_events.sub <- violent_events.expanded.split %>%
+  dplyr::select(event_id_cnty, year, event_type, sub_event_type, admin2, admin3, fatalities, actor_type, actor, geometry)
+
+```
+
+<br>
+
+#### Now, we will find which territory contains the most ACLED events and then subset the dataset to create a graph only for that territory. This will help keep the size of the network graph manageable since there is an extremely large number of parties to the conflict in the entirety of the Eastern DRC.
+
+<br>
+
+```{r Beni, North Kivu Network Graph, message = FALSE, results = TRUE, warning= FALSE, cache=TRUE, fig.height=9.5, fig.width=9.5}
+
+violent_events.sub.unique <- violent_events.sub %>%
+  distinct(event_id_cnty, .keep_all = TRUE)
+
+territory_counts <- violent_events.sub.unique %>%
+  group_by(admin2) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count))
+
+# Find the territory value with the most rows
+most_frequent_territory <- territory_counts %>%
+  slice_max(count, with_ties = FALSE)
+
+# Print the result
+print(most_frequent_territory$admin2)
+# > print(most_frequent_territory$admin2)
+# [1] "Beni"
+
+# We will now subset the violent_events.sub object to Beni Territory within North Kivu Province, DRC
+
+violent_events.sub.beni <- violent_events.sub %>%
+  filter(admin2 == 'Beni') %>%
+  dplyr::select(event_id_cnty, year, event_type, sub_event_type, admin3, fatalities, actor_type, actor, geometry)
+
+# Function to create edges based on actor_type, event counts, and fatalities
+create_edges <- function(df) {
+  edges <- data.frame(from = character(), to = character(), type = character(), sub_event_type = character(), count = numeric(), fatalities = numeric())
+  
+  unique_events <- unique(df$event_id_cnty)
+  
+  for (event in unique_events) {
+    event_data <- df %>% filter(event_id_cnty == event)
+    
+    if (nrow(event_data) > 1) {
+      actors <- event_data$actor
+      types <- event_data$actor_type
+      sub_event_type <- event_data$sub_event_type
+      fatalities <- event_data$fatalities
+      
+      for (i in 1:(length(actors) - 1)) {
+        for (j in (i + 1):length(actors)) {
+          from <- min(actors[i], actors[j])
+          to <- max(actors[i], actors[j])
+          if ((types[i] == "actor1" || types[i] == "assoc_actor_1") && (types[j] == "actor2" || types[j] == "assoc_actor_2")) {
+            edges <- rbind(edges, data.frame(from = from, to = to, type = "conflict", sub_event_type = sub_event_type, count = 1, fatalities = fatalities))
+          } else if ((types[i] == "actor1" || types[i] == "assoc_actor_1") && (types[j] == "actor1" || types[j] == "assoc_actor_1")) {
+            edges <- rbind(edges, data.frame(from = from, to = to, type = "alliance", sub_event_type = sub_event_type, count = 1, fatalities = 0))
+          }
+        }
+      }
+    }
+  }
+  
+  return(edges)
+}
+
+# Create edges
+edges <- create_edges(violent_events.sub.beni)
+
+# Aggregate event counts and fatalities for each pair of actors and sub_event_type
+edges <- edges %>%
+  group_by(from, to, type, sub_event_type) %>%
+  summarize(count = sum(count), fatalities = sum(fatalities), .groups = 'drop')
+
+# Ensure unique edges per pair of nodes, accounting for reversed node pairs
+edges <- edges %>%
+  group_by(from, to, type) %>%
+  summarize(
+    total_count = sum(count),
+    total_fatalities = sum(fatalities),
+    sub_event_summary = paste(unique(paste(sub_event_type, count, sep = ": ")), collapse = "<br>"),
+    .groups = 'drop'
+  )
+
+# Remove edges with total_count < 10
+edges <- edges %>% filter(total_count >= 10)
+
+# Update sub_event_summary to include total fatalities
+edges <- edges %>%
+  mutate(sub_event_summary = paste(sub_event_summary, "<br>Total Fatalities: ", total_fatalities))
+
+# Create an undirected graph including both conflicts and alliances
+g <- graph_from_data_frame(edges, directed = FALSE)
+
+# Apply community detection algorithm (Walktrap method) before modifying the edges
+set.seed(876)
+community <- cluster_walktrap(g, steps = 13) 
+V(g)$community <- as.integer(membership(community))
+
+# Add vertex labels and colors for edges based on type
+V(g)$label <- V(g)$name
+E(g)$color <- ifelse(E(g)$type == "alliance", "blue", "red")
+E(g)$width <- edges$total_count / 100  # Adjust width for better visualization
+
+# Calculate eigen centrality for nodes
+eigen_centrality_values <- eigen_centrality(g)$vector
+if (length(eigen_centrality_values) > 0) {
+  V(g)$size <- eigen_centrality_values * 100  # Scale for better visualization
+} else {
+  V(g)$size <- rep(5, vcount(g))  # Default value if no centrality values are present
+}
+
+
+# Prepare data for visNetwork
+nodes <- data.frame(id = V(g)$name, label = V(g)$label, size = V(g)$size, group = V(g)$community)
+edges <- data.frame(
+  from = as.character(edges$from), 
+  to = as.character(edges$to), 
+  width = E(g)$width,  # Adjust width for better visualization
+  color = E(g)$color,
+  title = edges$sub_event_summary  # Hover popup content on conflict events and fatalities
+)
+
+# Create visNetwork graph
+network_graph <- visNetwork(nodes, edges) %>%
+  visEdges(arrows = "none") %>% # "none" means undirected. "to" means directed
+  visNodes(font = list(size = 20, bold = TRUE, multi = "html", vadjust = -90)) %>%  # Adjust the vertical position of the label
+  visOptions(highlightNearest = TRUE, nodesIdSelection = TRUE, selectedBy = "group") %>%
+  visGroups(groupname = unique(nodes$group)) %>%
+  visInteraction(
+    hover = TRUE,
+    hoverConnectedEdges = TRUE, 
+    selectConnectedEdges = TRUE
+  ) %>%
+  visPhysics(
+    stabilization = FALSE,
+    solver = "forceAtlas2Based",
+    forceAtlas2Based = list(
+      gravitationalConstant = -50, 
+      centralGravity = 0.01, 
+      springLength = 100, 
+      springConstant = 0.08, 
+      damping = 0.4
+    )
+  ) %>%
+  visLayout(randomSeed = 876) # For consistent layout
+
+network_graph <- htmlwidgets::prependContent(
+  network_graph, 
+  htmltools::tags$h2("Network Graph of Conflict Parties and Events in Beni, North Kivu, DRC (Jan. 2018 to Dec. 2023)", style = "text-align: center; font-weight: bold;")
+)
+
+network_graph
+
+```
