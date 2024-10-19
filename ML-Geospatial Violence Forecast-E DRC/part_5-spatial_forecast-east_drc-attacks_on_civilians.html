@@ -779,27 +779,27 @@ defined) is the ratio of true positive predictions to all actual
 positives (true positives + false negatives).</h4>
 <p><br></p>
 </div>
-<div id="the-auprc-score-represents-a-summary-of-the-pr-curve-measuring-the-average-trade-off-between-precision-and-recall-across-all-thresholds.-in-an-ideal-scenario-auprc-1-would-indicate-perfect-precision-and-recall.-a-random-classifier-would-achieve-an-auprc-value-close-to-the-prevalence-of-the-positive-class-which-in-our-case-is-the-proportion-of-grid-cells-with-attacks-around-0.017-according-to-my-calculations-in-the-code-chunk-below." class="section level4">
-<h4>The AUPRC score represents a summary of the PR curve, measuring the
-average trade-off between Precision and Recall across all thresholds. In
-an ideal scenario, AUPRC = 1 would indicate perfect precision and
-recall. A random classifier would achieve an AUPRC value close to the
-prevalence of the positive class, which in our case is the proportion of
-grid cells with attacks (around 0.017, according to my calculations in
-the code chunk below).</h4>
+<div id="the-auprc-score-summarizes-the-precision-recall-pr-curve-measuring-the-trade-off-between-precision-and-recall-across-all-thresholds.-an-auprc-of-1-indicates-perfect-precision-and-recall.-a-random-classifier-would-achieve-an-auprc-value-close-to-the-prevalence-of-the-positive-class-among-grid-cells-in-the-test-set-which-is-approximately-1.6-or-0.016-since-we-previously-determined-about-98.4-of-the-test-set-grid-cells-contain-no-attacks." class="section level4">
+<h4>The AUPRC score summarizes the Precision-Recall (PR) curve,
+measuring the trade-off between precision and recall across all
+thresholds. An AUPRC of 1 indicates perfect precision and recall. A
+random classifier would achieve an AUPRC value close to the prevalence
+of the positive class among grid cells in the test set, which is
+approximately 1.6% (or 0.016) since we previously determined about 98.4%
+of the test set grid cells contain no attacks.</h4>
 <p><br></p>
 </div>
-<div id="given-that-a-random-classifier-would-have-an-auprc-of-approximately-0.017-the-fact-that-our-model-achieves-an-auprc-of-0.4835-is-a-substantial-improvement-over-the-baseline.-while-this-auprc-might-seem-low-in-absolute-terms-it-is-actually-strong-performance-relative-to-the-prevalence-of-the-positive-class.-here-is-why" class="section level4">
+<div id="given-that-a-random-classifier-would-have-an-auprc-of-approximately-0.016-the-fact-that-our-model-achieves-an-auprc-of-0.4835-is-a-substantial-improvement-over-the-baseline.-while-this-auprc-might-seem-low-in-absolute-terms-it-is-actually-strong-performance-relative-to-the-prevalence-of-the-positive-class.-here-is-why" class="section level4">
 <h4>Given that a random classifier would have an AUPRC of approximately
-0.017, the fact that our model achieves an AUPRC of
+0.016, the fact that our model achieves an AUPRC of
 <strong>0.4835</strong> is a <strong>substantial improvement</strong>
 over the baseline. While this AUPRC might seem low in absolute terms, it
 is actually <strong>strong performance</strong> relative to the
 prevalence of the positive class. Here is why:</h4>
 <p><br></p>
 </div>
-<div id="auprc-of-0.4835-is-much-higher-than-0.017-the-baseline-for-a-random-classifier.-this-indicates-that-the-model-is-capable-of-significantly-better-than-random-predictions-for-attack-locations-despite-the-class-imbalance.-however-the-models-performance-is-still-far-from-perfect-auprc-1-reflecting-the-ongoing-challenge-of-improving-precision-and-recall-given-the-imbalance." class="section level4">
-<h4>- AUPRC of 0.4835 is much higher than 0.017 (the baseline for a
+<div id="auprc-of-0.4835-is-much-higher-than-0.016-the-baseline-for-a-random-classifier.-this-indicates-that-the-model-is-capable-of-significantly-better-than-random-predictions-for-attack-locations-despite-the-class-imbalance.-however-the-models-performance-is-still-far-from-perfect-auprc-1-reflecting-the-ongoing-challenge-of-improving-precision-and-recall-given-the-imbalance." class="section level4">
+<h4>- AUPRC of 0.4835 is much higher than 0.016 (the baseline for a
 random classifier). This indicates that the model is capable of
 significantly better-than-random predictions for attack locations,
 despite the class imbalance. However, the model’s performance is still
@@ -843,23 +843,7 @@ struggling with precision as recall increases. The sharp precision drop
 as recall rises is expected in imbalanced contexts, as predicting more
 true positives leads to an increase in false positives.</h4>
 <p><br></p>
-<pre class="r"><code># First, let&#39;s calculate the percentage of attack grid cells among all grid cells in our map:
-
-# Calculate the total number of rows in data_combined
-total_rows &lt;- nrow(data_combined)
-
-# Calculate the number of rows where countAttacks is equal to 1 or higher
-count_greater_than_or_equal_1 &lt;- sum(data_combined$countAttacks &gt;= 1)
-
-# Calculate the ratio
-attck_cell_ratio &lt;- count_greater_than_or_equal_1 / total_rows
-
-# Print the result
-print(attck_cell_ratio)
-# &gt; print(attck_cell_ratio)
-# [1] 0.01617315
-
-# Next, let&#39;s plot the Precision-Recall Curve and calculate the PRAUC
+<pre class="r"><code># Next, let&#39;s plot the Precision-Recall Curve and calculate the PRAUC
 
 library(PRROC)
 library(fields)

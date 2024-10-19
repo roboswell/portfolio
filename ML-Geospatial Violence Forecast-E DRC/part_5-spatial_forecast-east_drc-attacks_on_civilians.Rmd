@@ -367,15 +367,15 @@ plot(roc_obj, main = "ROC Curve (AUC = 0.877)", cex.main = 0.8, "cex.lab" = 0.8)
 
 <br>
 
-#### The AUPRC score represents a summary of the PR curve, measuring the average trade-off between Precision and Recall across all thresholds. In an ideal scenario, AUPRC = 1 would indicate perfect precision and recall. A random classifier would achieve an AUPRC value close to the prevalence of the positive class, which in our case is the proportion of grid cells with attacks (around 0.017, according to my calculations in the code chunk below).
+#### The AUPRC score summarizes the Precision-Recall (PR) curve, measuring the trade-off between precision and recall across all thresholds. An AUPRC of 1 indicates perfect precision and recall. A random classifier would achieve an AUPRC value close to the prevalence of the positive class among grid cells in the test set, which is approximately 1.6% (or 0.016) since we previously determined about 98.4% of the test set grid cells contain no attacks.
 
 <br>
 
-#### Given that a random classifier would have an AUPRC of approximately 0.017, the fact that our model achieves an AUPRC of **0.4835** is a **substantial improvement** over the baseline. While this AUPRC might seem low in absolute terms, it is actually **strong performance** relative to the prevalence of the positive class. Here is why:
+#### Given that a random classifier would have an AUPRC of approximately 0.016, the fact that our model achieves an AUPRC of **0.4835** is a **substantial improvement** over the baseline. While this AUPRC might seem low in absolute terms, it is actually **strong performance** relative to the prevalence of the positive class. Here is why:
 
 <br>
 
-#### - AUPRC of 0.4835 is much higher than 0.017 (the baseline for a random classifier). This indicates that the model is capable of significantly better-than-random predictions for attack locations, despite the class imbalance. However, the model's performance is still far from perfect (AUPRC = 1), reflecting the ongoing challenge of improving precision and recall given the imbalance.
+#### - AUPRC of 0.4835 is much higher than 0.016 (the baseline for a random classifier). This indicates that the model is capable of significantly better-than-random predictions for attack locations, despite the class imbalance. However, the model's performance is still far from perfect (AUPRC = 1), reflecting the ongoing challenge of improving precision and recall given the imbalance.
 
 <br>
 
@@ -404,22 +404,6 @@ plot(roc_obj, main = "ROC Curve (AUC = 0.877)", cex.main = 0.8, "cex.lab" = 0.8)
 <br>
 
 ```{r Precision-Recall Curve and Area Under the Precision-Recall Curve Scores, cache=TRUE, cache.lazy=FALSE, fig.height=10, fig.width=10, eval=FALSE, echo=TRUE}
-
-# First, let's calculate the percentage of attack grid cells among all grid cells in our map:
-
-# Calculate the total number of rows in data_combined
-total_rows <- nrow(data_combined)
-
-# Calculate the number of rows where countAttacks is equal to 1 or higher
-count_greater_than_or_equal_1 <- sum(data_combined$countAttacks >= 1)
-
-# Calculate the ratio
-attck_cell_ratio <- count_greater_than_or_equal_1 / total_rows
-
-# Print the result
-print(attck_cell_ratio)
-# > print(attck_cell_ratio)
-# [1] 0.01617315
 
 # Next, let's plot the Precision-Recall Curve and calculate the PRAUC
 
