@@ -59,7 +59,11 @@ next_page <- ifelse(current_page < total_pages, paste0("part_", current_page + 1
 
 <br>
 
-```{r Histogram of Training Set Target Variable, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+```{r Histogram of Training Set Target Variable, cache=TRUE, cache.lazy=FALSE, fig.height=5.25, fig.width=5.25, eval=FALSE, echo=TRUE}
+
+setwd("C:/Users/rsb84/Desktop/RB/ds_projects/GIS/DRC/")
+
+final_net.sf.attacks_train <- readRDS("final_net.sf.attacks_train.rds")
 
 png("histogram of target variable.png", width = 500, height = 500 / (11/14.5)) # Aspect ratio that shows outliers
 
@@ -3135,12 +3139,12 @@ title(main = "Range vs Sample Size")
 # par(las = 1)  # Ensure y-axis labels remain horizontal
 # 
 # # Plot the results
-# plot(results$sample_size, results$range, type = "l", col = "blue", 
+# plot(results$sample_size, results$range, type = "l", col = "blue",
 #      xlab = "Sample Size", ylab = "Range", xaxt = 'n')  # Disable default x-axis
 # 
 # # Add custom axes with rotated x-axis labels
 # axis(1, at = seq(3000, 20000, by = 1000), labels = FALSE)  # Add ticks but no labels
-# text(x = seq(3000, 20000, by = 1000), y = par("usr")[3] - 500, 
+# text(x = seq(3000, 20000, by = 1000), y = par("usr")[3] - 500,
 #      labels = seq(3000, 20000, by = 1000), srt = 45, adj = 1, xpd = TRUE, cex = 0.8)
 # 
 # # Add y-axis as usual
@@ -9085,14 +9089,14 @@ ggplot(imp_matrix_regr, aes(x = reorder(Feature, Gain), y = Gain, fill = factor(
   theme(
     plot.title = element_text(face = "bold")
   )
-
+ZSA
 ```
 
 <br>
 
 ```{r Plot Gain Feature Importance - Plot, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=TRUE, echo=FALSE, out.width="100%", fig.align='center'}
 
-# Note: Uncomment out the following code to generate the image below
+# Note: Uncomment out the following code to generate the image below  
 
 # imp_matrix_regr <- readRDS("imp_matrix_regr.cumsum_added.rds")
 # 
@@ -9106,10 +9110,10 @@ ggplot(imp_matrix_regr, aes(x = reorder(Feature, Gain), y = Gain, fill = factor(
 #   geom_bar(stat = "identity") +
 #   coord_flip() +
 #   labs(x = "Feature", y = "Importance (Gain)", title = "Gain Feature Importance with Cumulative Threshold") +
-#   scale_fill_manual(values = c("TRUE" = "cyan", "FALSE" = "salmon"), 
+#   scale_fill_manual(values = c("TRUE" = "cyan", "FALSE" = "salmon"),
 #                     name = "Cumulative Sum of Gain ≥ 90% Threshold",
 #                     labels = c("Above Threshold", "Below Threshold")) +
-#   theme_minimal() + 
+#   theme_minimal() +
 #   theme(
 #     plot.title = element_text(face = "bold")
 #   )
@@ -11580,6 +11584,8 @@ print(measures_list.spcv_block)
   <summary style="font-size: 18px; color: crimson; font-weight: bold; margin-bottom: 60px; text-decoration: underline;">Click here to expand the code and see the output</summary>
   
 ```{r SVMs Model with spcv_block Cross-Validation - 2.25 x the Empirical Range - Version 2, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+setwd("C:/Users/rsb84/Desktop/RB/ds_projects/GIS/DRC/")
 
 param_set.2 <- ps(
   svm_regr.type = p_fct(levels = c("eps-regression")),

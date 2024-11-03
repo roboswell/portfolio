@@ -2850,7 +2850,7 @@ final_net.sf.attacks_test <- final_net.attacks_test %>%
 
 <br>
 
-```{r Local Morans I Cluster Analysis, cache=TRUE, cache.lazy=FALSE, fig.height=30, fig.width=11.25, eval=FALSE, echo=TRUE}
+```{r Local Morans I Cluster Analysis, cache=TRUE, cache.lazy=FALSE, fig.height=22.5, fig.width=8.4375, eval=FALSE, echo=TRUE}
 
 # Create a neighbors list and spatial weights using IDW (only once, as spatial geometries are the same)
 
@@ -2981,7 +2981,7 @@ gtable_output <- gridExtra::grid.arrange(
 )
 
 # Save the grid.arrange plot as a PNG file
-png("local_morans_i_exploratory_analysis-idw_queens.png", width = 800, height = 800 / (11.25/28)) # Adjust the height by the aspect ratio. Set aspect ratio as 11.25 inch width and 28 inch height
+png("local_morans_i_exploratory_analysis-idw_queens.png", width = 800, height = 800 / (8.4375/20.5))
 
 grid::grid.draw(gtable_output)
 
@@ -3040,7 +3040,7 @@ knitr::include_graphics("local_morans_i_exploratory_analysis-idw_queens.png")
 <details>
   <summary style="font-size: 18px; color: crimson; font-weight: bold; margin-bottom: 60px; text-decoration: underline;">Click here to expand the code and see the output</summary>
   
-```{r Local Morans I Cluster Analysis - Queens Matrix, cache=TRUE, cache.lazy=FALSE, fig.height=30, fig.width=11.25, eval=FALSE, echo=TRUE}
+```{r Local Morans I Cluster Analysis - Queens Matrix, cache=TRUE, cache.lazy=FALSE, fig.height=22.5, fig.width=8.4375, eval=FALSE, echo=TRUE}
 
 # Create a neighbors list and spatial weights using IDW (only once, as spatial geometries are the same)
 
@@ -3158,7 +3158,7 @@ gtable_output.standard_queens <- gridExtra::grid.arrange(
 )
 
 # Save the grid.arrange plot as a PNG file
-png("local_morans_i_exploratory_analysis-standard_queens.png", width = 800, height = 800 / (11.25/28)) # Adjust the height by the aspect ratio. Set aspect ratio as 11.25 inch width and 28 inch height
+png("local_morans_i_exploratory_analysis-standard_queens.png", width = 800, height = 800 / (8.4375/20.5)) # Adjust the height by the aspect ratio. Set aspect ratio as 8.4375 inch width and 20.5 inch height
 
 grid::grid.draw(gtable_output.standard_queens)
 
