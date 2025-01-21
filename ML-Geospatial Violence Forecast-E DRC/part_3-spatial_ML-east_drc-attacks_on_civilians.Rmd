@@ -1,0 +1,3225 @@
+---
+title: "Predicting Attacks on Civilians in the Eastern Democratic Republic of Congo:
+  Feature Engineering"
+author: "Rob Boswell"
+date: "10-15-2024"
+output:
+  html_document:
+    css: header_styles.css
+---
+
+```{r echo=FALSE}
+
+library(stringr)
+
+# Get the current page number from the file name
+current_page <- as.numeric(str_extract(knitr::current_input(), "\\d+"))
+
+# Set the total number of pages
+total_pages <- 5
+
+# Generate the URLs for the previous and next pages
+previous_page <- ifelse(current_page > 1, paste0("part_", current_page - 1, "-spatial_ML-east_drc-attacks_on_civilians.html"), NA)
+next_page <- ifelse(current_page < total_pages, paste0("part_", current_page + 1, "-spatial_ML-east_drc-attacks_on_civilians.html"), NA)
+
+```
+
+<ul class="pager">
+  <li><a href="`r previous_page`" style="color: crimson;">Previous Page</a></li>
+  <li><a href="`r next_page`" style="color: crimson;">Next Page</a></li>
+</ul>
+
+<br>
+
+### **Feature Engineering:**
+
+<br>
+
+#### We will now create and place our features in the fishnet grid cell observations, starting with nighttime light levels measured via satellite (on Dec. 25, 2023) as a variable, which is a proxy for economic development levels.
+
+<br>
+
+#### Variable: **Mean nighttime light levels**
+
+<br>
+
+```{r Mean Light Per Grid Cell, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, message=FALSE, warning=FALSE, eval=FALSE, echo=TRUE}
+
+setwd("C:/Users/Owner/Desktop/RB/ds_projects/e_drc_geo_ml/")
+
+source("https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/functions.r")
+options(scipen=9999)
+library(tidyverse)
+library(dplyr)
+library(sf)
+library(spatstat)
+library(viridis)
+library(FNN)
+library(spdep)
+library(gridExtra)
+library(raster)
+library(rgdal)
+library(rasterVis)
+library(rhdf5)
+library(tidyr)
+library(raster)
+library(ggplot2)
+library(viridis)
+library(exactextractr)
+library(rgeos)
+
+# The following custom map theme function is modified from the original, which comes from the following site: https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/functions.r
+
+mapTheme <- function(base_size = 12, title_size = 16) {
+  theme(
+    text = element_text( color = "black"),
+    plot.title = element_text(size = title_size,colour = "black"),
+    plot.subtitle=element_text(face="italic"),
+    plot.caption=element_text(hjust=0),
+    axis.ticks = element_blank(),
+    panel.background = element_blank(),axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(colour = "black", fill=NA, linewidth = 2),
+    strip.text.x = element_text(size = 14))
+}
+
+
+# These light levels come from the Day/Night Band (DNB) radiance measured by sensor dataset within the VIIRS/NPP Granular Gridded Day Night Band 500m Linear Lat. Lon. Grid Night NRT dataset, available at https://search.earthdata.nasa.gov/search/granules?portal=idn&p=C2780764136-LANCEMODIS&pg[0][v]=f&pg[0][gsk]=-start_date&q=VNP46A1G_NRT_2&tl=1704057535.621!3!!
+
+# Documentation on the dataset file naming conventions is discussed on pg. 8 of this document: https://viirsland.gsfc.nasa.gov/PDF/VIIRS_C1_BA_User_Guide_1.0.pdf
+
+# To convert between longitude and latitude coordinates and the dataset tiles needed to be downloaded, see the MODLAND Tile Calculator (https://landweb.modaps.eosdis.nasa.gov/cgi-bin/developer/tilemap.cgi)
+
+# To install the rhdf5 library, use the following code:
+# if (!requireNamespace("BiocManager", quietly = TRUE))
+#     install.packages("BiocManager")
+# 
+#     BiocManager::install("rhdf5")
+
+fishnet <- readRDS("fishnet.rds")
+
+e_drc_adm1_map <- readRDS("e_drc_adm1_map.rds")
+
+e_drc_adm2_map <- readRDS("e_drc_adm2_map.rds")
+
+e_drc_adm2_map <- e_drc_adm2_map %>%
+  st_transform(crs=4326)
+
+# Define the paths to HDF5 files
+h5_path_list <- c(
+               "C:/Users/rsb84/Desktop/RB/ds_projects/GIS/DRC/VNP46A1_NRT.A2023358.h20v08.002.2023359054827.h5",
+               "C:/Users/rsb84/Desktop/RB/ds_projects/GIS/DRC/VNP46A1_NRT.A2023358.h20v09.002.2023359054857.h5",
+               "C:/Users/rsb84/Desktop/RB/ds_projects/GIS/DRC/VNP46A1_NRT.A2023358.h21v08.002.2023359055442.h5",
+               "C:/Users/rsb84/Desktop/RB/ds_projects/GIS/DRC/VNP46A1_NRT.A2023358.h21v09.002.2023359055449.h5"
+)
+
+# Function to read spatial extents from multiple HDF5 files
+read_spatial_extent <- function(file_path) {
+  # Read latitude and longitude datasets
+  lat <- rhdf5::h5read(file_path, "/HDFEOS/GRIDS/VIIRS_Grid_DNB_2d/Data Fields/lat")
+  lon <- rhdf5::h5read(file_path, "/HDFEOS/GRIDS/VIIRS_Grid_DNB_2d/Data Fields/lon")
+
+  # Calculate the extent
+  lat_min <- min(lat)
+  lat_max <- max(lat)
+  lon_min <- min(lon)
+  lon_max <- max(lon)
+
+  return(c(lon_min, lon_max, lat_min, lat_max))
+}
+
+extents <- lapply(h5_path_list, read_spatial_extent)
+
+# Function to read and convert HDF5 to raster
+convert_h5_to_raster <- function(h5_file_path, dataset_path, extent_values) {
+  data <- h5read(h5_file_path, dataset_path)
+  # Assuming data needs to be transposed (common with matrix data from HDF5)
+  r <- raster(t(data))
+
+  # Set the extent of the raster
+  extent(r) <- extent(extent_values)
+  
+  # Define the projection (this is the same geographic projection as before)
+  projection(r) <- CRS("+proj=longlat +datum=WGS84")
+  return(r)
+}
+
+# Path to the internal dataset within each h5 file that we want to analyze for the lights at night feature
+
+internal_dataset_path = "/HDFEOS/GRIDS/VIIRS_Grid_DNB_2d/Data Fields/DNB_At_Sensor_Radiance"
+
+# Use mapply to pass the extents to the function along with file paths
+raster_list <- mapply(convert_h5_to_raster, h5_path_list, MoreArgs = list(dataset_path = internal_dataset_path), extents, SIMPLIFY = FALSE)
+
+# Flatten each element of raster_list
+raster_list <- lapply(raster_list, unlist)
+
+
+# No documentation was found listing the no-data value, which is often a number like -999. The no-data values in this dataset appear to be assigned as -999.900024, as discovered by using summary(raster_list[[1]]), summary(raster_list[[2]]), summary(raster_list[[3]]), and summary(raster_list[[4]]), which showed an unusually high number of values equal to -999.900024. To count the number of values very close to -999.900024 in case summary() is merely truncating the no-data values, I used the following function:
+
+count_near_no_data_values <- function(raster_layer, no_data_value, tolerance = 1e-5) {
+    values <- raster::getValues(raster_layer)
+    sum(abs(values - no_data_value) < tolerance, na.rm = TRUE)
+}
+
+no_data_value <- -999.900024
+no_data_counts <- lapply(raster_list, count_near_no_data_values, no_data_value = no_data_value)
+print(no_data_counts)
+
+
+# The above code found that there were a total of 5,418 values near -999.900024 among the 4 raster objects, which would seem highly unusual unless this is indeed the no-data value for the dataset, so I regard it as such. Thus, I replace these values with NA so that the final values are not biased.
+
+replace_near_no_data_with_NA <- function(raster_layer, no_data_value, tolerance = 1e-5) {
+    values <- raster::getValues(raster_layer)
+    values[abs(values - no_data_value) < tolerance] <- NA
+    raster::setValues(raster_layer, values)
+}
+
+raster_list <- lapply(raster_list, replace_near_no_data_with_NA, no_data_value = no_data_value)
+
+
+# Our raster layers are geographically literally situated side-by-side and contain no overlaps. We can use the merge function to merge the 4 raster layers into 1 raster
+merged_raster <- merge(raster_list[[1]], raster_list[[2]], raster_list[[3]], raster_list[[4]])
+
+# Examining NAs after merging
+print(summary(merged_raster)) # Shows 15,019 NA values
+
+# Use st_transform to ensure that the shapefile is in the same CRS as the raster
+e_drc_adm2_map <- st_transform(e_drc_adm2_map, crs(merged_raster))
+
+
+# We will check to make certain that the extents of the rasters overlap as they need to. 
+# Convert raster extent to SpatialPolygons, and ensure the CRS of merged_raster is carried over 
+merged_extent_sp <- as(extent(merged_raster), "SpatialPolygons")
+crs(merged_extent_sp) <- crs(merged_raster)
+
+shapefile_extent_sp <- as(extent(st_bbox(e_drc_adm2_map)), "SpatialPolygons")
+crs(shapefile_extent_sp) <- crs(e_drc_adm2_map)
+
+
+# Check if the extents overlap using gIntersects
+# Because the code below yields no warning when run, we know that the rasters and shapefile perfectly overlap.
+if (!gIntersects(merged_extent_sp, shapefile_extent_sp, byid = FALSE)) {
+  stop("The extents of the raster and shapefile do not overlap.")
+}
+
+# Convert the shapefile to a Spatial object
+e_drc_adm2_map_sp <- as(e_drc_adm2_map, "Spatial")
+
+# Crop the raster to the extent of the shapefile
+cropped_raster <- crop(merged_raster, e_drc_adm2_map_sp)
+
+# Masking the cropped raster using the shapefile
+clipped_raster <- mask(cropped_raster, e_drc_adm2_map_sp)
+
+# Check summary of raster values after masking to assess NA values
+print(summary(clipped_raster)) # There are now 1,367,745 NA values
+
+# After masking, the number of NAs jumps from 15,019 to ~1.37 million. Why the jump? This is because crop() and mask() set any pixel that is outside the shapefile boundary to NA.
+
+# Define the desired projected CRS (Transverse Mercator)
+projected_crs <- CRS("+proj=tmerc +lat_0=-0.6888125 +lon_0=29.0698245 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs")
+
+# Ensure the clipped raster has a defined CRS before projecting
+crs(clipped_raster) <- crs(e_drc_adm2_map)
+
+# Reproject the clipped raster to the new CRS
+final_clipped_raster <- projectRaster(clipped_raster, crs = projected_crs)
+
+# Save the clipped and projected final raster
+raster::writeRaster(final_clipped_raster, "C:/Users/rsb84/Desktop/RB/ds_projects/GIS/DRC/final_clipped_raster.tif", format = "GTiff", overwrite = TRUE)
+
+# Extract values from our dataset of interest from the clipped raster
+final_values <- getValues(final_clipped_raster)
+if (all(is.na(final_values))) {
+  stop("All extracted values are NA.")
+}
+
+print(summary(final_values)) # Shows there are 1,396,027 NAs
+print(ncell(final_values)) # Shows there are 2,283,463 total values
+
+# Note that projectRaster() can introduce additional interpolation artifacts or small fill areas where data might become NA, which may explain the additional increase in NAs.
+
+# 1396027/2283463 = 0.611364. 61.14% of all values are NAs. This is a lot of NA values, a potential limitation of using night light emissions as a feature. However, my comments on this subject further below show that it may still be okay to use this variable.
+
+# - Factors such as cloud coverage, 
+
+# Convert raster to a data frame with x, y coordinates and cell values
+light_sf <- rasterToPolygons(final_clipped_raster) %>%
+  st_as_sf() %>%
+  st_transform(crs(final_clipped_raster))
+
+# saveRDS(light_sf, "light_sf-original-before_intersection_with_fishnet.RDS", compress=TRUE)
+
+e_drc_adm2_map <- e_drc_adm2_map %>%
+  st_transform(crs(light_sf))
+
+
+# We might suspect that many of these NAs are present because the original raster was clipped to the area of the map shapefile, leaving most values outside the shapefile as NAs. However, because there are so many NA values, to verify whether these NA values are merely coming from areas outside the shapefile, we should do the following:
+
+# Determine the number of raster values that should reside outside of the shapefile boundaries after masking, using follow these steps:
+
+# - Create a mask raster from the shapefile: Convert the shapefile into a raster format where pixels inside the shapefile boundaries are given a value of 1, and those outside are given a value of NA.
+
+# - Compare the mask raster and the merged raster:
+
+# 1. For the merged raster (merged_raster), identify the cells which have non-NA values.
+# 2. For the mask raster, identify the cells which have NA values.
+# 3. Compare these two sets of cells to determine how many non-NA cells in the merged raster correspond to NA cells in the mask raster.
+# 4. Count these cells: The count of these cells (outside_values_count) will give you the number of values in merged_raster that fall outside the shapefile boundaries. If the number of NAs in final_values is similar to the number of NAs in outside_values_count, then this suggests there are few if any NAs introduced unintentionally in the code.
+
+# 1. Create mask_raster where any cell inside the shapefile boundary = 1, else NA.
+# 2. Check how many non-NA cells in merged_raster become NA in mask_raster.
+# 3. If outside_values_count = 0, then none of the original valid raster cells lie outside the shapefile boundary. They all lie within it.
+
+outside_values_count = 0 => none of the original valid raster cells lie outside the shapefile boundary.
+
+
+# Here is the R code to perform this analysis:
+
+# Create a mask raster from the shapefile
+mask_raster <- rasterize(e_drc_adm2_map, merged_raster, field=1, background=NA)
+
+# Get values from both rasters
+merged_values <- getValues(merged_raster)
+mask_values <- getValues(mask_raster)
+
+# Count the number of non-NA values in merged_raster that correspond to NA in mask_raster
+outside_values_count <- sum(!is.na(merged_values) & is.na(mask_values))
+print(outside_values_count) # Shows 0 NA values
+
+
+# From print(summary(final_values)), we saw there are 1,396,027 NAs. From print(outside_values_count), we can see there are 0 NAs. This means that 0% of the NAs in final_values come from areas outside the shapefile boundaries.
+
+# Ensure both datasets are in the same CRS
+light_sf <- st_transform(light_sf, st_crs(fishnet))
+
+# Intersect light_sf with fishnet
+light_sf_intersected <- st_intersection(light_sf, fishnet)
+
+# saveRDS(light_sf_intersected, "light_sf_intersected.RDS", compress = TRUE)
+
+# Convert intersected to a regular data frame
+light_df_intersected <- as.data.frame(light_sf_intersected)
+
+# Join fishnet (dropping its geometry) with intersected_df
+light_joined <- merge(st_drop_geometry(fishnet), light_df_intersected, by = "uniqueID", all.x = TRUE)
+
+# Aggregate the mean light values for each fishnet cell
+mean_light <- light_joined %>%
+  group_by(uniqueID) %>%
+  summarize(mean_light = mean(layer, na.rm = TRUE), .groups = 'drop')
+
+# saveRDS(mean_light, "mean_light.RDS", compress = TRUE)
+# mean_light <- readRDS("mean_light.RDS")
+
+# Merge the aggregated data with the original fishnet (with geometry)
+
+mean_light_net_merged <- merge(fishnet, mean_light, by = "uniqueID", all.x = TRUE)
+
+# Count the number of NA values to make sure there are not many. Results show there are only 3 NAs.
+print(sum(is.na(mean_light_net_merged$mean_light)))
+
+# How is this possible that we only have 3 NA values now? 
+
+# - Because a single polygon in the fishnet typically covers many raster cells, the presence of a large number of per-pixel NA values does not necessarily translate into a large number of fishnet polygons with missing values.
+
+# - Many missing pixels may still yield a valid average. Each fishnet cell (polygon) might contain hundreds or thousands of raster pixels. Even if some of those pixels are NA, there may be enough valid (non-NA) pixels within that polygon to compute a mean.
+
+# - You only see an NA in the final fishnet attribute table if every pixel (or almost every pixel) in a given fishnet polygon is missing. Hence, you can have 1.3 million missing pixels scattered across the region but, if they are “sprinkled” throughout different polygons (which also contain some valid pixel values), most if not all polygons can still compute a mean.
+
+# Next, for imputation purposes for NA values, the following code defines which cells are neighbors by creating a spatial weights matrix (Queen's contiguity matrix). The poly2nb function identifies neighboring polygons (grid cells), and nb2listw creates the weights. The style="W" argument creates weights based on neighboring presence (1 for neighbor, 0 otherwise), and zero.policy=TRUE allows operations on regions with no neighbors.
+
+neighbors <- poly2nb(mean_light_net_merged, queen = TRUE)
+weights <- nb2listw(neighbors, style="W", zero.policy=TRUE)
+
+# Imputation Using Averages of Neighboring Cell Values: these weights calculate the average of the neighboring cells. It loops through each cell in the sf object and computes the average of its neighbors for imputation of NA values.
+
+mean_light_net_merged <- mean_light_net_merged %>%
+    mutate(mean_light = ifelse(is.na(mean_light), 
+                          sapply(1:length(mean_light_net_merged), function(i) {
+                              sum(weights$weights[[i]] * mean_light_net_merged$mean_light[weights$neighbours[[i]]], 
+                                  na.rm = TRUE) / sum(weights$weights[[i]], na.rm = TRUE)
+                          }), 
+                          mean_light))
+
+# Count the number of NA values. 
+
+print(sum(is.na(mean_light_net_merged$mean_light))) # Results show there are now 0 NAs.
+
+vars_in_net <- mean_light_net_merged
+
+# saveRDS(vars_in_net, file = "vars_in_net-after_mean_light_added.rds", compress = TRUE)
+# vars_in_net <- readRDS("vars_in_net-after_mean_light_added.rds")
+ 
+ggplot(data = vars_in_net) +
+  geom_sf(aes(fill = mean_light)) +
+  geom_sf(data = e_drc_adm2_map, fill = NA, color = "white", size = 0.1) + # Territory Boundaries (2nd Order Districts)
+  geom_sf(data = e_drc_adm1_map, fill = NA, color = "red", linewidth = 1) + # Province Boundaries (1st Order Districts)
+  scale_fill_viridis_c(name = "Light Levels (nWatts·cm⁻²·sr⁻¹)", option = "H") +  # Color scale for fatalities
+  labs(title = "Mean Nighttime Light Radiance Levels over the Eastern DRC, Dec. 25, 2023", subtitle = "") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold")
+  ) +
+  coord_sf()
+
+```
+
+<br>
+
+```{r Mean Light Per Grid Cell - Plot, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=TRUE, echo=FALSE, out.width="100%", fig.align='center'}
+
+# Note: Uncomment out the following code to generate the image below
+
+# vars_in_net <- readRDS("vars_in_net-after_mean_light_added.rds")
+# 
+# g_plot_8 <- ggplot(data = vars_in_net) +
+#   geom_sf(aes(fill = mean_light)) +
+#   geom_sf(data = e_drc_adm2_map, fill = NA, color = "white", size = 0.1) + # Territory Boundaries (2nd Order Districts)
+#   geom_sf(data = e_drc_adm1_map, fill = NA, color = "red", linewidth = 1) + # Province Boundaries (1st Order Districts)
+#   scale_fill_viridis_c(name = "Light Levels (nWatts·cm⁻²·sr⁻¹)", option = "H") +  # Color scale for fatalities
+#   labs(title = "Mean Nighttime Light Radiance Levels over the Eastern DRC, Dec. 25, 2023", subtitle = "") +
+#   theme_minimal() +
+#   theme(
+#     plot.title = element_text(face = "bold")
+#   ) +
+#   coord_sf()
+# 
+# ggsave("Mean Nighttime Light Radiance Levels over the Eastern DRC, Dec. 25, 2023.png", plot = g_plot_8, width = 10.5, height = 10.5, units = "in")
+
+knitr::include_graphics("Mean Nighttime Light Radiance Levels over the Eastern DRC, Dec. 25, 2023.png")
+
+```
+<br>
+
+<br>
+
+#### Variable: **Mean population density**
+
+<br>
+
+```{r Mean Population Density, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# I used QGIS to clip this particular raster to the extent of the fishnet as doing so in QGIS is much faster than doing so in R.
+
+pop_dens <- raster("e_drc-gpw_v4_pop_dens-1km_res.tif")
+
+# Crop raster to the fishnet extent
+# cropped_raster.pop_dens <- crop(pop_dens, extent(fishnet))
+
+# Convert Raster to SpatialPolygonsDataFrame
+raster_2_polygons <- rasterToPolygons(pop_dens)
+
+names(raster_2_polygons@data)[names(raster_2_polygons@data) == "e_drc.gpw_v4_pop_dens.1km_res"] <- "pop_density"
+
+pop_density_sf <- raster_2_polygons %>%
+  st_as_sf() %>%
+  st_transform(crs=crs(fishnet))
+
+# Join via st_intersection
+
+pop_density_sf <- pop_density_sf %>%
+  st_intersection(fishnet)
+
+# Remove empty geometries resulting from the intersection
+pop_density_sf <- pop_density_sf[!st_is_empty(pop_density_sf), ]
+
+# saveRDS(pop_density_sf, file = "e_drc-pop_density_sf-before_mean.rds", compress = TRUE)
+# pop_density_sf <- readRDS(file = "e_drc-pop_density_sf-before_mean.rds")
+
+# Calculate the mean population density for each grid cell
+pop_density_sf <- pop_density_sf %>%
+  group_by(uniqueID) %>%
+  summarise(mean_pop_density = mean(pop_density, na.rm = TRUE)) %>%
+  ungroup()
+
+# Drop geometry from intersection before the join
+pop_density_no_geom <- as.data.frame(pop_density_sf) %>% 
+  dplyr::select(-c(geometry))
+
+# Step 4: Join the counts back with the original fishnet geometry
+# Now you can use left_join because intersection_no_geom is a regular data frame
+mean_pop_dens_sf <- left_join(fishnet, pop_density_no_geom, by = "uniqueID")
+
+# Count the number of NA values to make sure there are not many. Results show there are only 22 NAs.
+print(sum(is.na(mean_pop_dens_sf$mean_pop_density)))
+
+neighbors <- poly2nb(mean_pop_dens_sf, queen = TRUE)
+weights <- nb2listw(neighbors, style="W", zero.policy=TRUE)
+
+# Handling Missing Data: The mutate() function below updates the mean_pop_density column, replacing NA values with a weighted average of the population density values of neighboring grid cells.
+
+# Weighted Average Calculation: For each cell, the population density values of neighboring cells are multiplied by their spatial weights. The sum of these weighted values is then divided by the sum of the weights to compute the average.
+
+mean_pop_dens_sf <- mean_pop_dens_sf %>%
+    mutate(mean_pop_density = ifelse(is.na(mean_pop_density), 
+                          sapply(1:length(mean_pop_dens_sf), function(i) {
+                              sum(weights$weights[[i]] * mean_pop_dens_sf$mean_pop_density[weights$neighbours[[i]]], 
+                                  na.rm = TRUE) / sum(weights$weights[[i]], na.rm = TRUE)
+                          }), 
+                          mean_pop_density))
+
+print(sum(is.na(mean_pop_dens_sf$mean_pop_density)))
+
+# Replace NA values with 0 in the unique_nsags column
+
+# Ensure the result is an sf object with geometry
+mean_pop_dens_sf <- st_sf(mean_pop_dens_sf, geometry = st_geometry(fishnet), crs = st_crs(fishnet))
+
+# Save object
+# saveRDS(mean_pop_dens_sf, file = "e_drc-pop_density_sf-finished.rds", compress = TRUE)
+
+# mean_pop_dens_sf <- readRDS(file = "e_drc-pop_density_sf-finished.rds")
+
+mean_pop_dens_sf_subset <- mean_pop_dens_sf[, c("uniqueID", "mean_pop_density")]
+
+
+# Perform the join using base R's merge function
+vars_in_net <- merge(vars_in_net, as(mean_pop_dens_sf_subset, "Spatial"), by = "uniqueID", all.x = TRUE)
+
+
+# Save object
+# saveRDS(vars_in_net, file = "vars_in_net-after_pop_density_added.rds", compress = TRUE)
+
+# vars_in_net <- readRDS(file = "vars_in_net-after_pop_density_added.rds")
+
+```
+<br>
+
+<br>
+
+#### Variable: **Mean travel time to the nearest city**
+
+<br>
+
+```{r Mean Travel Time to Nearest City, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# I merged the raster files in QGIS (since doing so takes much longer in R) that provided travel times to cities of population sizes 50,000 - 100,000; 100,000 - 200,000; 200,000 - 500,000; and 500,000 - 1,000,000, based on 2015 data. I then clipped the merged raster file to the boundaries of e_drc_adm2_map (which has the same boundaries of fishnet). The result is the imported raster file below. This raster file thus contains travel times from any given point on the map to any city with a population between 50,000 and 1,000,000.
+
+time2city.50k_1mil <- raster("travel_time_to_cities-50k-1mil.tif")
+
+# Convert Raster to SpatialPolygonsDataFrame
+raster_2_polygons <- rasterToPolygons(time2city.50k_1mil)
+
+names(raster_2_polygons@data)[names(raster_2_polygons@data) == "travel_time_to_cities.50k.1mil"] <- "time_to_nearest_city"
+
+time_to_nearest_city_sf <- raster_2_polygons %>%
+  st_as_sf() %>%
+  st_transform(crs=crs(fishnet))
+
+
+# Step 2: Perform the spatial intersection
+intersection <- st_intersection(fishnet, time_to_nearest_city_sf)
+
+print(sum(is.na(intersection$time_to_nearest_city))) # Shows there are 0 NAs
+
+# Save object
+# saveRDS(intersection, file = "time_to_nearest_city_sf-before_mean.rds", compress = TRUE)
+
+# intersection <- readRDS(file = "time_to_nearest_city_sf-before_mean.rds")
+
+# Step 3: Generate a unique identifier for each geometry in the intersection result
+mean_time_to_nearest_city_intersection <- intersection %>%
+  group_by(uniqueID) %>%
+  summarise(mean_time_to_nearest_city = mean(time_to_nearest_city, na.rm = TRUE)) %>%
+  ungroup()
+
+# Drop geometry from intersection before the join
+mean_time_to_nearest_city_no_geom <- as.data.frame(mean_time_to_nearest_city_intersection) %>% 
+  dplyr::select(-c(geometry))
+
+# Step 4: Join the counts back with the original fishnet geometry
+# Now you can use left_join because intersection_no_geom is a regular data frame
+mean_time_to_nearest_city_sf <- left_join(fishnet, mean_time_to_nearest_city_no_geom, by = "uniqueID")
+
+
+print(sum(is.na(mean_time_to_nearest_city_sf$mean_time_to_nearest_city))) # shows there are no NA values
+
+# Ensure the result is an sf object with geometry
+mean_time_to_nearest_city_sf <- st_sf(mean_time_to_nearest_city_sf, geometry = st_geometry(fishnet), crs = st_crs(fishnet))
+
+
+# saveRDS(mean_time_to_nearest_city_sf, file = "e_drc-time_to_nearest_city_sf-finished.rds", compress = TRUE)
+
+# mean_time_to_nearest_city_sf <- readRDS(file = "e_drc-time_to_nearest_city_sf-finished.rds")
+
+mean_time_to_nearest_city_sf_subset <- mean_time_to_nearest_city_sf[, c("uniqueID", "mean_time_to_nearest_city")]
+
+# Perform the join using base R's merge function
+vars_in_net <- merge(vars_in_net, as(mean_time_to_nearest_city_sf_subset, "Spatial"), by = "uniqueID", all.x = TRUE)
+
+
+# saveRDS(vars_in_net, file = "vars_in_net-after_time_to_nearest_city_added.rds", compress = TRUE)
+
+# vars_in_net <- readRDS(file = "vars_in_net-after_time_to_nearest_city_added.rds")
+
+```
+
+<br>
+
+<br>
+
+#### Variable: **Mean altitude**
+
+<br>
+
+```{r Mean Altitude, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+drc_altitude_raster <- raster("DIVA-GIS_COD_msk_elevation/COD_msk_alt.grd")
+
+fishnet_geo <- fishnet %>%
+  st_transform(crs = st_crs(drc_altitude_raster))
+
+cropped_drc_altitude_raster <- crop(drc_altitude_raster, extent(fishnet_geo))
+
+clipped_drc_altitude_raster <- mask(cropped_drc_altitude_raster, fishnet_geo)
+
+clipped_e_drc_altitude_raster <- clipped_drc_altitude_raster %>%
+  projectRaster(crs = crs(fishnet))
+
+# Convert Raster to SpatialPolygonsDataFrame
+e_drc_alt_raster_2_polygons <- rasterToPolygons(clipped_e_drc_altitude_raster)
+
+names(e_drc_alt_raster_2_polygons@data)[names(e_drc_alt_raster_2_polygons@data) == "COD_msk_alt"] <- "altitude"
+
+e_drc_alt_sf <- e_drc_alt_raster_2_polygons %>%
+  st_as_sf() %>%
+  st_transform(crs=crs(fishnet))
+
+
+# Perform the spatial intersection
+intersection <- st_intersection(fishnet, e_drc_alt_sf)
+
+print(sum(is.na(intersection$altitude))) # Shows there are no NA values
+
+# saveRDS(intersection, file = "e_drc_altitude-before_mean.rds", compress = TRUE)
+# intersection <- readRDS(file = "e_drc_altitude-before_mean.rds")
+
+
+# Use unique identifier for each geometry in the intersection result to find the mean altitude per grid cell
+mean_e_drc_altitude_intersection <- intersection %>%
+  group_by(uniqueID) %>%
+  summarise(mean_altitude = mean(altitude, na.rm = TRUE)) %>%
+  ungroup()
+
+# Drop geometry from intersection before the join
+mean_altitude_no_geom <- as.data.frame(mean_e_drc_altitude_intersection) %>% 
+  dplyr::select(-c(geometry))
+
+# See if any NA values exist before using left_join
+print(sum(is.na(mean_altitude_no_geom$mean_altitude))) # Shows there are 0 NA values
+
+
+# Join the counts back with the original fishnet geometry
+# Now you can use left_join because intersection_no_geom is a regular data frame
+mean_altitude_sf <- left_join(fishnet, mean_altitude_no_geom, by = "uniqueID")
+
+
+# See if any NA values exist after using left_join
+print(sum(is.na(mean_altitude_sf$mean_altitude))) # Shows there are 17 NA values
+
+
+# Use the imputation method from earlier where we take a queens contiguity matrix around each NA value and impute the missing value with the mean of the values of its neighboring cells in the matrix. The poly2nb function identifies neighboring polygons (grid cells), and nb2listw creates the weights. The style="W" argument creates weights based on neighboring presence (1 for neighbor, 0 otherwise), and zero.policy=TRUE allows operations on regions with no neighbors.
+
+neighbors_alt <- poly2nb(mean_altitude_sf, queen = TRUE)
+weights_alt <- nb2listw(neighbors_alt, style="W", zero.policy=TRUE)
+
+# Imputation using averages of neighboring cell values
+mean_altitude_sf <- mean_altitude_sf %>%
+    mutate(mean_altitude = ifelse(is.na(mean_altitude), 
+                          sapply(1:length(mean_altitude_sf), function(i) {
+                              neighbor_values <- mean_altitude_sf$mean_altitude[neighbors_alt[[i]]]
+                              neighbor_weights <- weights_alt$weights[[i]]
+                              if (all(is.na(neighbor_values))) NA else sum(neighbor_weights * neighbor_values, na.rm = TRUE) / sum(neighbor_weights, na.rm = TRUE)
+                          }), 
+                          mean_altitude))
+
+
+# See if any NA values exist after using imputation
+print(sum(is.na(mean_altitude_sf$mean_altitude))) # The output shows 0 NA values
+
+
+# Ensure the result is an sf object with geometry
+mean_altitude_sf <- st_sf(mean_altitude_sf, geometry = st_geometry(fishnet), crs = st_crs(fishnet))
+
+
+# saveRDS(mean_altitude_sf, file = "e_drc-mean_altitude_sf-finished.rds", compress = TRUE)
+# mean_altitude_sf <- readRDS(file = "e_drc-mean_altitude_sf-finished.rds")
+
+mean_altitude_sf_subset <- mean_altitude_sf[, c("uniqueID", "mean_altitude")]
+
+# Perform the join using base R's merge function
+vars_in_net <- merge(vars_in_net, as(mean_altitude_sf_subset, "Spatial"), by = "uniqueID", all.x = TRUE)
+
+
+# saveRDS(vars_in_net, file = "vars_in_net-after_altitude_added.rds", compress = TRUE)
+# vars_in_net <- readRDS(file = "vars_in_net-after_altitude_added.rds.rds")
+
+```
+
+<br>
+
+<br>
+
+#### Variable: **Mean forest height**
+
+<br>
+
+```{r Mean Forest Height, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# The following raster files come from the Global Land Analysis & Discovery Forest Height, 2020 dataset (pixel value: forest height in meters) at the University of Maryland (See https://glad.umd.edu/dataset/GLCLUC2020):
+
+# -2020_00N_020E.tif
+# -2020_00N_030E.tif
+# -2020_10N_020E.tif
+# -2020_10N_030E.tif
+
+
+# I merged these raster files together and then clipped them to the boundaries of e_drc_adm2_map using QGIS, since QGIS has a processing time much faster than R's. The merged/clipped raster is imported below:
+
+clipped_e_drc_forest_height <- raster("e_drc-GLAD-forest_height_2020.tif")
+
+clipped_e_drc_forest_height <- clipped_e_drc_forest_height %>%
+  projectRaster(crs = crs(fishnet))
+
+
+# The original resolution of the GLAD dataset is 30m. Reducing it by a factor of 100 to preserve memory makes its resolution 3000m (or 1.86 mi) - still very good for our purposes, especially since the fishnet grid cells are 10 mi x 10 mi.
+
+
+# Convert Raster to SpatialPolygonsDataFrame
+raster_lower_res <- aggregate(clipped_e_drc_forest_height, fact=100)  # Must reduce resolution or else almost a 50GB object will result
+
+
+# saveRDS(raster_lower_res, file = "clipped_e_drc_forest_height-raster_lower_res.rds", compress = TRUE)
+
+# raster_lower_res <- readRDS(file = "clipped_e_drc_forest_height-raster_lower_res.rds")
+
+e_drc_forest_height_raster_2_polygons <- rasterToPolygons(raster_lower_res)
+
+names(e_drc_forest_height_raster_2_polygons@data)[names(e_drc_forest_height_raster_2_polygons@data) == "e_drc.GLAD.forest_height_2020"] <- "forest_height"
+
+e_drc_forest_height_sf <- e_drc_forest_height_raster_2_polygons %>%
+  st_as_sf() %>%
+  st_transform(crs=crs(fishnet))
+
+ 
+# Perform the spatial intersection
+intersection <- st_intersection(fishnet, e_drc_forest_height_sf)
+
+print(sum(is.na(intersection$forest_height))) # Shows there are 0 NAs
+
+
+# saveRDS(intersection, file = "e_drc_forest_height_sf-before_mean.rds", compress = TRUE)
+
+# intersection <- readRDS(file = "e_drc_forest_height_sf-before_mean.rds")
+
+
+# Generate a unique identifier for each geometry in the intersection result
+mean_e_drc_forest_height_intersection <- intersection %>%
+  group_by(uniqueID) %>%
+  summarise(mean_forest_height = mean(forest_height, na.rm = TRUE)) %>%
+  ungroup()
+
+# Drop geometry from intersection before the join
+mean_e_drc_forest_height_no_geom <- as.data.frame(mean_e_drc_forest_height_intersection) %>% 
+  dplyr::select(-c(geometry))
+
+
+# See if any NA values exist *before* using left_join
+print(sum(is.na(mean_e_drc_forest_height_no_geom$mean_forest_height))) # Shows there are 0 NA values
+
+
+# Join the counts back with the original fishnet geometry
+# Now you can use left_join because intersection_no_geom is a regular data frame
+mean_forest_height_sf <- left_join(fishnet, mean_e_drc_forest_height_no_geom, by = "uniqueID")
+
+
+# See if any NA values exist *after* using left_join
+print(sum(is.na(mean_forest_height_sf$mean_forest_height))) # Shows there are 0 NA values. No need for imputation
+
+
+# Ensure the result is an sf object with geometry
+mean_forest_height_sf <- st_sf(mean_forest_height_sf, geometry = st_geometry(fishnet), crs = st_crs(fishnet))
+
+
+# saveRDS(mean_forest_height_sf, file = "e_drc-mean_forest_height_sf-finished.rds", compress = TRUE)
+
+# mean_forest_height_sf <- readRDS(file = "e_drc-mean_forest_height_sf-finished.rds")
+
+mean_forest_height_sf_subset <- mean_forest_height_sf[, c("uniqueID", "mean_forest_height")]
+
+# Perform the join using base R's merge function
+vars_in_net <- merge(vars_in_net, as(mean_forest_height_sf_subset, "Spatial"), by = "uniqueID", all.x = TRUE)
+
+
+# saveRDS(vars_in_net, file = "vars_in_net-after_forest_height_added.rds", compress = TRUE)
+
+# vars_in_net <- readRDS(file = "vars_in_net-after_forest_height_added.rds")
+
+```
+
+<br>
+
+<br>
+
+#### Variable: **Minimum distance to the border with contiguous countries**
+
+<br>
+
+
+```{r Minimum Distance to Border, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# For every fishnet grid cell in the 3 Eastern DRC provinces under consideration, I will personally calculate the distances to the entire DRC country borders with neighboring countries, and find the minimum distance among these for each grid cell.
+
+# Read the DRC map and transform to WGS 84 (lat/lon)
+drc_map <- st_read('COD_adm/COD_adm0.shp') %>%
+  st_transform(crs = 4326)
+
+# Create the DRC boundary. drc_map is a single polygon for the country
+drc_boundary <- st_boundary(drc_map) %>% 
+  st_cast("MULTILINESTRING")
+
+# Convert the boundary to MULTIPOLYGON.
+drc_border <- drc_boundary %>% 
+  st_combine() %>%
+  st_cast("MULTIPOLYGON")
+
+
+# Calculate distances
+# Transform to a projected CRS that's suitable for distance measurement in the DRC region
+proj_crs <- st_crs(projected_crs) # Using the same projected CRS suitable for Eastern DRC as before
+
+drc_border_proj <- st_transform(drc_border, crs = proj_crs)
+
+# Calculate the distances in meters
+distances_to_border <- st_distance(fishnet, drc_border_proj)
+
+# Use apply() to calculate the minimum value across rows of the distances matrix
+min_distances <- apply(distances_to_border, 1, min)
+
+# Add the minimum distances to the fishnet data
+distances_to_border_sf <- fishnet
+
+distances_to_border_sf$min_distance_to_border <- min_distances
+
+# Step 5: Merge with vars_in_net
+distances_to_border_sf_subset <- distances_to_border_sf[, c("uniqueID", "min_distance_to_border")]
+
+vars_in_net <- merge(vars_in_net, as(distances_to_border_sf_subset, "Spatial"), by = "uniqueID", all.x = TRUE)
+
+
+# saveRDS(vars_in_net, file = "vars_in_net-after_distance_to_border_added.rds", compress = TRUE)
+# vars_in_net <- readRDS(file = "vars_in_net-after_distance_to_border_added.rds")
+
+```
+
+<br>
+
+<br>
+
+#### Variable: **Total mines controlled by armed groups**
+
+<br>
+
+```{r Total Armed Mines, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+library(tidyr)
+
+# Variable: Armed Mines
+# This variable comes from the IPIS dataset "Artisanal Mining Sites in Eastern DRC" (https://ipisresearch.be/project/mapping-artisanal-small-scale-mining-in-eastern-drc/). The dataset's variables - "armed_group1", "armed_group2", and "armed_group3" - provide the names of armed groups that maintained a presence, if any, at any given mine. I will filter out the categories of "None", NA, and government forces such as the "FARDC", which is the Armed Forces of the Democratic Republic of the Congo, "Police des Mines (PMH)", and "Police Nationale Congolaise (sauf PMH)", leaving us with mines occupied by NSAGs.
+
+e_drc_mines <- read.csv("eastern_drc_mines-ipis.csv")
+e_drc_mines <- e_drc_mines %>%
+  dplyr::select(vid, # unique ID for each mine
+         longitude, 
+         latitude,
+         is_3t_mine,
+         is_gold_mine,
+         presence, # Whether or not there are any armed groups at a given mine
+         armed_group1, # The dataset lists up to 3 armed groups stationed at each mine
+         armed_group2,
+         armed_group3,
+         )
+
+e_drc_mines <- e_drc_mines %>%
+  st_as_sf(coords = c("longitude", "latitude"), crs = 4326) %>%
+  st_transform(crs = projected_crs)
+
+e_drc_mines.expanded <- tidyr::gather(data = e_drc_mines, key = "armed_group_number", value = "armed_group", armed_group1, armed_group2, armed_group3)
+
+# I will remove the following values from the armed_group column. The first 3 are government organizations.
+values_to_remove <- c('FARDC', 'Police Nationale Congolaise (sauf PMH)', 'Police des Mines (PMH)', 'None')
+
+e_drc_mines.expanded <- e_drc_mines.expanded %>%
+  filter(presence == 1, 
+         !is.na(armed_group), 
+         nzchar(armed_group),
+         !(armed_group %in% values_to_remove)) %>%
+  distinct(vid, .keep_all = TRUE)
+
+# Having removed all government organizations, 'None' values, potential NA values, and blank cells, the only armed groups left are non-state armed groups (NSAGs).
+
+e_drc_mines.expanded_sf <- e_drc_mines.expanded %>%
+  st_as_sf(coords = c("longitude", "latitude"), crs = 4326) %>%
+  st_transform(crs = crs(fishnet))
+
+
+# Perform the spatial intersection
+intersection <- st_intersection(fishnet, e_drc_mines.expanded_sf)
+
+# Remove empty geometries resulting from the intersection
+intersection <- intersection[!st_is_empty(intersection), ]
+
+print(sum(is.na(intersection$altitude))) # Shows there are no NA values
+
+
+# saveRDS(intersection, file = "e_drc_mines.expanded_sf-before_sum.rds", compress = TRUE)
+
+# intersection <- readRDS(file = "e_drc_mines.expanded_sf-before_sum.rds")
+
+# Use unique identifier for each geometry in the intersection result to find the total mines with NSAGs present per grid cell
+total_armed_e_drc_mines <- intersection %>%
+  group_by(uniqueID) %>%
+  summarise(total_armed_mines = sum(presence, na.rm = TRUE)) %>%
+  ungroup()
+
+
+# Drop geometry from intersection before the join
+total_armed_e_drc_mines_no_geom <- as.data.frame(total_armed_e_drc_mines) %>% 
+  dplyr::select(-c(geometry))
+
+
+print(dim(total_armed_e_drc_mines_no_geom)) # Output shows 388 grid cells/rows with armed mine.
+
+# Join the counts back with the original fishnet geometry
+total_armed_mines_sf <- left_join(fishnet, total_armed_e_drc_mines_no_geom, by = "uniqueID")
+
+# See if any NA values exist after using left_join
+print(sum(is.na(total_armed_mines_sf$total_armed_mines))) # Shows there are 8021 NA values. 
+print(dim(fishnet)) # shows 8409 grid cells
+
+
+# Recall before the left join, we saw there were 388 grid cells/rows with armed mines. Since 388 armed mines + 8021 NA values = 8409, we know the only NA values that exist are from grid cells that did not have any mines occupied by NSAGs. We can therefore replace these NA values with 0.
+
+total_armed_mines_sf$total_armed_mines[is.na(total_armed_mines_sf$total_armed_mines)] <- 0
+
+
+# saveRDS(total_armed_mines_sf, file = "total_armed_mines_sf-finished.rds", compress = TRUE)
+
+# total_armed_mines_sf <- readRDS(file = "total_armed_mines_sf-finished.rds")
+
+total_armed_mines_sf_subset <- total_armed_mines_sf[, c("uniqueID", "total_armed_mines")]
+
+
+# Perform the join using base R's merge function
+vars_in_net <- merge(vars_in_net, as(total_armed_mines_sf_subset, "Spatial"), by = "uniqueID", all.x = TRUE)
+
+```
+
+<br>
+
+<br>
+
+#### Variable: **Weighted harmonic mean Inverse-Distance Weighted (IDW) distance to mines armed by NSAGs**
+
+<br>
+
+```{r Weighted Harmonic Mean - Total Armed Mines, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# The following code calculates the weighted harmonic mean of mines armed by NSAGs - using the inverse of the distances to the nearest neighboring grid cells and number of armed mines per grid cell, and sets k=3
+
+weighted_harmonic_avg_dists <- function(sf_data, column, sf_data_centroids, neighbors_weights, k_value) {
+
+  weighted_harmonic_avg_distances <- vector("numeric", nrow(sf_data))
+
+  for (i in 1:nrow(sf_data)) {
+    # Retrieve neighbor indices, excluding the ego grid cell itself
+    current_neighbors <- neighbors_weights$neighbours[[i]]
+    current_neighbors <- current_neighbors[current_neighbors != i]
+
+    # Keep/consider only neighbors with at least one NSAG
+    neighbors_with_quantity <- current_neighbors[sf_data[[column]][current_neighbors] > 0]
+
+    # Calculate distances to from cell i (the ego cell) to these neighbors
+    if (length(neighbors_with_quantity) > 0) {
+      distances <- st_distance(sf_data_centroids[i, , drop = FALSE],
+                               sf_data_centroids[neighbors_with_quantity, , drop = FALSE])
+
+      # Convert distance to numeric and sort distances in order to ensure we're using the closest k neighbors
+      distances <- as.numeric(distances)
+      sorted_indices <- order(distances)
+      distances <- distances[sorted_indices]
+      neighbors_with_quantity <- neighbors_with_quantity[sorted_indices]
+
+      # Automatically adjust k based on the number of available neighbors with NSAGs, starting with 3 neighbors and decreasing to 2 or 1 if needed
+      k_adj <- min(k_value, length(neighbors_with_quantity))
+
+      # Calculate the weighted harmonic mean
+      if (sum(sf_data[[column]][neighbors_with_quantity][1:k_adj]) > 0 && sum(1/distances[1:k_adj]) > 0) {
+        weighted_harmonic_avg_distances[i] <- sum(sf_data[[column]][neighbors_with_quantity][1:k_adj]) /
+                                              sum((sf_data[[column]][neighbors_with_quantity][1:k_adj]) / distances[1:k_adj])
+      } else {
+        weighted_harmonic_avg_distances[i] <- NA  # Safety check: If no neighbors with NSAGs or distances are zero, assign NA
+      }
+    } else {
+      weighted_harmonic_avg_distances[i] <- NA  # Safety check: If no neighbors or all neighbors have zero NSAGs, assign NA
+    }
+  }
+  return(weighted_harmonic_avg_distances)
+}
+
+# Convert the sf object to centroids
+total_armed_mines_sf_centroids <- st_centroid(total_armed_mines_sf)
+
+# Ensure the centroids are in a projected CRS appropriate for distance calculations
+total_armed_mines_sf_centroids <- st_transform(total_armed_mines_sf_centroids, crs = st_crs(fishnet))
+
+# Convert the sf centroids object to sp class for using with spdep functions
+total_armed_mines_sp_centroids <- as(total_armed_mines_sf_centroids, "Spatial")
+
+# Create a neighbors list
+nearest_neighbors_list <- dnearneigh(coordinates(total_armed_mines_sp_centroids), 0, Inf, longlat = FALSE)
+
+# Create spatial weights using IDW. This weights matrix can be reused for other spatial objects with centroids regardless of differences in values, because the weights matrix depends on the locations of the centroids - not their values. This will save time.
+neighbors_weights <- nb2listwdist(nearest_neighbors_list, x = total_armed_mines_sp_centroids, type = "idw", style = "raw", zero.policy = TRUE)
+
+# saveRDS(neighbors_weights, "neighbors_weights.rds", compress = TRUE)
+# neighbors_weights <- readRDS("neighbors_weights.rds")
+
+# Use the weighted_harmonic_avg_dists function to calculate weighted harmonic average distances
+weighted_harmonic_avg_distances <- weighted_harmonic_avg_dists(
+  sf_data = total_armed_mines_sf,         # Spatial data object
+  column = "total_armed_mines",           # Column with the number of armed mines
+  sf_data_centroids = total_armed_mines_sf_centroids,  # Centroids of the grid cells
+  neighbors_weights = neighbors_weights,  # Spatial weights created using IDW
+  k_value = 3                             # Starting with 3 neighbors, will adjust if fewer exist
+)
+
+# Assign the weighted harmonic average distances to the sf object
+total_armed_mines_sf$weighted_harmonic_avg_distance_to_armed_mines <- weighted_harmonic_avg_distances
+
+# Subset relevant columns
+total_armed_mines_sf_subset <- total_armed_mines_sf[, c("uniqueID", "total_armed_mines", "weighted_harmonic_avg_distance_to_armed_mines")]
+
+# Merge variables to vars_in_net
+vars_in_net <- merge(vars_in_net, as(total_armed_mines_sf_subset, "Spatial"), by = "uniqueID", all.x = TRUE)
+
+# Save object
+# saveRDS(vars_in_net, file = "vars_in_net-after_armed_mines_added.rds", compress = TRUE)
+
+```
+
+<br>
+
+<br>
+
+#### Variable: **Total number of mines**
+
+<br>
+
+```{r Total Mines, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# Use st_within to find mines within polygons
+mines_in_fishnet <- st_within(e_drc_mines, fishnet, sparse = FALSE)
+
+# Convert the logical matrix to a numeric matrix
+mines_in_fishnet_numeric <- matrix(as.numeric(mines_in_fishnet), nrow = nrow(mines_in_fishnet))
+
+# Count the number of mines in each polygon
+total_mines_per_cell <- colSums(mines_in_fishnet_numeric)
+
+# Create a data frame (optional)
+total_mines_per_cell <- data.frame(uniqueID = fishnet$uniqueID, total_mines = total_mines_per_cell)
+
+total_mines_per_cell_sf <- left_join(fishnet, total_mines_per_cell, by = "uniqueID")
+
+saveRDS(total_mines_per_cell_sf, file = "total_mines_per_cell_sf.rds", compress = TRUE)
+
+# total_mines_per_cell_sf <- readRDS(file = "total_mines_per_cell_sf.rds")
+
+total_mines_per_cell_sf_subset <- total_mines_per_cell_sf[, c("uniqueID", "total_mines")]
+
+# vars_in_net <- merge(vars_in_net, as(total_mines_per_cell_sf_subset, "Spatial"), by = "uniqueID", all.x = TRUE)
+
+```
+
+<br>
+
+<br>
+
+#### Variable: **Weighted harmonic mean IDW distance to the nearest mines, regardless of type**
+
+<br>
+
+```{r Weighted Harmonic Mean - Total Mines, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# Convert the sf object to centroids
+total_mines_per_cell_sf_centroids <- st_centroid(total_mines_per_cell_sf_subset)
+
+# Ensure the centroids are in a projected CRS appropriate for distance calculations
+total_mines_per_cell_sf_centroids <- st_transform(total_mines_per_cell_sf_centroids, crs = st_crs(fishnet))
+
+# There is no need to create a new neighbors_weights matrix object. The previous neighbors_weights can simply be reused in the weighted_harmonic_avg_dists() function below for the reasons previously explained.
+
+weighted_harmonic_avg_distance_to_mines <- weighted_harmonic_avg_dists(
+  sf_data = total_mines_per_cell_sf_subset,
+  column = "total_mines",
+  sf_data_centroids = total_mines_per_cell_sf_centroids,
+  neighbors_weights = neighbors_weights,
+  k_value = 3
+)
+
+# Assign the weighted harmonic average distances to the sf object
+total_mines_per_cell_sf_subset$weighted_harmonic_avg_distance_to_mines <- weighted_harmonic_avg_distances
+
+total_mines_per_cell_sf_subset <- total_mines_per_cell_sf_subset[, c("uniqueID", "total_mines", "weighted_harmonic_avg_distance_to_mines")]
+
+# Merge variables to vars_in_net
+vars_in_net <- merge(vars_in_net, as(total_mines_per_cell_sf_subset, "Spatial"), by = "uniqueID", all.x = TRUE)
+
+# Save object
+# saveRDS(vars_in_net, file = "vars_in_net-after_mines_added.rds", compress = TRUE)
+# vars_in_net <- readRDS(file = "vars_in_net-after_mines_added.rds")
+
+```
+
+<br>
+
+<br>
+
+#### Variable: **Total number of 3T (tin, tantalum, tungsten) mines**
+
+<br>
+
+```{r Total 3T Mines, cahce=TRUE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+e_drc_mines_intersection <- st_intersection(fishnet[,"uniqueID", "geometry"], e_drc_mines)
+
+e_drc_mines.3t <- e_drc_mines_intersection %>%
+  dplyr::filter(is_3t_mine == 1)
+
+# Use st_within to find mines within polygons
+mines_3t_in_fishnet <- st_within(e_drc_mines.3t, fishnet, sparse = FALSE)
+
+# Convert the logical matrix to a numeric matrix
+mines_3t_in_fishnet_numeric <- matrix(as.numeric(mines_3t_in_fishnet), nrow = nrow(mines_3t_in_fishnet))
+
+# Count the number of mines in each polygon
+total_3t_mines_per_cell <- colSums(mines_3t_in_fishnet_numeric)
+
+# Create a data frame (optional)
+total_3t_mines_per_cell <- data.frame(uniqueID = fishnet$uniqueID, total_3t_mines = total_3t_mines_per_cell)
+
+
+total_3t_mines_per_cell_sf <- left_join(fishnet, total_3t_mines_per_cell, by = "uniqueID")
+
+# saveRDS(total_3t_mines_per_cell_sf, file = "total_3t_mines_per_cell_sf.rds", compress = TRUE)
+
+# total_3t_mines_per_cell_sf <- readRDS(file = "total_3t_mines_per_cell_sf.rds")
+
+total_3t_mines_per_cell_sf_subset <- total_3t_mines_per_cell_sf[, c("uniqueID", "total_3t_mines")]
+
+# vars_in_net <- merge(vars_in_net, as(total_3t_mines_per_cell_sf_subset, "Spatial"), by = "uniqueID", all.x = TRUE)
+
+```
+
+<br>
+
+<br>
+
+#### Variable: **Weighted harmonic mean IDW distance to the nearest 3T mines**
+
+<br>
+
+```{r Weighted Harmonic Mean - Total 3T Mines, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# Convert the sf object to centroids
+total_3t_mines_per_cell_sf_centroids <- st_centroid(total_3t_mines_per_cell_sf_subset)
+
+# Ensure the centroids are in a projected CRS appropriate for distance calculations
+total_3t_mines_per_cell_sf_centroids <- st_transform(total_3t_mines_per_cell_sf_centroids, crs = st_crs(fishnet))
+
+# The previous neighbors_weights can simply be reused in the weighted_harmonic_avg_dists() function below for the reasons previously mentioned.
+
+weighted_harmonic_avg_distance_to_3t_mines <- weighted_harmonic_avg_dists(
+  sf_data = total_3t_mines_per_cell_sf_subset,
+  column = "total_3t_mines",
+  sf_data_centroids = total_3t_mines_per_cell_sf_centroids,
+  neighbors_weights = neighbors_weights,
+  k_value = 3
+)
+
+# Assign the weighted harmonic average distances to the sf object
+total_3t_mines_per_cell_sf_subset$weighted_harmonic_avg_distance_to_3t_mines <- weighted_harmonic_avg_distances
+
+total_3t_mines_per_cell_sf_subset <- total_3t_mines_per_cell_sf_subset[, c("uniqueID", "total_3t_mines", "weighted_harmonic_avg_distance_to_3t_mines")]
+
+# Merge variables to vars_in_net
+vars_in_net <- merge(vars_in_net, as(total_3t_mines_per_cell_sf_subset, "Spatial"), by = "uniqueID", all.x = TRUE)
+
+# Save object
+# saveRDS(vars_in_net, file = "vars_in_net-after_3t_mines_added.rds", compress = TRUE)
+# vars_in_net <- readRDS(file = "vars_in_net-after_3t_mines_added.rds")
+
+```
+
+<br>
+
+<br>
+
+#### Variable: **Total number of gold mines**
+
+<br>
+
+```{r Total Gold Mines, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+e_drc_mines.gold <- e_drc_mines_intersection %>%
+  dplyr::filter(is_gold_mine == 1)
+
+# Use st_within to find mines within polygons
+gold_mines_in_fishnet <- st_within(e_drc_mines.gold, fishnet, sparse = FALSE)
+
+# Convert the logical matrix to a numeric matrix
+gold_mines_in_fishnet_numeric <- matrix(as.numeric(gold_mines_in_fishnet), nrow = nrow(gold_mines_in_fishnet))
+
+# Count the number of mines in each polygon
+total_gold_mines_per_cell <- colSums(gold_mines_in_fishnet_numeric)
+
+# Create a data frame (optional)
+total_gold_mines_per_cell <- data.frame(uniqueID = fishnet$uniqueID, total_gold_mines = total_gold_mines_per_cell)
+
+total_gold_mines_per_cell_sf <- left_join(fishnet, total_gold_mines_per_cell, by = "uniqueID")
+
+# saveRDS(total_gold_mines_per_cell_sf, file = "total_gold_mines_per_cell_sf.rds", compress = TRUE)
+
+# total_gold_mines_per_cell_sf <- readRDS(file = "total_gold_mines_per_cell_sf.rds")
+
+total_gold_mines_per_cell_sf_subset <- total_gold_mines_per_cell_sf[, c("uniqueID", "total_gold_mines")]
+
+# vars_in_net <- merge(vars_in_net, as(total_gold_mines_per_cell_sf_subset, "Spatial"), by = "uniqueID", all.x = TRUE)
+
+```
+
+<br>
+
+<br>
+
+#### Variable: **Weighted harmonic mean IDW distance to the nearest gold mines**
+
+<br>
+
+```{r Weighted Harmonic Mean - Total Gold Mines, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# Convert the sf object to centroids
+total_gold_mines_per_cell_sf_centroids <- st_centroid(total_gold_mines_per_cell_sf_subset)
+
+# Ensure the centroids are in a projected CRS appropriate for distance calculations
+total_gold_mines_per_cell_sf_centroids <- st_transform(total_gold_mines_per_cell_sf_centroids, crs = st_crs(fishnet))
+
+weighted_harmonic_avg_distance_to_gold_mines <- weighted_harmonic_avg_dists(
+  sf_data = total_3t_mines_per_cell_sf_subset,
+  column = "total_3t_mines",
+  sf_data_centroids = total_3t_mines_per_cell_sf_centroids,
+  neighbors_weights = neighbors_weights,
+  k_value = 3
+)
+
+# Assign the weighted harmonic average distances to the sf object
+total_gold_mines_per_cell_sf_subset$weighted_harmonic_avg_distance_to_gold_mines <- weighted_harmonic_avg_distances
+
+total_gold_mines_per_cell_sf_subset <- total_gold_mines_per_cell_sf_subset[, c("uniqueID", "total_gold_mines", "weighted_harmonic_avg_distance_to_gold_mines")]
+
+# Merge variables to vars_in_net
+vars_in_net <- merge(vars_in_net, as(total_gold_mines_per_cell_sf_subset, "Spatial"), by = "uniqueID", all.x = TRUE)
+
+# Save object
+# saveRDS(vars_in_net, file = "vars_in_net-after_gold_mines_added.rds", compress = TRUE)
+# vars_in_net <- readRDS(file = "vars_in_net-after_3t_mines_added.rds")
+
+```
+
+<br>
+
+<br>
+
+#### Variable: **Total number of active non-state armed groups (NSAGs) per grid cell**
+
+<br>
+
+```{r Total NSAGs, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# Number of active non-state armed groups per grid cell
+# The categories for inter1 and inter2 variables are found in the "ACLED Codebook" (Jan. 2021, pg. 3)
+
+acled <- readRDS("acled.rds")
+
+acled$inter1 <- factor(acled$inter1, 
+                         levels = c(1, 2, 3, 4, 5, 6, 7, 8), 
+                         labels = c("State Forces", "Rebel Groups", "Political Militias", "Identity Militias", "Rioters", "Protesters", "Civilians", "External/Other Forces"))
+  
+acled$inter2 <- factor(acled$inter2, 
+                         levels = c(1, 2, 3, 4, 5, 6, 7, 8), 
+                         labels = c("State Forces", "Rebel Groups", "Political Militias", "Identity Militias", "Rioters", "Protesters", "Civilians", "External/Other Forces"))
+
+violent_events = subset(acled, event_type %in% c('Battles', 'Explosions/Remote violence', 'Violence against civilians'))
+
+
+# Ensure that both inter1 and inter2 have the same attributes
+violent_events$inter1 <- factor(violent_events$inter1, levels = levels(acled$inter1))
+violent_events$inter2 <- factor(violent_events$inter2, levels = levels(acled$inter2))
+
+
+desired_values = c("Rebel Groups", "Political Militias", "Identity Militias")
+
+# Convert violent_events to expanded format via gather()
+violent_events.expanded <- tidyr::gather(data = violent_events, key = "interaction_number", value = "nsag", inter1, inter2)
+
+# By specifying the columns in the line above (inter1 and inter2), I ensure that gather() only combines inter1 and inter2 into a single column ("nsag") rather than attempting to combine other columns, with interaction_number indicating whether the original data came from inter1 or inter2.
+
+
+# Filter violent_events_expanded for only NSAGs as actors
+violent_events.expanded <- violent_events.expanded %>%
+  filter(nsag %in% desired_values)
+
+
+# Next, I must combine actor1, assoc_actor_1, actor2, and assoc_actor_2 columns as the names of specific armed groups are listed in these.
+
+violent_events.expanded.nsags <- tidyr::gather(data = violent_events, key = "actor", value = "nsag_name", actor1, assoc_actor_1, actor2, assoc_actor_2)
+
+
+# In the commented out code below, I wrote the dataframe to a CSV file to manually check which nsag_name values should be removed (those that are not NSAGs). I also manually removed them via Excel.
+# write.csv(violent_events.expanded.nsags, file = "violent_events_expanded_nsags.csv", row.names = FALSE)
+
+
+# In the commented out code below, I imported the reviewed and filtered version of violent_events.expanded.nsags:
+
+violent_events.expanded.nsags.reviewed <- read.csv("violent_events_expanded_nsags-reviewed.csv", stringsAsFactors = FALSE)
+
+violent_events.expanded.nsags.reviewed$event_date <- as.Date(violent_events.expanded.nsags.reviewed$event_date, format = "%m/%d/%Y")
+
+
+# I will summarize  the process I followed when reviewing the non-state armed groups (NSAGs) in the csv file:
+
+# The ACLED categories that I combined into the "nsag_name" column consist of columns "actor1", "assoc_actor_1", "actor2", and "assoc_actor_2". Each of these columns can contain the names of armed groups, but also many other types of names of categories of actors, including government actors (e.g., military, police) and a large variety of civilian and ordinary organization actors (e.g., health workers). 
+
+# Because there were many, I carefully reviewed, research, and manually identify which organizations were names of armed groups in the DRC, and which organizations were not. Only those names that were found to be non-state armed groups (NSAGs) were kept. NSAGs with the word "unidentified" in them were not kept - since it would be impossible to know if such a group represented a unique armed group or if it would be double counted when I later count the number of unique NSAGs in any given fishnet grid cell. There were also many NA values in the "nsag_name" column which I had to delete. Many of these NA values represent unidentified armed groups engaged in violent acts. 
+
+# Thus, my count of the number of distinct armed groups active in each fishnet grid cell represent only those in which the names were recorded by ACLED. As such, there are likely many more unidentified armed groups that could have been distinct armed groups in any given grid cell had their names been known. Naturally, armed groups involved in violence may have incentives to keep their identity unknown. As a result, my count of distinct NSAGs in each grid cell will likely not be fully accurate. Nonetheless, what is most important is to see whether the counts of distinct identified armed groups known for sure to have been engaged in political violence carry enough signal rather than noise that they can be used in my ML model as a fairly accurate predictor of future trends of violence against civilians in a given grid cell location.
+
+
+# Set it as an sf object with the correct geographic CRS
+violent_events.expanded.nsags.reviewed <- st_as_sf(
+  violent_events.expanded.nsags.reviewed, 
+  coords = c("longitude", "latitude"), 
+  crs = 4326 # WGS 84 coordinate reference system
+)
+
+# Now transform to the projected CRS of fishnet
+violent_events.expanded.nsags.reviewed <- st_transform(
+  violent_events.expanded.nsags.reviewed, 
+  st_crs(fishnet)
+)
+
+violent_events.expanded.nsags.reviewed_train <- filter(violent_events.expanded.nsags.reviewed, event_date < as.Date("2023-07-01"))
+violent_events.expanded.nsags.reviewed_test <- dplyr::filter(violent_events.expanded.nsags.reviewed, event_date >= as.Date("2023-07-01"))
+
+# Perform the spatial intersection
+intersection_train.nsags <- st_intersection(fishnet, violent_events.expanded.nsags.reviewed_train)
+intersection_test.nsags <- st_intersection(fishnet, violent_events.expanded.nsags.reviewed_test)
+
+print(sum(is.na(intersection_train.nsags$nsag_name))) # Shows there are no NAs
+print(sum(is.na(intersection_test.nsags$nsag_name))) # Shows there are no NAs
+
+# Generate a unique identifier for each geometry in the intersection result
+unique_nsags_intersection_train <- intersection_train.nsags %>%
+  group_by(uniqueID) %>%
+  summarise(unique_nsags = n_distinct(nsag_name, na.rm = TRUE)) %>%
+  ungroup()
+
+unique_nsags_intersection_test <- intersection_test.nsags %>%
+  group_by(uniqueID) %>%
+  summarise(unique_nsags = n_distinct(nsag_name, na.rm = TRUE)) %>%
+  ungroup()
+
+# Drop geometry from intersection before the join
+unique_nsags_intersection_no_geom_train <- as.data.frame(unique_nsags_intersection_train)
+unique_nsags_intersection_no_geom_train <- unique_nsags_intersection_no_geom_train %>% dplyr::select(-c(geometry))
+
+unique_nsags_intersection_no_geom_test <- as.data.frame(unique_nsags_intersection_test)
+unique_nsags_intersection_no_geom_test <- unique_nsags_intersection_no_geom_test %>% dplyr::select(-c(geometry))
+
+# Join the counts back with the original fishnet geometry
+# Now you can use left_join because intersection_no_geom is a regular data frame
+nsags_count_sf_train <- left_join(fishnet, unique_nsags_intersection_no_geom_train, by = "uniqueID")
+nsags_count_sf_test <- left_join(fishnet, unique_nsags_intersection_no_geom_test, by = "uniqueID")
+
+# Replace NA values with 0 in the unique_nsags column
+nsags_count_sf_train$unique_nsags <- replace_na(nsags_count_sf_train$unique_nsags, 0)
+nsags_count_sf_test$unique_nsags <- replace_na(nsags_count_sf_test$unique_nsags, 0)
+
+```    
+
+<br>
+
+<br>
+
+#### Variable: **Weighted harmonic mean IDW distance to each grid cell's k = 3 nearest neighbors who have at least 1 active NSAG present, weighted by the total number of NSAGs present**
+
+<br>
+
+```{r Weighted Harmonic Mean - Total NSAGs, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# Why do I include the requirement that neighboring grid cells have at least 1 NSAG? The weighted average is meant to represent an actual measured value (in this case, distance weighted by NSAG counts). If the weights are all zero because there are no NSAGs in the neighboring cells, this essentially means there is no data to calculate a meaningful average distance for that particular cell, hence NA (not available) is more appropriate to signify the absence of data. Since When you calculate a weighted average, the formula involves summing up the product of each value and its corresponding weight and then dividing this sum by the total sum of weights, if all weights are zero, the sum of weights is zero, leading to a situation where you divide by zero, which is mathematically undefined and would typically result in an infinite (Inf) value.
+
+# If we simply substituted 0 instead of Inf, this would incorrectly imply the average distance is zero, which has a different meaning (suggesting that the NSAGs are exactly at the location of the cell in question, which would not be the case here).
+
+# Convert the sf object to centroids
+nsags_count_sf_centroids_train <- st_centroid(nsags_count_sf_train)
+nsags_count_sf_centroids_test <- st_centroid(nsags_count_sf_test)
+
+# Ensure the centroids are in a projected CRS appropriate for distance calculations
+nsags_count_sf_centroids_train <- st_transform(nsags_count_sf_centroids_train, crs = st_crs(fishnet))
+nsags_count_sf_centroids_test <- st_transform(nsags_count_sf_centroids_test, crs = st_crs(fishnet))
+
+# In theory, we could also use just nsags_count_sf_centroids_train to place in both train and test set versions of the weighted_harmonic_avg_dists() function below since nsags_count_sf_centroids_train and nsags_count_sf_centroids_test share exactly the same spatial coordinates. However, for clarity, I use nsags_count_sf_centroids_train in the training set version of the weighted_harmonic_avg_dists() function and nsags_count_sf_centroids_test in the test set version of weighted_harmonic_avg_dists().
+
+
+weighted_harmonic_avg_distances_train.nsags <- weighted_harmonic_avg_dists(
+  sf_data = nsags_count_sf_train,
+  column = "unique_nsags",
+  sf_data_centroids = nsags_count_sf_centroids_train,
+  neighbors_weights = neighbors_weights,
+  k_value = 3
+)
+
+weighted_harmonic_avg_distances_test.nsags <- weighted_harmonic_avg_dists(
+  sf_data = nsags_count_sf_test,
+  column = "unique_nsags",
+  sf_data_centroids = nsags_count_sf_centroids_test,
+  neighbors_weights = neighbors_weights,
+  k_value = 3
+)
+
+# Train
+# Assign the weighted harmonic average distances to the sf object
+nsags_count_sf_train$weighted_harmonic_avg_distance_to_NSAGs <- weighted_harmonic_avg_distances_train.nsags
+
+nsags_count_sf_subset_train <- nsags_count_sf_train[, c("uniqueID", "unique_nsags", "weighted_harmonic_avg_distance_to_NSAGs")]
+
+# Merge variables to vars_in_net
+vars_in_net_train <- merge(vars_in_net, as(nsags_count_sf_subset_train, "Spatial"), by = "uniqueID", all.x = TRUE)
+
+# Test
+# Assign the weighted harmonic average distances to the sf object
+nsags_count_sf_test$weighted_harmonic_avg_distance_to_NSAGs <- weighted_harmonic_avg_distances_test.nsags
+
+nsags_count_sf_subset_test <- nsags_count_sf_test[, c("uniqueID", "unique_nsags", "weighted_harmonic_avg_distance_to_NSAGs")]
+
+
+# Merge variables to vars_in_net
+vars_in_net_test <- merge(vars_in_net, as(nsags_count_sf_subset_test, "Spatial"), by = "uniqueID", all.x = TRUE)
+
+# saveRDS(vars_in_net_train, file = "vars_in_net_train-after_nsags_added.rds", compress = TRUE)
+# saveRDS(vars_in_net_test, file = "vars_in_net_test-after_nsags_added.rds", compress = TRUE)
+
+# vars_in_net_train <- readRDS(file = "vars_in_net_train-after_nsags_added.rds")
+# vars_in_net_test <- readRDS(file = "vars_in_net_test-after_nsags_added.rds")
+
+```
+
+<br>
+
+<br>
+
+#### Variable: **Total number of territorial seizures**
+
+<br>
+
+```{r Total Land Seizures, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# Variable - Seizure of territory either by NSAGs or by government forces.
+
+# I will count the number of forceful territorial seizures (by either the government or NSAGs) in each fishnet grid cell. As before, I will also calculate the weighted harmonic mean distance from each grid cell to the 3 nearest neighboring cells in which at least 1 territorial seizure occurred. 
+
+territory_taken_train = subset(acled, sub_event_type %in% c('Non-state actor overtakes territory', 'Government regains territory')) %>%
+  filter(event_date < as.Date("2023-07-01")) %>%
+  dplyr::select(longitude, latitude, sub_event_type) %>% 
+  mutate(countLandSeizures = 1) %>% 
+  mutate(territory_taker = sub_event_type)
+  
+
+territory_taken_test = subset(acled, sub_event_type %in% c('Non-state actor overtakes territory', 'Government regains territory')) %>%
+  filter(event_date >= as.Date("2023-07-01")) %>%
+  dplyr::select(longitude, latitude, sub_event_type) %>% 
+  mutate(countLandSeizures = 1) %>% 
+  mutate(territory_taker = sub_event_type)
+
+
+# Set it as an sf object with the correct geographic CRS
+territory_taken_train <- st_as_sf(
+  territory_taken_train, 
+  coords = c("longitude", "latitude"), 
+  crs = 4326 # WGS 84 coordinate reference system
+)
+
+
+territory_taken_test <- st_as_sf(
+  territory_taken_test, 
+  coords = c("longitude", "latitude"), 
+  crs = 4326 # WGS 84 coordinate reference system
+)
+
+
+# Now transform to the projected CRS of fishnet
+territory_taken_train <- st_transform(
+  territory_taken_train, 
+  st_crs(fishnet)
+)
+
+
+territory_taken_test <- st_transform(
+  territory_taken_test, 
+  st_crs(fishnet)
+)
+
+
+# Perform the spatial intersection
+intersection_train.territory <- st_intersection(fishnet, territory_taken_train)
+intersection_test.territory <- st_intersection(fishnet, territory_taken_test)
+
+
+sum(is.na(intersection_train.territory$countLandSeizures)) # Shows there are no NAs
+sum(is.na(intersection_test.territory$countLandSeizures)) # Shows there are no NAs
+
+
+# Calculate the sum total of land seizures which occurred in each grid cell
+total_land_seizures_intersection_train <- intersection_train.territory %>%
+  group_by(uniqueID) %>%
+  summarise(total_land_seizures = sum(countLandSeizures, na.rm = TRUE)) %>%
+  ungroup()
+
+sum(total_land_seizures_intersection_train$total_land_seizures) # There were 679 total land seizures
+
+
+total_land_seizures_intersection_test <- intersection_test.territory %>%
+  group_by(uniqueID) %>%
+  summarise(total_land_seizures = sum(countLandSeizures, na.rm = TRUE)) %>%
+  ungroup()
+
+sum(total_land_seizures_intersection_test$total_land_seizures) # There were 34 total land seizures
+
+
+# Drop geometry from intersection before the join
+total_land_seizures_intersection_no_geom_train <- as.data.frame(total_land_seizures_intersection_train) %>% 
+  dplyr::select(-c(geometry)) # Delete geometry in order to perform the left join below
+
+
+total_land_seizures_intersection_no_geom_test <- as.data.frame(total_land_seizures_intersection_test) %>% 
+  dplyr::select(-c(geometry)) 
+
+
+# Join the counts back with the original fishnet geometry
+land_seizure_count_sf_train <- left_join(fishnet, total_land_seizures_intersection_no_geom_train, by = "uniqueID")
+land_seizure_count_sf_test <- left_join(fishnet, total_land_seizures_intersection_no_geom_test, by = "uniqueID")
+
+
+# Print the number sum total to verify whether the land seizure count is the same or whether any excess NAs were introduced
+sum(land_seizure_count_sf_train$total_land_seizures, na.rm = TRUE) # No new NAs introduced by the left join
+sum(land_seizure_count_sf_test$total_land_seizures, na.rm = TRUE) # No new NAs introduced by the left join
+
+
+# Replace NA values with 0 in the unique_nsags column. 0 is the value these NAs had before the left join
+land_seizure_count_sf_train$total_land_seizures <- replace_na(land_seizure_count_sf_train$total_land_seizures, 0)
+land_seizure_count_sf_test$total_land_seizures <- replace_na(land_seizure_count_sf_test$total_land_seizures, 0)
+
+
+# Ensure the result is an sf object with geometry
+land_seizure_count_sf_train <- st_sf(land_seizure_count_sf_train, geometry = st_geometry(fishnet), crs = st_crs(fishnet))
+land_seizure_count_sf_test <- st_sf(land_seizure_count_sf_test, geometry = st_geometry(fishnet), crs = st_crs(fishnet))
+
+```
+
+<br>
+
+<br>
+
+#### Variable: **Weighted harmonic mean IDW distance to the nearest territorial seizures**
+
+<br>
+
+```{r Weighted Harmonic Mean - Total Land Seizures, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# Convert the sf object to centroids
+land_seizure_count_sf_centroids_train <- st_centroid(land_seizure_count_sf_train)
+land_seizure_count_sf_centroids_test <- st_centroid(land_seizure_count_sf_test)
+
+# Ensure the centroids are in a projected CRS appropriate for distance calculations
+land_seizure_count_sf_centroids_train <- st_transform(land_seizure_count_sf_centroids_train, crs = st_crs(fishnet))
+land_seizure_count_sf_centroids_test <- st_transform(land_seizure_count_sf_centroids_test, crs = st_crs(fishnet))
+
+
+weighted_harmonic_avg_distances_train.land <- weighted_harmonic_avg_dists(
+  sf_data = land_seizure_count_sf_train,
+  column = "total_land_seizures",
+  sf_data_centroids = land_seizure_count_sf_centroids_train,
+  neighbors_weights = neighbors_weights,
+  k_value = 3
+)
+
+weighted_harmonic_avg_distances_test.land <- weighted_harmonic_avg_dists(
+  sf_data = land_seizure_count_sf_test,
+  column = "total_land_seizures",
+  sf_data_centroids = land_seizure_count_sf_centroids_test,
+  neighbors_weights = neighbors_weights,
+  k_value = 3
+)
+
+
+# Assign the weighted harmonic average distances to the sf object
+land_seizure_count_sf_train$weighted_harmonic_avg_distance_to_land_seizures <- weighted_harmonic_avg_distances_train.land
+land_seizure_count_sf_test$weighted_harmonic_avg_distance_to_land_seizures <- weighted_harmonic_avg_distances_test.land
+
+
+land_seizure_count_sf_subset_train <- land_seizure_count_sf_train[, c("uniqueID", "total_land_seizures", "weighted_harmonic_avg_distance_to_land_seizures")]
+land_seizure_count_sf_subset_test <- land_seizure_count_sf_test[, c("uniqueID", "total_land_seizures", "weighted_harmonic_avg_distance_to_land_seizures")]
+
+# Merge variables to vars_in_net
+vars_in_net_train <- merge(vars_in_net_train, as(land_seizure_count_sf_subset_train, "Spatial"), by = "uniqueID", all.x = TRUE)
+vars_in_net_test <- merge(vars_in_net_test, as(land_seizure_count_sf_subset_test, "Spatial"), by = "uniqueID", all.x = TRUE)
+
+# Save objects
+# saveRDS(vars_in_net_train, file = "vars_in_net_train-after_land_seizures_added.rds", compress = TRUE)
+# saveRDS(vars_in_net_test, file = "vars_in_net_test-after_land_seizures_added.rds", compress = TRUE)
+# vars_in_net_train <- readRDS(file = "vars_in_net-after_land_seizures_added.rds")
+# vars_in_net_test <- readRDS(file = "vars_in_net-after_land_seizures_added.rds")
+
+```
+
+<br>
+
+<br>
+
+#### Variable: **Total armed clashes in a given grid cell location**
+
+<br>
+
+```{r Total Armed Clashes, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+armed_clashes_train <- subset(acled, sub_event_type %in% c('Armed clash')) %>%
+  filter(event_date < as.Date("2023-07-01")) %>%
+  dplyr::select(longitude, latitude, sub_event_type) %>% 
+  mutate(countArmedClashes = 1)
+
+
+armed_clashes_test <- subset(acled, sub_event_type %in% c('Armed clash')) %>%
+  filter(event_date >= as.Date("2023-07-01")) %>%
+  dplyr::select(longitude, latitude, sub_event_type) %>% 
+  mutate(countArmedClashes = 1)
+
+
+# Set it as an sf object with the correct geographic CRS
+armed_clashes_train <- st_as_sf(
+  armed_clashes_train, 
+  coords = c("longitude", "latitude"), 
+  crs = 4326 # WGS 84 coordinate reference system
+)
+
+
+armed_clashes_test <- st_as_sf(
+  armed_clashes_test, 
+  coords = c("longitude", "latitude"), 
+  crs = 4326 # WGS 84 coordinate reference system
+)
+
+
+# Now transform to the projected CRS of fishnet
+armed_clashes_train <- st_transform(
+  armed_clashes_train, 
+  st_crs(fishnet)
+)
+
+
+armed_clashes_test <- st_transform(
+  armed_clashes_test, 
+  st_crs(fishnet)
+)
+
+
+# Perform the spatial intersection
+intersection_train.clashes <- st_intersection(fishnet, armed_clashes_train)
+intersection_test.clashes <- st_intersection(fishnet, armed_clashes_test)
+
+
+print(sum(is.na(intersection_train.clashes$countArmedClashes))) # No NAs exist
+print(sum(is.na(intersection_test.clashes$countArmedClashes))) # No NAs exist
+
+
+total_armed_clashes_intersection_train <- intersection_train.clashes %>%
+  group_by(uniqueID) %>%
+  summarise(total_armed_clashes = sum(countArmedClashes, na.rm = TRUE)) %>%
+  ungroup()
+
+
+total_armed_clashes_intersection_test <- intersection_test.clashes %>%
+  group_by(uniqueID) %>%
+  summarise(total_armed_clashes = sum(countArmedClashes, na.rm = TRUE)) %>%
+  ungroup()
+
+
+print(sum(total_armed_clashes_intersection_train$total_armed_clashes)) # 4853 armed clashes
+print(sum(total_armed_clashes_intersection_test$total_armed_clashes)) # 325 armed clashes
+
+# Drop geometry from intersection before the join
+total_armed_clashes_intersection_no_geom_train <- as.data.frame(total_armed_clashes_intersection_train)
+total_armed_clashes_intersection_no_geom_test <- as.data.frame(total_armed_clashes_intersection_test)
+
+
+total_armed_clashes_intersection_no_geom_train <- total_armed_clashes_intersection_no_geom_train %>% 
+  dplyr::select(-c(geometry))
+total_armed_clashes_intersection_no_geom_test <- total_armed_clashes_intersection_no_geom_test %>% 
+  dplyr::select(-c(geometry))
+
+
+# Join the counts back with the original fishnet geometry
+# Now you can use left_join because total_armed_clashes_intersection_no_geom is a regular data frame
+armed_clash_count_sf_train <- left_join(fishnet, total_armed_clashes_intersection_no_geom_train, by = "uniqueID")
+armed_clash_count_sf_test <- left_join(fishnet, total_armed_clashes_intersection_no_geom_test, by = "uniqueID")
+
+
+# Replace NA values resulting from the left join with 0 in the unique_nsags column
+armed_clash_count_sf_train$total_armed_clashes <- replace_na(armed_clash_count_sf_train$total_armed_clashes, 0)
+armed_clash_count_sf_test$total_armed_clashes <- replace_na(armed_clash_count_sf_test$total_armed_clashes, 0)
+
+
+# Check to ensure the total number of armed clashes has not changed because of the left join
+print(sum(armed_clash_count_sf_train$total_armed_clashes)) # 4853 - same number of clashes
+print(sum(armed_clash_count_sf_test$total_armed_clashes)) # 325 - same number of clashes
+
+```
+
+<br>
+
+<br>
+
+#### Variable: **Weighted harmonic mean IDW distance from each grid cell to the 3 nearest neighboring grid cells in which at least 1 armed clash occurred**
+
+<br>
+
+```{r Weighted Harmonic Mean - Total Armed Clashes, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# Convert the sf object to centroids
+armed_clash_count_sf_centroids_train <- st_centroid(armed_clash_count_sf_train)
+armed_clash_count_sf_centroids_test <- st_centroid(armed_clash_count_sf_test)
+
+
+# Ensure the centroids are in a projected CRS appropriate for distance calculations
+armed_clash_count_sf_centroids_train <- st_transform(armed_clash_count_sf_centroids_train, crs = st_crs(fishnet))
+armed_clash_count_sf_centroids_test <- st_transform(armed_clash_count_sf_centroids_test, crs = st_crs(fishnet))
+
+
+weighted_harmonic_avg_distances_train.clashes <- weighted_harmonic_avg_dists(
+  sf_data = armed_clash_count_sf_train,
+  column = "total_armed_clashes",
+  sf_data_centroids = armed_clash_count_sf_centroids_train,
+  neighbors_weights = neighbors_weights,
+  k_value = 3
+)
+
+
+weighted_harmonic_avg_distances_test.clashes <- weighted_harmonic_avg_dists(
+  sf_data = armed_clash_count_sf_test,
+  column = "total_armed_clashes",
+  sf_data_centroids = armed_clash_count_sf_centroids_test,
+  neighbors_weights = neighbors_weights,
+  k_value = 3
+)
+
+
+# Assign the weighted harmonic average distances to the sf object
+armed_clash_count_sf_train$weighted_harmonic_avg_distance_to_armed_clashes <- weighted_harmonic_avg_distances_train.clashes
+armed_clash_count_sf_test$weighted_harmonic_avg_distance_to_armed_clashes <- weighted_harmonic_avg_distances_test.clashes
+
+
+armed_clash_count_sf_subset_train <- armed_clash_count_sf_train[, c("uniqueID", "total_armed_clashes", "weighted_harmonic_avg_distance_to_armed_clashes")]
+armed_clash_count_sf_subset_test <- armed_clash_count_sf_test[, c("uniqueID", "total_armed_clashes", "weighted_harmonic_avg_distance_to_armed_clashes")]
+
+
+# Merge variables to vars_in_net
+vars_in_net_train <- merge(vars_in_net_train, as(armed_clash_count_sf_subset_train, "Spatial"), by = "uniqueID", all.x = TRUE)
+vars_in_net_test <- merge(vars_in_net_test, as(armed_clash_count_sf_subset_test, "Spatial"), by = "uniqueID", all.x = TRUE)
+
+#Save objects
+# saveRDS(vars_in_net_train, file = "vars_in_net_train-after_armed_clashes_added.rds", compress = TRUE)
+# saveRDS(vars_in_net_test, file = "vars_in_net_test-after_armed_clashes_added.rds", compress = TRUE)
+# vars_in_net_train <- readRDS(file = "vars_in_net_train-after_armed_clashes_added.rds")
+# vars_in_net_test <- readRDS(file = "vars_in_net_test-after_armed_clashes_added.rds")
+
+```
+
+<br>
+
+<br>
+
+#### Variable: **Number of "direct strikes" per grid cell location**
+
+<br>
+
+```{r Direct Strikes, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# Variable: I will create a variable called "direct strike", which is a combination of the following sub event types from ACLED's "Explosions and remote violence" event type:
+
+# -Shelling/artillery/missile attack
+# -Grenade
+# -Air/drone strike
+
+direct_strikes_train = subset(acled, sub_event_type %in% c('Shelling/artillery/missile attack', 'Grenade', 'Air/drone strike')) %>%
+  dplyr::filter(event_date < as.Date("2023-07-01")) %>%
+  dplyr::select(longitude, latitude, sub_event_type) %>% 
+  mutate(countDirectStrikes = 1)
+
+
+direct_strikes_test = subset(acled, sub_event_type %in% c('Shelling/artillery/missile attack', 'Grenade', 'Air/drone strike')) %>%
+  dplyr::filter(event_date >= as.Date("2023-07-01")) %>%
+  dplyr::select(longitude, latitude, sub_event_type) %>% 
+  mutate(countDirectStrikes = 1)
+
+
+# Set it as an sf object with the correct geographic CRS
+direct_strikes_train <- st_as_sf(
+  direct_strikes_train, 
+  coords = c("longitude", "latitude"), 
+  crs = 4326 # WGS 84 coordinate reference system
+)
+
+
+direct_strikes_test <- st_as_sf(
+  direct_strikes_test, 
+  coords = c("longitude", "latitude"), 
+  crs = 4326 # WGS 84 coordinate reference system
+)
+
+
+# Now transform to the projected CRS of fishnet
+direct_strikes_train <- st_transform(
+  direct_strikes_train, 
+  st_crs(fishnet)
+)
+
+
+direct_strikes_test <- st_transform(
+  direct_strikes_test, 
+  st_crs(fishnet)
+)
+
+
+# Perform the spatial intersection
+intersection_train.strikes <- st_intersection(fishnet, direct_strikes_train)
+intersection_test.strikes <- st_intersection(fishnet, direct_strikes_test)
+
+print(sum(intersection_train.strikes$countDirectStrikes)) # 139 direct strikes
+# > print(sum(intersection_train.strikes$countDirectStrikes))
+# [1] 139
+
+print(sum(intersection_test.strikes$countDirectStrikes)) # 23 direct strikes
+# > print(sum(intersection_test.strikes$countDirectStrikes))
+# [1] 23
+
+
+# Generate a unique identifier for each geometry in the intersection result
+total_direct_strikes_intersection_train <- intersection_train.strikes %>%
+  group_by(uniqueID) %>%
+  summarise(total_direct_strikes = sum(countDirectStrikes, na.rm = TRUE)) %>%
+  ungroup()
+
+total_direct_strikes_intersection_test <- intersection_test.strikes %>%
+  group_by(uniqueID) %>%
+  summarise(total_direct_strikes = sum(countDirectStrikes, na.rm = TRUE)) %>%
+  ungroup()
+
+# Drop geometry from intersection before the join
+total_direct_strikes_intersection_no_geom_train <- as.data.frame(total_direct_strikes_intersection_train)
+total_direct_strikes_intersection_no_geom_test <- as.data.frame(total_direct_strikes_intersection_test)
+
+total_direct_strikes_intersection_no_geom_train <- total_direct_strikes_intersection_no_geom_train %>% 
+  dplyr::select(-c(geometry))
+total_direct_strikes_intersection_no_geom_test <- total_direct_strikes_intersection_no_geom_test %>% 
+  dplyr::select(-c(geometry))
+
+# Join the counts back with the original fishnet geometry
+# Now you can use left_join because total_direct_strikes_intersection_no_geom is a regular data frame
+direct_strike_count_sf_train <- left_join(fishnet, total_direct_strikes_intersection_no_geom_train, by = "uniqueID")
+direct_strike_count_sf_test <- left_join(fishnet, total_direct_strikes_intersection_no_geom_test, by = "uniqueID")
+
+# Replace NA values with 0 introduced by the left join in the tota_direct_strikes column
+direct_strike_count_sf_train$total_direct_strikes <- replace_na(direct_strike_count_sf_train$total_direct_strikes, 0)
+direct_strike_count_sf_test$total_direct_strikes <- replace_na(direct_strike_count_sf_test$total_direct_strikes, 0)
+
+print(sum(direct_strike_count_sf_train$total_direct_strikes)) # 139 direct strikes
+# > print(sum(direct_strike_count_sf_train$total_direct_strikes))
+# [1] 139
+
+print(sum(direct_strike_count_sf_test$total_direct_strikes)) # 23 direct strikes 
+# > print(sum(direct_strike_count_sf_test$total_direct_strikes)) 
+# [1] 23
+
+```
+
+<br>
+
+<br>
+
+#### Variable: **Weighted harmonic mean IDW distance to 3 nearest grid cells having at least 1 direct strike** 
+
+<br>
+
+```{r Weighted Harmonic Mean - Direct Strikes, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# Convert the sf object to centroids
+direct_strike_count_sf_centroids_train <- st_centroid(direct_strike_count_sf_train)
+direct_strike_count_sf_centroids_test <- st_centroid(direct_strike_count_sf_test)
+
+
+# Ensure the centroids are in a projected CRS appropriate for distance calculations
+direct_strike_count_sf_centroids_train <- st_transform(direct_strike_count_sf_centroids_train, crs = st_crs(fishnet))
+direct_strike_count_sf_centroids_test <- st_transform(direct_strike_count_sf_centroids_test, crs = st_crs(fishnet))
+
+
+weighted_harmonic_avg_distances_train.strikes <- weighted_harmonic_avg_dists(
+  sf_data = direct_strike_count_sf_train,
+  column = "total_direct_strikes",
+  sf_data_centroids = direct_strike_count_sf_centroids_train,
+  neighbors_weights = neighbors_weights,
+  k_value = 3
+)
+
+
+weighted_harmonic_avg_distances_test.strikes <- weighted_harmonic_avg_dists(
+  sf_data = direct_strike_count_sf_test,
+  column = "total_direct_strikes",
+  sf_data_centroids = direct_strike_count_sf_centroids_test,
+  neighbors_weights = neighbors_weights,
+  k_value = 3
+)
+
+
+# Assign the weighted harmonic average distances to the sf object
+direct_strike_count_sf_train$weighted_harmonic_avg_distance_to_direct_strikes <- weighted_harmonic_avg_distances_train.strikes
+direct_strike_count_sf_test$weighted_harmonic_avg_distance_to_direct_strikes <- weighted_harmonic_avg_distances_test.strikes
+
+
+direct_strike_count_sf_subset_train <- direct_strike_count_sf_train[, c("uniqueID", "total_direct_strikes", "weighted_harmonic_avg_distance_to_direct_strikes")]
+direct_strike_count_sf_subset_test <- direct_strike_count_sf_test[, c("uniqueID", "total_direct_strikes", "weighted_harmonic_avg_distance_to_direct_strikes")]
+
+
+# Merge variables to vars_in_net
+vars_in_net_train <- merge(vars_in_net_train, as(direct_strike_count_sf_subset_train, "Spatial"), by = "uniqueID", all.x = TRUE)
+vars_in_net_test <- merge(vars_in_net_test, as(direct_strike_count_sf_subset_test, "Spatial"), by = "uniqueID", all.x = TRUE)
+
+
+# Save objects
+# saveRDS(vars_in_net_train, file = "vars_in_net_train-after_direct_strikes_added.rds", compress = TRUE)
+# saveRDS(vars_in_net_test, file = "vars_in_net_test-after_direct_strikes_added.rds", compress = TRUE) 
+# vars_in_net_train <- readRDS(file = "vars_in_net_train-after_direct_strikes_added.rds")
+# vars_in_net_test <- readRDS(file = "vars_in_net_test-after_direct_strikes_added.rds")
+
+```
+
+<br>
+
+<br>
+
+#### Variable: **Total number of ethnic groups in a single grid cell**
+
+<br>
+
+```{r Total Ethnic Groups, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# Number of ethnic groups in a single grid cell
+
+
+# The figures I will use of ethnic group presence are taken from the Spatially Interpolated Data on Ethnicity (SIDE) dataset (2018). I specifically seek to know the number of ethnic groups in any given grid cell which constitute less than approximately 50 percent of the population. I.e., I seek to know how many ethnic minority groups exist in any given location on the map. The hypothesis is that the greater the number of ethnic groups residing in any single location, the greater are the chances for ethnic tensions and attacks on civilians belonging to rival ethnic groups.
+
+
+# The data was found specifically on https://icr.ethz.ch/data/side/
+# Citation: Müller-Crepon, Carl & Philipp Hunziker. (2018). New Spatial Data on Ethnicity: Introducing SIDE. Journal of Peace Research, 55(5), 687-698
+
+setwd("C:/Users/Owner/Desktop/RB/ds_projects/e_drc_geo_ml/")
+
+side_1 <- raster::raster("side_v1_52_1.asc")
+side_2 <- raster::raster("side_v1_52_2.asc")
+side_3 <- raster::raster("side_v1_52_3.asc")
+side_4 <- raster::raster("side_v1_52_4.asc")
+side_5 <- raster::raster("side_v1_52_5.asc")
+side_6 <- raster::raster("side_v1_52_6.asc")
+side_7 <- raster::raster("side_v1_52_7.asc")
+side_8 <- raster::raster("side_v1_52_8.asc")
+side_9 <- raster::raster("side_v1_52_9.asc")
+
+
+side_data <- stack(side_1, side_2, side_3, side_4,side_5, side_6, side_7, side_8, side_9)
+
+side_data <- projectRaster(side_data, crs = projected_crs)
+
+plot(side_data)
+
+side_data_df <- raster::as.data.frame(side_data, xy = TRUE)
+colnames(side_data_df)
+
+names(side_data_df)[3:11] <- c("group_1", "group_2", "group_3", "group_4", "group_5", "group_6", "group_7", "group_8", "group_9")
+
+side_data_sf <- st_as_sf(side_data_df, coords = c("x", "y"), crs = projected_crs)
+
+group_columns <- c("group_1", "group_2", "group_3", "group_4", "group_5", "group_6", "group_7", "group_8", "group_9")
+
+# Use dplyr's 'across' function to apply the same operation to all group columns
+side_avg_data_int_sf <- st_intersection(fishnet, side_data_sf) %>%
+  group_by(uniqueID) %>%
+  summarise(across(all_of(group_columns), ~ mean(.x, na.rm = TRUE))) %>%
+  ungroup()
+
+# saveRDS(side_avg_data_int_sf, "side_avg_data_int_sf.rds")
+# side_avg_data_int_sf <- readRDS("side_avg_data_int_sf.rds")
+
+# Join the geometries from fishnet to side_avg_data_sf based on uniqueID to ensure geometries are polygons
+
+side_avg_data_sf <- side_avg_data_int_sf %>%
+  left_join(as.data.frame(fishnet) %>% dplyr::select(uniqueID, geometry), by = "uniqueID") %>%
+  # Coalesce to choose the geometry from fishnet where available
+  mutate(geometry = coalesce(geometry.y, geometry.x))
+
+side_avg_data_sf$geometry.x <- NULL
+side_avg_data_sf$geometry.y <- NULL
+
+if (!inherits(side_avg_data_sf, "sf")) {
+  side_avg_data_sf <- st_as_sf(side_avg_data_sf)
+}
+
+side_avg_data_in_net_sf <- left_join(fishnet[, "uniqueID", "geometry"], as.data.frame(side_avg_data_sf %>% st_set_geometry(NULL)), by = "uniqueID")
+
+na_count <- side_avg_data_in_net_sf %>%
+  st_drop_geometry() %>%  # Drop the geometry column
+  dplyr::select(starts_with("group_")) %>%
+  summarise(across(everything(), ~sum(is.na(.), na.rm = TRUE)))
+
+print(na_count)
+
+# For grid cells with NAs (there are 257 in each group column). Impute each missing value with the mean of its neighbors:
+
+neighbors <- poly2nb(side_avg_data_in_net_sf, queen = TRUE)
+weights <- nb2listw(neighbors, style="W", zero.policy=TRUE)
+
+group_columns <- c("group_1", "group_2", "group_3", "group_4", "group_5", 
+                   "group_6", "group_7", "group_8", "group_9")
+
+for (col in group_columns) {
+  side_avg_data_in_net_sf[[col]] <- ifelse(is.na(side_avg_data_in_net_sf[[col]]),
+                                     sapply(1:nrow(side_avg_data_in_net_sf), function(i) {
+                                       sum(weights$weights[[i]] * side_avg_data_in_net_sf[[col]][weights$neighbours[[i]]],
+                                           na.rm = TRUE) / sum(weights$weights[[i]], na.rm = TRUE)
+                                     }),
+                                     side_avg_data_in_net_sf[[col]])
+}
+
+side_avg_data_in_net_sf <- side_avg_data_in_net_sf %>% ungroup()
+
+# Count the number of NA values to make sure there are not many.
+
+na_count <- side_avg_data_in_net_sf %>%
+  st_drop_geometry() %>%  # Drop the geometry column
+  dplyr::select(starts_with("group_")) %>%
+  summarise(across(everything(), ~sum(is.na(.), na.rm = TRUE)))
+
+print(na_count) # Show there are 0 NAs
+
+
+side_avg_data_sum_sf <- side_avg_data_in_net_sf %>%
+  group_by(uniqueID) %>%
+  mutate(num_of_min_groups = sum(across(starts_with("group_"), ~ . >= 0.05 & . <= 0.50))) %>%
+  ungroup()
+
+# saveRDS(side_avg_data_sum_sf, "side_avg_data_sum_sf.rds")
+# side_avg_data_sum_sf <- readRDS("side_avg_data_sf.rds")
+
+print(sum(side_avg_data_sum_sf$num_of_min_groups))
+# > print(sum(side_avg_data_sum_sf$num_of_min_groups))
+# [1] 2139
+
+# Drop geometry from intersection before the join
+side_avg_data_sum_df <- as.data.frame(side_avg_data_sum_sf[c("uniqueID", "num_of_min_groups")]) %>% 
+  dplyr::select(-c(geometry))
+
+vars_in_net_train <- left_join(vars_in_net_train, side_avg_data_sum_df)
+vars_in_net_test <- left_join(vars_in_net_test, side_avg_data_sum_df)
+
+# saveRDS(vars_in_net_train, "vars_in_net_train-after_num_of_min_groups_added.RDS")
+# vars_in_net_train <- readRDS("vars_in_net_train-after_num_of_min_groups_added.RDS")
+
+```
+
+<br>
+
+<br>
+
+#### Variable: **Total number of ACLED events involving foreign troops**
+
+<br>
+
+```{r Total Foreign Troop Events, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# Presence of foreign troops
+
+ # I count the number of ACLED events involving foreign troops (other than UN forces) by grid cell location to see whether their foreign state force presence results in more attacks on civilians. I also find the harmonic average distance from each grid cell to the nearest 3 locations where foreign troops have been present at any point since 2018. I specifically do not limit my analysis here to ACLED events involving violence like I did earlier with non-state armed groups
+
+# I separately examine whether UN force presence may have any impact on the occurrence of attacks on civilians.
+
+# I have noticed that sometimes foreign forces/UN forces appear in ACLED observations that are not strictly categorized by inter1 or inter2 = 8 ("External/Other Forces") as one might assumes they are, and so I examine the full dataset for foreign force/ MONUSCO actor names 
+
+acled_all <- readRDS("acled_all.rds")
+
+acled_all$inter1 <- factor(acled_all$inter1, 
+                         levels = c(1, 2, 3, 4, 5, 6, 7, 8), 
+                         labels = c("State Forces", "Rebel Groups", "Political Militias", "Identity Militias", "Rioters", "Protesters", "Civilians", "External/Other Forces"))
+
+acled_all$inter2 <- factor(acled_all$inter2, 
+                         levels = c(1, 2, 3, 4, 5, 6, 7, 8), 
+                         labels = c("State Forces", "Rebel Groups", "Political Militias", "Identity Militias", "Rioters", "Protesters", "Civilians", "External/Other Forces"))
+
+
+foreign_force_names <- tidyr::gather(data = violent_events, key = "actor", value = "foreign_force_name", actor1, assoc_actor_1, actor2, assoc_actor_2)
+
+foreign_forces <- tidyr::gather(data = foreign_force_names, key = "inter_code", value = "group_type", inter1, inter2)
+
+# print(unique(foreign_forces$foreign_force_name)) 
+
+# Note: The output from the above code contains a mixture of actors. Many of these are not foreign military or police forces, but all foreign military or police forces are located in this column. I manually identified all such actors from this output, and include them in the list below.
+
+# Note that I consider foreign forces that are part of the East African Community Regional Force to the DRC to be included in this analysis of foreign forces since these are not part of the UN peacekeeping mission in the DRC (MONUSCO), and thus may not be as restrained from using deadly force against civilians or acting in ways towards NSAGs that may in turn result in NSAGs attacking civilians.
+
+# Note that some of the strings below include multiple actors, both foreign military or police forces and non-foreign actors. Since the strings which contain both types reflect events in which both foreign military/police actors and non-foreign actors took part, using such strings does not negatively impact the accuracy of counting events including foreign troops/police.
+
+foreign_forces_list = c("Military Forces of Burundi (2005-); Banyamulenge Ethnic Militia (Democratic Republic of Congo)",
+"Military Forces of South Sudan (2011-)",
+"Military Forces of Uganda (1986-)",
+"Military Forces of Angola (1975-)",
+"Military Forces of Zambia (2011-2021)",
+"Military Forces of Rwanda (1994-)",
+"Military Forces of Burundi (2005-)",
+"Military Forces of Uganda (1986-) Fisheries Protection Unit",
+"CNDD-FDD-Imbonerakure: National Council for the Defence of Democracy (Imbonerakure Faction); Military Forces of Burundi (2005-)",
+"Police Forces of Angola (1975-)",
+"Military Forces of Burundi (2005-); EPLC: Awakening of Patriots for the Liberation of Congo (Wazalendo)",
+"Military Forces of Rwanda (1994-); NDC-R: Nduma Defence of Congo (Renove)",
+"Military Forces of the Democratic Republic of Congo (2019-); Military Forces of Uganda (1986-)",
+"East African Community Regional Force to the Democratic Republic of Congo (2022-) (Burundi)", 
+"East African Community Regional Force to the Democratic Republic of Congo (2022-) (Uganda)", 
+"East African Community Regional Force to the Democratic Republic of Congo (2022-) (Kenya)", 
+"East African Community Regional Force to the Democratic Republic of Congo (2022-)" )
+
+foreign_forces <- foreign_forces %>%
+  filter(foreign_force_name %in% foreign_forces_list)
+
+sum(duplicated(foreign_forces$event_id_cnty)) # Shows there are 327 duplicate observations
+# > sum(duplicated(foreign_forces$event_id_cnty))
+# [1] 327
+
+# Remove all duplicate events
+foreign_forces <- foreign_forces %>%
+  distinct(event_id_cnty, .keep_all = TRUE)
+
+foreign_forces$event_date <- as.Date(foreign_forces$event_date, format = "%m/%d/%Y")
+
+foreign_forces <- st_as_sf(
+  foreign_forces, 
+  coords = c("longitude", "latitude"), 
+  crs = 4326 # WGS 84 coordinate reference system
+)
+
+foreign_forces <- st_transform(
+  foreign_forces, 
+  st_crs(projected_crs)
+)
+
+foreign_forces_train <- dplyr::filter(foreign_forces, event_date < as.Date("2023-07-01"))
+foreign_forces_test <- dplyr::filter(foreign_forces, event_date >= as.Date("2023-07-01"))
+
+print(sum(is.na(foreign_forces_train$foreign_force_name)))
+# > print(sum(is.na(foreign_forces_train$foreign_force_name)))
+# [1] 0
+
+print(sum(is.na(foreign_forces_test$foreign_force_name)))
+# > print(sum(is.na(foreign_forces_test$foreign_force_name)))
+# [1] 0
+
+foreign_forces_intersection_train <- st_intersection(fishnet[, "uniqueID", "geometry"], foreign_forces_train)
+foreign_forces_intersection_test <- st_intersection(fishnet[, "uniqueID", "geometry"], foreign_forces_test)
+
+print(sum(is.na(foreign_forces_intersection_train$foreign_force_name))) # There are no NA values
+print(sum(is.na(foreign_forces_intersection_test$foreign_force_name))) # There are no NA values
+
+
+foreign_forces_intersection_train <- foreign_forces_intersection_train %>%
+  mutate(events_with_f_forces = 1)
+
+foreign_forces_intersection_test <- foreign_forces_intersection_test %>%
+  mutate(events_with_f_forces = 1)
+
+total_foreign_forces_intersection_train <- foreign_forces_intersection_train %>%
+  group_by(uniqueID) %>%
+  summarise(total_events_with_f_forces = sum(events_with_f_forces, na.rm = TRUE)) %>%
+  ungroup()
+
+total_foreign_forces_intersection_test <- foreign_forces_intersection_test %>%
+  group_by(uniqueID) %>%
+  summarise(total_events_with_f_forces = sum(events_with_f_forces, na.rm = TRUE)) %>%
+  ungroup()
+
+# Drop geometry from intersection before the join
+total_foreign_forces_intersection_train <- as.data.frame(total_foreign_forces_intersection_train) %>% 
+  dplyr::select(-c(geometry))
+total_foreign_forces_intersection_test <- as.data.frame(total_foreign_forces_intersection_test) %>% 
+  dplyr::select(-c(geometry))
+
+print(sum(total_foreign_forces_intersection_train$total_events_with_f_forces))
+# > print(sum(total_foreign_forces_intersection_train$total_events_with_f_forces))
+# [1] 237
+
+print(sum(total_foreign_forces_intersection_test$total_events_with_f_forces))
+# > print(sum(total_foreign_forces_intersection_test$total_events_with_f_forces))
+# [1] 63
+
+print(sum(is.na(total_foreign_forces_intersection_train$total_events_with_f_forces)))
+# > print(sum(is.na(total_foreign_forces_intersection_train$total_events_with_f_forces)))
+# [1] 0
+# Before the left join, there are no NA values
+
+print(sum(is.na(total_foreign_forces_intersection_test$total_events_with_f_forces)))
+# > print(sum(is.na(total_foreign_forces_intersection_test$total_events_with_f_forces)))
+# [1] 0
+# Before the left join, there are no NA values
+
+foreign_forces_count_sf_train <- left_join(fishnet, total_foreign_forces_intersection_train, by = "uniqueID")
+
+foreign_forces_count_sf_test <- left_join(fishnet, total_foreign_forces_intersection_test, by = "uniqueID")
+
+# Because we know there were no NA values before the left join, we know that any NA values introduced because of the left join can safely be replaced with zeroes. This is because any and all such NA values occur in grid cells where no events involving foreign troops or police took place.
+
+foreign_forces_count_sf_train$total_events_with_f_forces <- replace_na(foreign_forces_count_sf_train$total_events_with_f_forces, 0)
+foreign_forces_count_sf_test$total_events_with_f_forces <- replace_na(foreign_forces_count_sf_test$total_events_with_f_forces, 0)
+
+print(sum(foreign_forces_count_sf_train$total_events_with_f_forces))
+# > print(sum(foreign_forces_count_sf_train$total_events_with_f_forces))
+# [1] 237
+
+# 237 events involving foreign troops or police occur in the training set
+
+print(sum(foreign_forces_count_sf_test$total_events_with_f_forces))
+# > print(sum(foreign_forces_count_sf_test$total_events_with_f_forces))
+# [1] 63
+
+# 63 events involving foreign troops or police occur in the test set
+
+```
+
+<br>
+
+<br>
+
+#### Variable: **Weighted harmonic mean IDW distance from each grid cell to the nearest location where foreign troops have been present**
+
+<br>
+
+```{r Weighted Harmonic Mean - Total Foreign Troop Events, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+foreign_forces_count_sf_centroids_train <- st_centroid(foreign_forces_count_sf_train)
+foreign_forces_count_sf_centroids_test <- st_centroid(foreign_forces_count_sf_test)
+
+foreign_forces_count_sf_centroids_train <- st_transform(foreign_forces_count_sf_centroids_train, crs = st_crs(fishnet))
+foreign_forces_count_sf_centroids_test <- st_transform(foreign_forces_count_sf_centroids_test, crs = st_crs(fishnet))
+
+# This time, I set k=1 since there are very few observations
+
+weighted_harmonic_avg_distances_train.f_forces <- weighted_harmonic_avg_dists(
+  sf_data = foreign_forces_count_sf_centroids_train,
+  column = "total_events_with_f_forces",
+  sf_data_centroids = foreign_forces_count_sf_centroids_train,
+  neighbors_weights = neighbors_weights,
+  k_value = 1
+)
+
+weighted_harmonic_avg_distances_test.f_forces <- weighted_harmonic_avg_dists(
+  sf_data = foreign_forces_count_sf_centroids_test,
+  column = "total_events_with_f_forces",
+  sf_data_centroids = foreign_forces_count_sf_centroids_test,
+  neighbors_weights = neighbors_weights,
+  k_value = 1
+)
+
+foreign_forces_count_sf_train$weighted_harmonic_avg_distances.f_forces <- weighted_harmonic_avg_distances_train.f_forces
+foreign_forces_count_sf_test$weighted_harmonic_avg_distances.f_forces <- weighted_harmonic_avg_distances_test.f_forces
+
+foreign_forces_count_sf_subset_train <- foreign_forces_count_sf_train[, c("uniqueID", "total_events_with_f_forces", "weighted_harmonic_avg_distances.f_forces")]
+foreign_forces_count_sf_subset_test <- foreign_forces_count_sf_test[, c("uniqueID", "total_events_with_f_forces", "weighted_harmonic_avg_distances.f_forces")]
+
+vars_in_net_train <- merge(vars_in_net_train, as(foreign_forces_count_sf_subset_train, "Spatial"), by = "uniqueID", all.x = TRUE)
+vars_in_net_test <- merge(vars_in_net_test, as(foreign_forces_count_sf_subset_test, "Spatial"), by = "uniqueID", all.x = TRUE)
+
+# Save objects
+# saveRDS(vars_in_net_train, file = "vars_in_net_train-after_foreign_force_events_added.rds", compress = TRUE)
+# saveRDS(vars_in_net_test, file = "vars_in_net_test-after_foreign_force_events_added.rds", compress = TRUE) 
+# vars_in_net_train <- readRDS(file = "vars_in_net_train-after_foreign_force_events_added.rds")
+# vars_in_net_test <- readRDS(file = "vars_in_net_test-after_foreign_force_events_added.rds")
+
+```
+
+<br>
+
+<br>
+
+#### Variable: **Total number of ACLED events involving MONUSCO**
+
+<br>
+
+```{r Total MONUSCO Events, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# Events involving MONUSCO
+
+# Here, I count the number of ACLED events involving MONUSCO (the UN peacekeeping mission in the DRC) by grid cell location to see whether their presence results in more attacks on civilians. 
+
+# I also calculate the harmonic average distance from each grid cell to the nearest 3 locations where UN troops have been present at any point since 2018. I specifically do not limit my analysis here to ACLED events involving violence like I did earlier with non-state armed groups; rather, all ACLED events - violent or non-violent - are considered, which aligns with my hypothesis that the number of events involving MONUSCO may decrease attacks on civilians. 
+
+monusco_names <- tidyr::gather(data = acled_all, key = "actor", value = "monusco_name", actor1, assoc_actor_1, actor2, assoc_actor_2)
+
+
+# print(unique(monusco_names$monusco_name)) # Note: This output contains a mixture of actors. Many of these are not MONUSCO actors, but all MONUSCO actors are located in this column.
+
+# From the above output, I identified the following strings of actors that include all MONUSCO actors. Some of these strings include multiple actors involved in the same event, including some non-MONUSCO actors alongside MONUSCO actors. Yet, since these non-MONUSCO actors were involved in the same events as the MONUSCO actors, including the non-MONUSCO actors has no impact on the accuracy of MONUSCO actor event counts:
+
+monusco_list = c("Aid Workers (Democratic Republic of Congo); UN: United Nations", "Military Forces of the Democratic Republic of Congo (2019-); MONUSCO: United Nations Organization Stabilization Mission in Democratic Republic of Congo (2010-)", "MONUSCO: United Nations Organization Stabilization Mission in Democratic Republic of Congo (2010-); Aid Workers (Democratic Republic of Congo)", "Nyatura Militia; Hutu Ethnic Militia (Democratic Republic of Congo); MONUSCO: United Nations Organization Stabilization Mission in Democratic Republic of Congo (2010-); FDLR: Democratic Forces for the Liberation of Rwanda", "MONUSCO: United Nations Organization Stabilization Mission in Democratic Republic of Congo (2010-); FDLR-FOCA: Democratic Forces for the Liberation of Rwanda- Forces fighting Abacunguzi; FDLR-RUD: Democratic Forces for the Liberation of Rwanda-Rally for Unity and Democracy", "MONUSCO: United Nations Organization Stabilization Mission in Democratic Republic of Congo (2010-)", "Military Forces of Malawi (2020-); MONUSCO: United Nations Organization Stabilization Mission in Democratic Republic of Congo (2010-)", "Aid Workers (Democratic Republic of Congo); MONUSCO: United Nations Organization Stabilization Mission in Democratic Republic of Congo (2010-); UNHCR: United Nations Refugee Agency", "MONUSCO: United Nations Organization Stabilization Mission in Democratic Republic of Congo (2010-); Police Forces of the Democratic Republic of Congo (2019-)", "Police Forces of the Democratic Republic of Congo (2019-); MONUSCO: United Nations Organization Stabilization Mission in Democratic Republic of Congo (2010-)")
+
+monusco <- monusco_names %>%
+  filter(monusco_name %in% monusco_list)
+
+
+sum(duplicated(monusco$event_id_cnty)) # Shows there is 1 duplicate observation
+# > sum(duplicated(monusco$event_id_cnty)) # Shows there is 1 duplicate observation
+# [1] 1
+
+# Remove any duplicate observations
+monusco <- monusco %>%
+  distinct(event_id_cnty, .keep_all = TRUE)
+
+
+monusco$event_date <- as.Date(monusco$event_date, format = "%m/%d/%Y")
+
+monusco <- st_as_sf(
+  monusco, 
+  coords = c("longitude", "latitude"), 
+  crs = 4326 # WGS 84 coordinate reference system
+)
+
+monusco <- st_transform(
+  monusco, 
+  st_crs(projected_crs)
+)
+
+monusco_train <- dplyr::filter(monusco, event_date < as.Date("2023-07-01"))
+monusco_test <- dplyr::filter(monusco, event_date >= as.Date("2023-07-01"))
+
+monusco_intersection_train <- st_intersection(fishnet[, "uniqueID", "geometry"], monusco_train)
+monusco_intersection_test <- st_intersection(fishnet[, "uniqueID", "geometry"], monusco_test)
+
+print(sum(is.na(monusco_intersection_train$monusco_name))) # There are no NA values
+# > print(sum(is.na(monusco_intersection_train$monusco_name))) # There are no NA values
+# [1] 0
+
+print(sum(is.na(monusco_intersection_test$monusco_name))) # There are no NA values
+# > print(sum(is.na(monusco_intersection_test$monusco_name))) # There are no NA values
+# [1] 0
+
+monusco_intersection_train <- monusco_intersection_train %>%
+  mutate(events_with_monusco = 1)
+
+monusco_intersection_test <- monusco_intersection_test %>%
+  mutate(events_with_monusco = 1)
+
+total_monusco_intersection_train <- monusco_intersection_train %>%
+  group_by(uniqueID) %>%
+  summarise(total_events_with_monusco = sum(events_with_monusco, na.rm = TRUE)) %>%
+  ungroup()
+
+total_monusco_intersection_test <- monusco_intersection_test %>%
+  group_by(uniqueID) %>%
+  summarise(total_events_with_monusco = sum(events_with_monusco, na.rm = TRUE)) %>%
+  ungroup()
+
+# Drop geometry from intersection before the join
+total_monusco_intersection_train <- as.data.frame(total_monusco_intersection_train) %>% 
+  dplyr::select(-c(geometry))
+total_monusco_intersection_test <- as.data.frame(total_monusco_intersection_test) %>% 
+  dplyr::select(-c(geometry))
+
+print(sum(total_monusco_intersection_train$total_events_with_monusco))
+# > print(sum(total_monusco_intersection_train$total_events_with_monusco))
+# [1] 309
+
+print(sum(total_monusco_intersection_test$total_events_with_monusco))
+# > print(sum(total_monusco_intersection_test$total_events_with_monusco))
+# [1] 11
+
+# Check if there are any NA values before the left join is performed:
+print(sum(is.na(total_monusco_intersection_train$total_events_with_monusco)))
+# > print(sum(is.na(total_monusco_intersection_train$total_events_with_monusco)))
+# [1] 0
+
+print(sum(is.na(total_monusco_intersection_test$total_events_with_monusco)))
+# > print(sum(is.na(total_monusco_intersection_test$total_events_with_monusco)))
+# [1] 0
+
+monusco_count_sf_train <- left_join(fishnet, total_monusco_intersection_train, by = "uniqueID")
+monusco_count_sf_test <- left_join(fishnet, total_monusco_intersection_test, by = "uniqueID")
+
+# There will almost certainly be NA values introduced by the left join above since not all grid cell locations have events involving the MONUSCO. Since we have already identified that there were no NA values in  total_monusco_intersection_train$total_events_with_monusco and total_monusco_intersection_test$total_events_with_monusco, we know that any NA values after the join were introduced by the join itself, and can safely be replaced with 0 values:
+
+monusco_count_sf_train$total_events_with_monusco <- replace_na(monusco_count_sf_train$total_events_with_monusco, 0)
+monusco_count_sf_test$total_events_with_monusco <- replace_na(monusco_count_sf_test$total_events_with_monusco, 0)
+
+print(sum(monusco_count_sf_train$total_events_with_monusco))
+# > print(sum(monusco_count_sf_train$total_events_with_monusco))
+# [1] 309
+
+# There are 309 events involving MONUSCO in the training set
+
+print(sum(monusco_count_sf_test$total_events_with_monusco))
+# > print(sum(monusco_count_sf_test$total_events_with_monusco))
+# [1] 11
+
+# There are 11 events involving MONUSCO in the test set
+
+```
+
+<br>
+
+<br>
+
+#### Variable: **Weighted harmonic mean IDW distance from each grid cell to the nearest location where events involving MONUSCO have occurred**
+
+<br>
+
+```{r Weighted Harmonic Mean - Total MONUSCO Events, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+monusco_count_sf_centroids_train <- st_centroid(monusco_count_sf_train)
+monusco_count_sf_centroids_test <- st_centroid(monusco_count_sf_test)
+
+monusco_count_sf_centroids_train <- st_transform(monusco_count_sf_centroids_train, crs = st_crs(fishnet))
+monusco_count_sf_centroids_test <- st_transform(monusco_count_sf_centroids_test, crs = st_crs(fishnet))
+
+
+# This time, I set k=1 since there are very few observations containing events with MONUSCO
+
+weighted_harmonic_avg_distances_train.monusco <- weighted_harmonic_avg_dists(
+  sf_data = monusco_count_sf_centroids_train,
+  column = "total_events_with_monusco",
+  sf_data_centroids = monusco_count_sf_centroids_train,
+  neighbors_weights = neighbors_weights,
+  k_value = 1
+)
+
+weighted_harmonic_avg_distances_test.monusco <- weighted_harmonic_avg_dists(
+  sf_data = monusco_count_sf_centroids_test,
+  column = "total_events_with_monusco",
+  sf_data_centroids = monusco_count_sf_centroids_test,
+  neighbors_weights = neighbors_weights,
+  k_value = 1
+)
+
+monusco_count_sf_train$weighted_harmonic_avg_distances.monusco <- weighted_harmonic_avg_distances_train.monusco
+monusco_count_sf_test$weighted_harmonic_avg_distances.monusco <- weighted_harmonic_avg_distances_test.monusco
+
+monusco_count_sf_subset_train <- monusco_count_sf_train[, c("uniqueID", "total_events_with_monusco", "weighted_harmonic_avg_distances.monusco")]
+monusco_count_sf_subset_test <- monusco_count_sf_test[, c("uniqueID", "total_events_with_monusco", "weighted_harmonic_avg_distances.monusco")]
+
+vars_in_net_train <- merge(vars_in_net_train, as(monusco_count_sf_subset_train, "Spatial"), by = "uniqueID", all.x = TRUE)
+vars_in_net_test <- merge(vars_in_net_test, as(monusco_count_sf_subset_test, "Spatial"), by = "uniqueID", all.x = TRUE)
+
+# Save objects
+# saveRDS(vars_in_net_train, file = "vars_in_net_train-after_monusco_events_added.rds", compress = TRUE)
+# saveRDS(vars_in_net_test, file = "vars_in_net_test-after_monusco_events_added.rds", compress = TRUE) 
+# vars_in_net_train <- readRDS(file = "vars_in_net_train-after_monusco_events_added.rds")
+# vars_in_net_test <- readRDS(file = "vars_in_net_test-after_monusco_events_added.rds")
+
+```
+
+<br>
+
+<br>
+
+#### Variable: **Total number of violent events in any given grid cell involving DRC state troops or police**
+
+<br>
+
+```{r Total State Force Events, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# Presence of national police or troops:
+
+# I will next calculate the number of ACLED events involving national police or troops, as well as the harmonic average distance to their presence to see whether it has any impact on the occurrence of attacks on civilians.
+
+state_force_names <- tidyr::gather(data = violent_events, key = "actor", value = "state_force_name", actor1, assoc_actor_1, actor2, assoc_actor_2)
+
+state_forces <- tidyr::gather(data = state_force_names, key = "inter_code", value = "group_type", inter1, inter2) %>%
+  dplyr::filter(group_type == "State Forces")
+
+# Note: This output contains a mixture of actors. Many of these are not DRC military or police forces, but all DRC military or police forces are located in this column
+
+# print(unique(state_force_names$state_force_name)) 
+
+
+state_forces_list = c("Military Forces of the Democratic Republic of Congo (2019-)",
+                      "Police Forces of the Democratic Republic of Congo (2019-)",
+                      "Military Forces of the Democratic Republic of Congo (2019-) Naval Forces",
+                      "Military Forces of the Democratic Republic of Congo (2019-) Republican Guard",
+                      "Military Forces of the Democratic Republic of Congo (2019-) Military Police",
+                      "Police Forces of the Democratic Republic of Congo (2019-) Eco-Guards",
+                      "Police Forces of the Democratic Republic of Congo (2019-) Prison Guards",
+                      "Military Forces of the Democratic Republic of Congo (2019-) National Intelligence Agency",
+                      "Police Forces of the Democratic Republic of Congo (2019-) Virunga National Park",
+                      "Military Forces of the Democratic Republic of Congo (2019-) Special Forces",
+                      "Police Forces of the Democratic Republic of Congo (2019-) Kahuzi-Biega National Park",
+                      "Police Forces of the Democratic Republic of Congo (2019-) Okapi National Park",
+                      "Military Forces of the Democratic Republic of Congo (2001-2019)",
+                      "Police Forces of the Democratic Republic of Congo (2001-2019)",
+                      "Police Forces of the Democratic Republic of Congo (2001-2019) Eco-Guards",
+                      "Police Forces of the Democratic Republic of Congo (2001-2019) Kahuzi-Biega National Park",
+                      "Police Forces of the Democratic Republic of Congo (2019-) Virunga National Park; ICCN: Congolese Institute for Nature Conservation",
+                      "Military Forces of the Democratic Republic of Congo (2019-); Hutu Ethnic Militia (Democratic Republic of Congo); Nyatura Militia (Jean-Marie); Nyatura Militia (Musheku)",
+                      "Banyamulenge Ethnic Militia (Democratic Republic of Congo); Mayi Mayi Militia (El Shabab); Military Forces of the Democratic Republic of Congo (2019-)",
+                      "Beni Communal Group (Democratic Republic of Congo); Police Forces of the Democratic Republic of Congo (2001-2019)",
+                      "ICCN: Congolese Institute for Nature Conservation; Police Forces of the Democratic Republic of Congo (2019-) Virunga National Park",
+                      "Police Forces of the Democratic Republic of Congo (2019-) Kahuzi-Biega National Park; ICCN: Congolese Institute for Nature Conservation",
+                      "Military Forces of the Democratic Republic of Congo (2019-); Police Forces of the Democratic Republic of Congo (2019-)",
+                      "Government of the Democratic Republic of Congo (2019-); Military Forces of the Democratic Republic of Congo (2019-)",
+                      "Military Forces of the Democratic Republic of Congo (2001-2019) National Intelligence Agency",
+                      "Military Forces of the Democratic Republic of Congo (2001-2019) National Intelligence Agency; Police Forces of the Democratic Republic of Congo (2001-2019)",
+                      "Military Forces of the Republic of Congo (1997-)", "Police Forces of the Democratic Republic of Congo (2019-) Upemba National Park",
+                      "Police Forces of the Democratic Republic of Congo (2019-); MONUSCO: United Nations Organization Stabilization Mission in Democratic Republic of Congo (2010-)",
+                      "Military Forces of the Democratic Republic of Congo (2001-2019) Naval Forces",
+                      "Police Forces of the Democratic Republic of Congo (2001-2019) Prison Guards", "Refugees/IDPs (Democratic Republic of Congo); Military Forces of the Democratic Republic of Congo (2019-)",
+                      "Christian Group (Democratic Republic of Congo); Police Forces of the Democratic Republic of Congo (2019-)",
+                      "Labor Group (Democratic Republic of Congo); Police Forces of the Democratic Republic of Congo (2019-) Virunga National Park",
+                      "Health Workers (Democratic Republic of Congo); Military Forces of the Democratic Republic of Congo (2019-)",
+                      "Catholic Christian Group (Democratic Republic of Congo); Health Workers (Democratic Republic of Congo); Labor Group (Democratic Republic of Congo); Police Forces of the Democratic Republic of Congo (2019-); Protestant Christian Group (Democratic Republic of Congo)",
+                      "Women (Democratic Republic of Congo); Labor Group (Democratic Republic of Congo); Military Forces of the Democratic Republic of Congo (2019-)",
+                      "Judges (Democratic Republic of Congo); Government of the Democratic Republic of Congo (2019-); Military Forces of the Democratic Republic of Congo (2019-)",
+                      "Military Forces of the Democratic Republic of Congo (2019-); Military Forces of the Democratic Republic of Congo (2019-) National Intelligence Agency",
+                      "Fishers (Democratic Republic of Congo); Military Forces of the Democratic Republic of Congo (2019-)",
+                      "Military Forces of the Democratic Republic of Congo (2019-); Military Forces of Uganda (1986-)",
+                      "Labor Group (Democratic Republic of Congo); Military Forces of the Democratic Republic of Congo (2019-); Government of the Democratic Republic of Congo (2019-)",
+                      "Taxi Drivers (Democratic Republic of Congo); Military Forces of the Democratic Republic of Congo (2019-)",
+                      "ICCN: Congolese Institute for Nature Conservation; Military Forces of the Democratic Republic of Congo (2019-)",
+                      "Government of the Democratic Republic of Congo (2019-); Police Forces of the Democratic Republic of Congo (2019-)",
+                      "Police Forces of the Democratic Republic of Congo (2019-); Taxi Drivers (Democratic Republic of Congo)",
+                      "Military Forces of the Democratic Republic of Congo (2019-); Labor Group (Democratic Republic of Congo)",
+                      "Military Forces of the Democratic Republic of Congo (2019-); Private Security Forces (Democratic Republic of Congo)",
+                      "Military Forces of the Democratic Republic of Congo (2019-); Taxi Drivers (Democratic Republic of Congo)",
+                      "Ruhuha Communal Group (Democratic Republic of Congo); Military Forces of the Democratic Republic of Congo (2019-)",
+                      "Police Forces of the Democratic Republic of Congo (2019-); Women (Democratic Republic of Congo)",
+                      "Women (Democratic Republic of Congo); Military Forces of the Democratic Republic of Congo (2019-)",
+                      "Police Forces of the Democratic Republic of Congo (2019-); Military Forces of the Democratic Republic of Congo (2019-)")
+
+state_forces <- state_forces %>%
+  filter(state_force_name %in% state_forces_list)
+
+sum(duplicated(state_forces$event_id_cnty)) # Shows there are 240 duplicate observations
+
+state_forces <- state_forces %>%
+  distinct(event_id_cnty, .keep_all = TRUE)
+
+state_forces$event_date <- as.Date(state_forces$event_date, format = "%m/%d/%Y")
+
+state_forces <- st_as_sf(
+  state_forces, 
+  coords = c("longitude", "latitude"), 
+  crs = 4326 # WGS 84 coordinate reference system
+)
+
+state_forces <- st_transform(
+  state_forces, 
+  st_crs(projected_crs)
+)
+
+state_forces_train <- dplyr::filter(state_forces, event_date < as.Date("2023-07-01"))
+state_forces_test <- dplyr::filter(state_forces, event_date >= as.Date("2023-07-01"))
+
+state_forces_intersection_train <- st_intersection(fishnet[, "uniqueID", "geometry"], state_forces_train)
+state_forces_intersection_test <- st_intersection(fishnet[, "uniqueID", "geometry"], state_forces_test)
+
+print(sum(is.na(state_forces_intersection_train$state_force_name))) # There are no NA values
+print(sum(is.na(state_forces_intersection_test$state_force_name))) # There are no NA values
+
+state_forces_intersection_train <- state_forces_intersection_train %>%
+  mutate(events_with_s_forces = 1)
+
+state_forces_intersection_test <- state_forces_intersection_test %>%
+  mutate(events_with_s_forces = 1)
+
+total_state_forces_intersection_train <- state_forces_intersection_train %>%
+  group_by(uniqueID) %>%
+  summarise(total_events_with_s_forces = sum(events_with_s_forces, na.rm = TRUE)) %>%
+  ungroup()
+
+total_state_forces_intersection_test <- state_forces_intersection_test %>%
+  group_by(uniqueID) %>%
+  summarise(total_events_with_s_forces = sum(events_with_s_forces, na.rm = TRUE)) %>%
+  ungroup()
+
+# Drop geometry from intersection before the join
+total_state_forces_intersection_train <- as.data.frame(total_state_forces_intersection_train) %>% 
+  dplyr::select(-c(geometry))
+
+total_state_forces_intersection_test <- as.data.frame(total_state_forces_intersection_test) %>% 
+  dplyr::select(-c(geometry))
+
+print(sum(total_state_forces_intersection_train$total_events_with_s_forces))
+# > print(sum(total_state_forces_intersection_train$total_events_with_s_forces))
+# [1] 4657
+
+print(sum(total_state_forces_intersection_test$total_events_with_s_forces))
+# > print(sum(total_state_forces_intersection_test$total_events_with_s_forces))
+# [1] 195
+
+state_forces_count_sf_train <- left_join(fishnet, total_state_forces_intersection_train, by = "uniqueID")
+state_forces_count_sf_test <- left_join(fishnet, total_state_forces_intersection_test, by = "uniqueID")
+
+state_forces_count_sf_train$total_events_with_s_forces <- replace_na(state_forces_count_sf_train$total_events_with_s_forces, 0)
+state_forces_count_sf_test$total_events_with_s_forces <- replace_na(state_forces_count_sf_test$total_events_with_s_forces, 0)
+
+print(sum(state_forces_count_sf_train$total_events_with_s_forces))
+# > print(sum(state_forces_count_sf_train$total_events_with_s_forces))
+# [1] 4657
+
+print(sum(state_forces_count_sf_test$total_events_with_s_forces))
+# > print(sum(state_forces_count_sf_test$total_events_with_s_forces))
+# [1] 195
+
+```
+
+<br>
+
+<br>
+
+#### Variable: **Weighted harmonic mean IDW distance from each grid cell to the nearest location where DRC state troops or police forces have been active in violent events**
+
+<br>
+
+```{r Weighted Harmonic Mean - Total State Force Events, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+state_forces_count_sf_centroids_train <- st_centroid(state_forces_count_sf_train)
+state_forces_count_sf_centroids_test <- st_centroid(state_forces_count_sf_test)
+
+state_forces_count_sf_centroids_train <- st_transform(state_forces_count_sf_centroids_train, crs = st_crs(fishnet))
+state_forces_count_sf_centroids_test <- st_transform(state_forces_count_sf_centroids_test, crs = st_crs(fishnet))
+
+
+weighted_harmonic_avg_distances_train.s_forces <- weighted_harmonic_avg_dists(
+  sf_data = state_forces_count_sf_centroids_train,
+  column = "total_events_with_s_forces",
+  sf_data_centroids = state_forces_count_sf_centroids_train,
+  neighbors_weights = neighbors_weights,
+  k_value = 3
+)
+
+weighted_harmonic_avg_distances_test.s_forces <- weighted_harmonic_avg_dists(
+  sf_data = state_forces_count_sf_centroids_test,
+  column = "total_events_with_s_forces",
+  sf_data_centroids = state_forces_count_sf_centroids_test,
+  neighbors_weights = neighbors_weights,
+  k_value = 3
+)
+
+state_forces_count_sf_train$weighted_harmonic_avg_distances.s_forces <- weighted_harmonic_avg_distances_train.s_forces
+state_forces_count_sf_test$weighted_harmonic_avg_distances.s_forces <- weighted_harmonic_avg_distances_test.s_forces
+
+state_forces_count_sf_subset_train <- state_forces_count_sf_train[, c("uniqueID", "total_events_with_s_forces", "weighted_harmonic_avg_distances.s_forces")]
+state_forces_count_sf_subset_test <- state_forces_count_sf_test[, c("uniqueID", "total_events_with_s_forces", "weighted_harmonic_avg_distances.s_forces")]
+
+vars_in_net_train <- merge(vars_in_net_train, as(state_forces_count_sf_subset_train, "Spatial"), by = "uniqueID", all.x = TRUE)
+vars_in_net_test <- merge(vars_in_net_test, as(state_forces_count_sf_subset_test, "Spatial"), by = "uniqueID", all.x = TRUE)
+
+# Save objects
+# saveRDS(vars_in_net_train, file = "vars_in_net_train-after_state_force_events_added.rds", compress = TRUE)
+# saveRDS(vars_in_net_test, file = "vars_in_net_test-after_state_force_events_added.rds", compress = TRUE) 
+# vars_in_net_train <- readRDS(file = "vars_in_net_train-after_state_force_events_added.rds")
+# vars_in_net_test <- readRDS(file = "vars_in_net_test-after_state_force_events_added.rds")
+
+```
+
+<br>
+
+<br>
+
+#### Variable: **Distance to the nearest refugee camp or Internally Displaced Person (IDP) camp**
+
+<br>
+
+```{r Distance to Nearest Refugee Camp, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# Location of Refugee Camps and IDP Camps: One theory is that refugees and IDPs may be seen as targets by armed groups - either for recruitment - or for retaliation on vulnerable civilians seen to be connected with rival groups. It is possible that attacks may occur near where refugees and IDPs are living. In contrast, it is also possible that refugee and IDP camps are intentionally built in areas seen as safer in terms of distance from where non-state armed groups believed to be located. If either of these theories are true, one might expect the model to benefit from this variable.
+
+
+# The data is taken from the UNHCR People of Concern dataset, found on https://data.unhcr.org/en/geoservices/
+
+unhcr_drc <- st_read("unhcr_persons_of_concern_drc_2_29_2024.shp") %>%
+  st_transform(crs = 4326) %>%
+  st_transform(crs = projected_crs)
+
+
+e_drc_adm2_map <- e_drc_adm2_map %>%
+  st_transform(crs = projected_crs)
+
+
+unhcr_e_drc <- st_intersection(unhcr_drc, e_drc_adm2_map)
+
+# This line computes the pairwise distances between all points in fishnet and all points in unhcr_e_drc, returning a matrix where each row corresponds to a point in fishnet and each column to a point in unhcr_e_drc
+dist_to_nearest_ref_camp <- st_distance(fishnet, unhcr_e_drc)
+
+# Here, apply() is used with MARGIN = 1 to apply the min function across each row of the distance matrix
+min_distances_to_camps <- apply(dist_to_nearest_ref_camp, 1, min)
+
+# Combine the uniqueID from fishnet with the computed minimum distances
+dist_to_nearest_ref_camp <- data.frame(uniqueID = fishnet$uniqueID, dist_to_nearest_camp = min_distances_to_camps)
+
+# Note: UNHCR camp locations are assumed unchanged between the train and test set time periods.
+
+vars_in_net_train <-
+  left_join(vars_in_net_train, dist_to_nearest_ref_camp, by="uniqueID")
+
+vars_in_net_test <-
+  left_join(vars_in_net_test, dist_to_nearest_ref_camp, by="uniqueID")
+
+
+```
+
+<br>
+
+<br>
+
+#### Variable: **Distance to the nearest main road**
+
+<br>
+
+```{r Distance to Nearest Main Road, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# Distance from Main Roads, from the "Democratic Republic of Congo (DRC) Major Roads Network (OpenStreetMap Export)" dataset, available at: https://data.humdata.org/dataset/democratic-republic-of-congo-drc-major-roads-network-openstreetmap-export?
+
+main_roads <- st_read("osm_rd_congo_main_roads_network.geojson")
+
+main_roads <- main_roads %>% 
+  st_transform(crs = 4326) %>%
+  st_transform(crs = projected_crs)
+
+main_roads_e_drc <- st_intersection(fishnet[, "uniqueID", "geometry"], main_roads)
+
+library(future)
+library(future.apply)
+
+# Detect the number of available cores and reserve two
+  n_cores <- parallel::detectCores() - 1
+  
+  # Set up future to use multisession with the desired number of cores
+  plan(multisession, workers = n_cores)
+  
+  # Assuming fishnet and main_roads_e_drc are already loaded and are sf objects
+  
+  # Compute the distances from each fishnet geometry to all road geometries
+  dist_to_all_roads <- st_distance(fishnet, main_roads_e_drc)
+  
+  
+  # Find the minimum distance for each fishnet geometry using parallel processing
+  dist_to_nearest_road <- future_apply(dist_to_all_roads, 1, min, future.seed = TRUE)
+  
+  rm(dist_to_all_roads)
+  # gc(dist_to_nearest_road)
+  
+  saveRDS(dist_to_nearest_road, "dist_to_nearest_road.rds")
+  
+  future::plan("sequential") # Ends parallel processing
+  future:::ClusterRegistry("stop") # Stops any registered parallel clusters, effectively ensuring that all parallel processes have completed.
+
+# min_dist_to_nearest_road <- readRDS("min_dist_to_nearest_road.rds")    
+dist_to_nearest_road_df <- data.frame(uniqueID = fishnet$uniqueID, dist_to_nearest_raod = dist_to_nearest_road)
+
+# Note: Distances to nearest major roads are assumed to be unchanged between the train and test set periods
+
+vars_in_net_train <-
+  left_join(vars_in_net_train, dist_to_nearest_road_df, by="uniqueID")
+
+vars_in_net_test <-
+  left_join(vars_in_net_test, dist_to_nearest_road_df, by="uniqueID")
+
+# Save objects
+# saveRDS(vars_in_net_train, "vars_in_net_train-after_dist_to_nearest_road_added.rds")
+# saveRDS(vars_in_net_test, "vars_in_net_test-after_dist_to_nearest_road_added.rds")
+
+# vars_in_net_train <- readRDS("vars_in_net_train-after_dist_to_nearest_road_added.rds")
+# vars_in_net_test <- readRDS("vars_in_net_test-after_dist_to_nearest_road_added.rds")
+
+```
+
+<br>
+
+<br>
+
+#### I will add 2 more feature variables, but will first do the following:
+
+<br>
+
+#### - *Remove unnecessary columns*.
+
+<br>
+
+```{r Remove Unnecessary Columns, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# Remove unneeded columns
+vars_in_net_train <- vars_in_net_train %>% dplyr::select(-TYPE_3, -ENGTYPE_3, -NL_NAME_2, -VARNAME_2)
+vars_in_net_test <- vars_in_net_test %>% dplyr::select(-TYPE_3, -ENGTYPE_3, -NL_NAME_2, -VARNAME_2) 
+
+```
+
+<br>
+
+#### - *Join the attack counts to the risk factors*.
+
+<br>
+
+```{r Join Features to the sf Object, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+attacks_in_net_train <- readRDS("attacks_in_net_train.rds")
+attacks_in_net_test <- readRDS("attacks_in_net_test.rds")
+
+final_net.attacks_train <-
+  left_join(attacks_in_net_train, st_drop_geometry(vars_in_net_train), by="uniqueID")
+final_net.attacks_test <-
+  left_join(attacks_in_net_test, st_drop_geometry(vars_in_net_test), by="uniqueID")
+
+# Save objects
+# saveRDS(final_net.attacks_train, file = "final_net.attacks_train-after_direct_strikes_added.rds", compress = TRUE)
+# saveRDS(final_net.attacks_test, file = "final_net.attacks_test-after_direct_strikes_added.rds", compress = TRUE)
+
+
+# final_net.attacks_train <- readRDS(file = "final_net.attacks_train-after_direct_strikes_added.rds")
+# final_net.attacks_test <- readRDS(file = "final_net.attacks_test-after_direct_strikes_added.rds")
+
+```
+
+<br>
+
+#### - *Make the NAME_2 column consisting of 2nd order administrative districts (territories) a factor*.
+
+<br>
+
+```{r Convert NAME_2 Column to Factor, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+final_net.sf.attacks_train <- final_net.attacks_train %>%
+  mutate(NAME_2 = factor(NAME_2))
+
+final_net.sf.attacks_test <- final_net.attacks_test %>%
+  mutate(NAME_2 = factor(NAME_2))
+
+# Save objects
+# saveRDS(final_net.sf.attacks_train, "final_net.sf.attacks_train.rds")
+# saveRDS(final_net.sf.attacks_test, "final_net.sf.attacks_test.rds")
+
+# final_net.sf.attacks_train <- readRDS("final_net.sf.attacks_train.rds")
+# final_net.sf.attacks_test <- readRDS("final_net.sf.attacks_test.rds")
+
+
+```
+
+<br>
+
+<br>
+
+#### Before conducting feature engineering involving Local Moran's I calculations, let's begin with an exploratory analysis. We will create the following four maps and display them together in a faceted layout:
+
+<br>
+
+#### 1) Attack Counts
+
+#### 2) Local Moran's I Values
+
+#### 3) Local Moran's I P-Values
+
+#### 4) Significant Local Moran's I Clusters
+
+<br>
+
+```{r Local Morans I Cluster Analysis, cache=TRUE, cache.lazy=FALSE, fig.height=22.5, fig.width=8.4375, eval=FALSE, echo=TRUE}
+
+# Create a neighbors list and spatial weights using IDW (only once, as spatial geometries are the same)
+
+final_net.nb <- poly2nb(as_Spatial(final_net.sf.attacks_train), queen=TRUE)
+final_net.weights <- nb2listwdist(final_net.nb, as_Spatial(final_net.sf.attacks_train), type = "idw", alpha = 2)
+
+# Use the same spatial weights for all datasets, since spatial observations are identical
+final_net.attacks_train.weights <- final_net.weights
+final_net.attacks_test.weights <- final_net.weights
+
+final_net.attacks_train.nb <- final_net.nb
+final_net.attacks_test.nb <- final_net.nb
+
+# Save objects
+# saveRDS(final_net.attacks_train.nb, file = "final_net.attacks_train.nb.rds", compress = TRUE)
+# saveRDS(final_net.attacks_train.weights, file = "final_net.attacks_train.weights.rds", compress = TRUE)
+
+# saveRDS(final_net.attacks_test.nb, file = "final_net.attacks_test.nb.rds", compress = TRUE)
+# saveRDS(final_net.attacks_test.weights, file = "final_net.attacks_test.weights.rds", compress = TRUE)
+
+
+# final_net.attacks_train.nb <- readRDS(file = "final_net.attacks_train.nb.rds")
+# final_net.attacks_train.weights <- readRDS(file = "final_net.attacks_train.weights.rds")
+# final_net.attacks_test.nb <- readRDS(file = "final_net.attacks_test.nb.rds")
+# final_net.attacks_test.weights <- readRDS(file = "final_net.attacks_test.weights.rds")
+
+
+# Calculate Local Moran's I
+local_morans.attacks_train <- as.data.frame(localmoran(final_net.sf.attacks_train$countAttacks, final_net.attacks_train.weights))
+
+
+final_net.attacks_train.localMorans <- 
+  cbind(local_morans.attacks_train, as.data.frame(final_net.sf.attacks_train)) %>% 
+  st_sf() %>%
+  dplyr::select(Attacks_Count = countAttacks, 
+                Local_Morans_I = Ii, 
+                P_Value = `Pr(z != E(Ii))`) %>%
+  mutate(Significant_Clustering = ifelse(P_Value <= 0.05, 1, 0)) %>%
+  tidyr::gather(Variable, Value, -geometry)
+
+
+# Attacks Train
+# Define custom titles for each map
+custom_titles.attacks <- c("Attacks_Count" = "Attacks Count",
+                   "Local_Morans_I" = "Local Moran's I",
+                   "P_Value" = "P-Values",
+                   "Significant_Clustering" = "Statistically Significant Clusters")
+
+vars <- unique(final_net.attacks_train.localMorans$Variable)
+
+# Create a list to store the ggplot objects
+varList <- vector("list", length(vars))
+names(varList) <- vars
+
+
+for(var_name in vars){
+  data_to_plot <- final_net.attacks_train.localMorans %>%
+    filter(Variable == var_name)
+
+  plot <- ggplot(data_to_plot, aes(fill = Value)) +
+    geom_sf(color = NA) +
+    labs(title = custom_titles.attacks[var_name]) +
+    theme_minimal() +
+    theme(plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
+          legend.position = "bottom",
+          legend.title = element_blank(),
+          legend.text = element_text(size = 14),
+          legend.key.height = unit(2, 'lines'),
+          legend.key.width = unit(2, 'cm'))
+
+  if(var_name == "P_Value"){
+    plot <- plot + scale_fill_gradientn(
+      name = NULL, # Removes the legend title
+      colours = viridis(256),
+      values = scales::rescale(c(0, 0.2, 1)),
+      breaks = c(0.01, 0.2),
+      labels = c("0.01", "0.2"),
+      guide = guide_colorbar(
+        title = "",
+        barwidth = 19.5,
+        barheight = 2.1,
+        label.theme = element_text(size = 14),
+        title.position = "top",
+        title.hjust = 0.5
+      )
+    )
+  } else if(var_name == "Significant_Clustering") {
+    plot <- plot + 
+      scale_fill_viridis_c(
+        name = "Cluster Significance",
+        begin = 0,
+        end = 1,
+        # direction = -1,
+        labels = c("Non-significant", "Significant"),
+        breaks = c(0, 1)
+      )
+  } else {
+    plot <- plot + scale_fill_viridis_c(
+      name = NULL, # Removes the legend title
+      option = "viridis",
+      begin = 0,
+      end = 1
+    )
+  }
+
+  varList[[var_name]] <- plot
+}
+
+
+# Convert each ggplot object in varList to a grob
+varListGrob <- lapply(varList, ggplotGrob)
+
+dev.size("in")
+
+# For example, c(1, 0.1, 1) would mean both rows are the same height, with some space between
+# Define widths for two columns only
+row_heights <- unit(c(0.50, -0.06, 0.50), "npc")
+column_widths <- unit(c(0.5, 0.5), "npc") # Equal column widths, adjust the numbers to change spacing
+
+# Arrange the plots with specified space between rows
+gtable_output <- gridExtra::grid.arrange(
+  grobs = varListGrob,
+  ncol = 2,
+  layout_matrix = rbind(c(1, 2), c(NA, NA), c(3, 4)),  # Add a row of NAs for spacing
+  top = grid::textGrob("Local Moran's I Statistics - Queen's Matrix with IDW Weights", gp = grid::gpar(fontsize = 25, fontface = "bold"), vjust = 0),
+  heights = row_heights,
+  widths = column_widths
+)
+
+# Save the grid.arrange plot as a PNG file
+png("local_morans_i_exploratory_analysis-idw_queens.png", width = 800, height = 800 / (8.4375/20.5))
+
+grid::grid.draw(gtable_output)
+
+```
+
+<br>
+
+```{r Local Morans I Cluster Analysis - Plot, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=TRUE, echo=FALSE, out.width="100%", fig.align='center'}
+
+knitr::include_graphics("local_morans_i_exploratory_analysis-idw_queens.png")
+
+```
+
+#### **2nd Map (1st Row, 2nd Column) - Local Moran's I Statistics:** This map displays the Local Moran's I statistic for each location, which measures spatial autocorrelation. Hot spots are identified by positive and statistically significant Local Moran's I values that indicate an area has a high number of attacks on civilians and is surrounded by areas with similarly high values. Cold spots are identified by negative and statistically significant Local Moran's I values, where locations with low numbers of attacks are surrounded by areas with similarly low values. Local Moran's I values nearest to 0, regardless of their statistical significance, typically indicate no strong spatial autocorrelation (no significant clustering of similar or dissimilar values).
+
+<br>
+
+#### As you can see, there appear to only be a few places on this map - including the north-eastern and central-eastern areas that have hot spots of a relatively high concentration of attacks on civilians. A Local Moran's I value of 0.0000187829661 - which is the highest value detected in the map - would appear to suggest a very low degree of spatial autocorrelation, or spatial clustering of similar high values (hotspots). However, these very low Local Moran's I values are misleading at face value. Allow me to explain:
+
+<br>
+
+#### While Global Moran's I values are always between +1 and -1, this is not true of Local Moran's I values. If I were to not use IDW weights for my Queen's contiguity matrix, the Local Moran's I values would be much higher. IDW is a commonly used method to reflect the idea that spatial influence decreases as distance increases. This is a reasonable assumption in this project, as attacks occurring in one region are more likely to affect nearby regions more than distant ones. 
+
+<br>
+
+#### The alpha parameter controls the rate of decay. In my case, alpha = 2 means that spatial influence diminishes quadratically with distance. A higher alpha (e.g., alpha = 3) might overly penalize distant neighbors, potentially ignoring relevant distant spatial interactions. Conversely, a lower alpha (e.g., alpha = 1) might not sufficiently reduce the influence of local points, leading to an overestimation of spatial dependence. Alpha = 2 strikes a balance.
+
+<br>
+
+#### Local Moran's I values are more likely to be higher when using the row-standardized contiguity-based weighting matrix (style = "W") compared to IDW with alpha = 2. First, this is because non-IDW contiguity-based weights tend to capture broader local spatial patterns by giving each neighbor relatively equal importance. However, it may not be realistic for events transpiring hundreds of miles away to be as likely to have the same impact on the number of attacks occurring against civilians as events transpiring only a few miles away.
+
+<br>
+
+#### Second, this type of weights matrix ensures the sum of weights for each observation equals 1. The calculation of Local Moran's I involves multiplying the deviation of each observation by the weighted sum of the deviations of its neighbors. If certain observations have values that are significantly higher than the mean and are surrounded by neighbors with similarly high values, the Local Moran's I for that point can be quite large.
+
+<br>
+
+#### Third, IDW with alpha = 2 strongly diminishes the influence of distant neighbors, focusing mostly on close neighbors. This can result in very low Local Moran's I values because distant points are assigned very little weight, and the number of influential neighbors is small. 
+
+<br>
+
+#### **3rd Map (2nd Row, 1st Column) - P-Values:** This map shows the p-values associated with the Local Moran's I statistic. Areas with low p-values (dark blue areas) suggest that the observed spatial pattern (whether a hot spot or cold spot) is statistically significant, whereas areas with high p-values (green and yellow areas) suggest the observed pattern could be due to random spatial processes. We can see most areas on the map are not statistically significant, with the exception of the blue and purple clusters mostly along the eastern parts of the map.
+
+<br>
+
+#### **4th Map (2nd Row, 2nd Column) - Statistically Significant Clustering:** This map combinbes the Moran's I values and p-values when using IDW weights, indicating significant spatial hot spots and cold spots of attacks. Areas marked in bright colors (light yellow) represent hot spots and cold spots where the Local Moran's I statistic is significantly positive (p-value <= 0.05). The very large proportion of dark areas indicate non-statistically significant clustering, meaning spatial autocorrelation was not found to be much more likely than pure chance. Once again, statistically significant clusters mostly exist along the eastern part of the map. The main difference between plots 3 and 4 is that plot 3 provides a continuous range of p-values while the 4th plot categorically indicates the presence or absence of significant clustering.
+
+---
+
+<br>
+
+#### Now, having performed exploratory data analysis with Local Moran's I values, I will add 2 more features: 
+
+---
+
+<br>
+
+#### Variable: **Grid cell locations with Moran's I p-values that are extremely statistically significant at p ≤ 0.0000001**
+
+<br>
+
+#### Variable: **Distance from each grid cell location to the nearest extremely statistically significant grid cell location** 
+
+<br>
+
+```{r Hyper-Statistically Significant Clusters, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# Extremely statistically significant clustering:
+
+# The following function which calculates the average distance from each and every spatial point to its nearest neighbor can be found on https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/functions.r as nn_function:
+
+library(FNN)
+library(tibble)
+library(tidyr)
+
+dist_2_nearest_neighbor <- function(measureFrom, measureTo, k) {
+  measureFrom_Matrix <-
+    as.matrix(measureFrom)
+  measureTo_Matrix <-
+    as.matrix(measureTo)
+  nn <-   
+    get.knnx(measureTo, measureFrom, k)$nn.dist
+  output <-
+    as.data.frame(nn) %>%
+    rownames_to_column(var = "thisPoint") %>%
+    gather(points, point_distance, V1:ncol(.)) %>%
+    arrange(as.numeric(thisPoint)) %>%
+    group_by(thisPoint) %>%
+    summarize(pointDistance = mean(point_distance)) %>%
+    arrange(as.numeric(thisPoint)) %>% 
+    dplyr::select(-thisPoint) %>%
+    pull()
+  
+  return(output)  
+}
+
+# Calculate whether each observation is highly statistically significant (1) or not (0)
+final_net.sf.attacks_train <- final_net.sf.attacks_train %>% 
+  mutate(attacks.HiSig = ifelse(localmoran(countAttacks, final_net.attacks_train.weights)[,5] <= 0.0000001, 1, 0))
+
+# Calculate distances from each grid cell to the nearest highly statistically significant grid cell
+final_net.sf.attacks_train <- final_net.sf.attacks_train %>%
+  mutate(attacks.HiSig.dist = dist_2_nearest_neighbor(
+    st_coordinates(st_centroid(final_net.sf.attacks_train)),
+    st_coordinates(st_centroid(filter(final_net.sf.attacks_train, attacks.HiSig == 1))),
+    1
+  ))
+
+# Calculate whether each observation is highly statistically significant (1) or not (0)
+final_net.sf.attacks_test <- final_net.sf.attacks_test %>% 
+  mutate(attacks.HiSig = ifelse(localmoran(countAttacks, final_net.attacks_test.weights)[,5] <= 0.0000001, 1, 0))
+
+# Calculate distances from each grid cell to the nearest highly statistically significant grid cell
+final_net.sf.attacks_test <- final_net.sf.attacks_test %>%
+  mutate(attacks.HiSig.dist = dist_2_nearest_neighbor(
+    st_coordinates(st_centroid(final_net.sf.attacks_test)),
+    st_coordinates(st_centroid(filter(final_net.sf.attacks_test, attacks.HiSig == 1))),
+    1
+  ))
+
+# Calculate whether each observation is highly statistically significant (1) or not (0)
+final_net.sf.fatalities_train <- final_net.sf.fatalities_train %>% 
+  mutate(fatalities.HiSig = ifelse(localmoran(fatalities, final_net.fatalities_train.weights)[,5] <= 0.0000001, 1, 0))
+
+# Calculate distances from each grid cell to the nearest highly statistically significant grid cell
+final_net.sf.fatalities_train <- final_net.sf.fatalities_train %>%
+  mutate(fatalities.HiSig.dist = dist_2_nearest_neighbor(
+    st_coordinates(st_centroid(final_net.sf.fatalities_train)),
+    st_coordinates(st_centroid(filter(final_net.sf.fatalities_train, fatalities.HiSig == 1))),
+    1
+  ))
+
+# Calculate whether each observation is highly statistically significant (1) or not (0)
+final_net.sf.fatalities_test <- final_net.sf.fatalities_test %>% 
+  mutate(fatalities.HiSig = ifelse(localmoran(fatalities, final_net.fatalities_test.weights)[,5] <= 0.0000001, 1, 0))
+
+# Calculate distances from each grid cell to the nearest highly statistically significant grid cell
+final_net.sf.fatalities_test <- final_net.sf.fatalities_test %>%
+  mutate(fatalities.HiSig.dist = dist_2_nearest_neighbor(
+    st_coordinates(st_centroid(final_net.sf.fatalities_test)),
+    st_coordinates(st_centroid(filter(final_net.sf.fatalities_test, fatalities.HiSig == 1))),
+    1
+  ))
+
+# Save objects
+# saveRDS(final_net.sf.attacks_train, file = "final_net.sf.attacks_train-after_adding_HiSig_and_HiSig.dist.rds", compress = TRUE)
+# saveRDS(final_net.sf.attacks_test, file = "final_net.sf.attacks_test-after_adding_HiSig_and_HiSig.dist.rds", compress = TRUE)
+
+```
+
+<br>
+
+#### The next map shows the distance from each grid cell to its nearest neighboring grid cell found to contain a extremely statistically significant spatial cluster of attacks against civilians. These extremely significant Local Moran's I grid cells may be especially vulnerable to attacks.
+
+<br>
+
+```{r Map - Distances to Nearest Very Significant Local Morans I Gird Cell, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+ggplot() +
+  geom_sf(data = final_net.sf.attacks_train, aes(fill = attacks.HiSig.dist / 1000), show.legend=TRUE) +
+  # geom_sf(data=main_streets, colour="white", size=1) +
+  geom_sf(data = filter(final_net.sf.attacks_train, attacks.HiSig == 1) %>% st_centroid(), colour = "black") +
+  scale_fill_viridis_c(name = "Distance (km)", option = "H", direction = -1) +
+  geom_sf(data = e_drc_adm2_map, fill = NA, color = "white", size = 0.1) +
+  geom_sf(data = e_drc_adm1_map, fill = NA, color = "grey", linewidth = 1) +
+  labs(title = "Distance to Extremely Statistically Significant Attack Clusters", 
+       subtitle = "Black Points: Attack Clusters Where p <= 0.0000001") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold")
+  ) +
+  coord_sf()
+
+
+```
+
+<br>
+
+```{r Map - Distances to Nearest Very Significant Local Morans I Gird Cell - Plot, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=TRUE, echo=FALSE, out.width="100%", fig.align='center'}
+
+# Note: Uncomment out the following code to generate the image below
+
+# library(dplyr)
+# library(ggplot2)
+# 
+# fishnet <- readRDS("fishnet.rds")
+# 
+# e_drc_adm1_map <- readRDS("e_drc_adm1_map.rds")
+# e_drc_adm2_map <- readRDS("e_drc_adm2_map.rds")
+# 
+# final_net.sf.attacks_train <- readRDS(file = "final_net.sf.attacks_train-after_adding_HiSig_and_HiSig.dist.rds")
+# 
+# g_plot_9 <- ggplot() +
+#   geom_sf(data = final_net.sf.attacks_train, aes(fill = attacks.HiSig.dist / 1000), show.legend=TRUE) +
+#   # geom_sf(data=main_streets, colour="white", size=1) +
+#   geom_sf(data = filter(final_net.sf.attacks_train, attacks.HiSig == 1) %>% sf::st_centroid(), colour = "black") +
+#   scale_fill_viridis_c(name = "Distance (km)", option = "H", direction = -1) +
+#   geom_sf(data = e_drc_adm2_map, fill = NA, color = "white", size = 0.1) +
+#   geom_sf(data = e_drc_adm1_map, fill = NA, color = "grey", linewidth = 1) +
+#   labs(title = "Distance to Extremely Statistically Significant Attack Clusters", 
+#        subtitle = "Black Points: Attack Clusters Where p <= 0.0000001") +
+#   theme_minimal() +
+#   theme(
+#     plot.title = element_text(face = "bold")
+#   ) +
+#   coord_sf()
+# 
+# # Save the plot
+# ggsave("Distances to Extremely Significant Attack Clusters.png", plot = g_plot_9, width = 10.5, height = 10.5, units = "in")
+
+knitr::include_graphics("Distances to Extremely Significant Attack Clusters.png")
+
+```
+
+
+<br>
+
+```{r echo=FALSE}
+
+# Get the current page number from the file name
+current_page <- as.numeric(str_extract(knitr::current_input(), "\\d+"))
+
+# Set the total number of pages
+total_pages <- 5
+
+# Generate the URLs for the previous and next pages
+previous_page <- ifelse(current_page > 1, paste0("part_", current_page - 1, "-spatial_ML-east_drc-attacks_on_civilians.html"), NA)
+next_page <- ifelse(current_page < total_pages, paste0("part_", current_page + 1, "-spatial_ML-east_drc-attacks_on_civilians.html"), NA)
+
+```
+
+<ul class="pager">
+  <li><a href="`r previous_page`" style="color: crimson;">Previous Page</a></li>
+  <li><a href="`r next_page`" style="color: crimson;">Next Page</a></li>
+</ul>
