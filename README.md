@@ -6,6 +6,7 @@
 - BA in Political Science (Concentration: International Affairs), Northwestern University
 
 ### Work Experience
+- Founder, CEO, and Lead Geospatial Machine Learning Engineer @ Crisis Forecast - Las Vegas, NV - 2023 - Present
 - Data Scientist Intern @ Volkswagen Group of America (VGoA) - Belmont, CA - 2022-2023
 - SIPA Capstone Project Consultant @ International Peace Institute (IPI) - New York, NY - 2020
 - Protection of Civilians (PoC) Team Intern, Division of Policy, Evaluation, and Training @ United Nations Department of Peace Operations (UN DPO) - New York, NY - 2019
