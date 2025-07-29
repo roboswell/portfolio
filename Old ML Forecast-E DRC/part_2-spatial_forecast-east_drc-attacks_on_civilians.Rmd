@@ -1,0 +1,1119 @@
+---
+title: "Predicting Attacks on Civilians in the Eastern Democratic Republic of Congo: Maps"
+author: "Rob Boswell"
+date: "10-15-2024"
+output:
+  html_document:
+    css: header_styles.css
+---
+
+```{r echo=FALSE}
+
+library(stringr)
+
+# Get the current page number from the file name
+current_page <- as.numeric(str_extract(knitr::current_input(), "\\d+"))
+
+# Set the total number of pages
+total_pages <- 5
+
+# Generate the URLs for the previous and next pages
+previous_page <- ifelse(current_page > 1, paste0("part_", current_page - 1, "-spatial_forecast-east_drc-attacks_on_civilians.html"), NA)
+next_page <- ifelse(current_page < total_pages, paste0("part_", current_page + 1, "-spatial_forecast-east_drc-attacks_on_civilians.html"), NA)
+
+```
+
+<ul class="pager">
+  <li><a href="`r previous_page`" style="color: crimson;">Previous Page</a></li>
+  <li><a href="`r next_page`" style="color: crimson;">Next Page</a></li>
+</ul>
+
+<br>
+
+### **Kernel Density Estimation (KDE) as a Traditional Forecasting Tool:**
+
+<br>
+
+#### This portfolio project will create a standard kernel density estimation (KDE) map to illustrate a typical approach to creating maps that attempt to capture future risks of violence against civilians in the Eastern DRC. I will then proceed with a better approach of creating machine learning models to predict such risks.
+
+<br>
+
+#### A KDE map, also known as a heat map, is a traditional approach for predicting risk. It utilizes kernel density estimation to visualize the concentration of certain events geographically. This method employs a kernel, a mathematical function, to assign weights to surrounding points, peaking at the data point and diminishing with distance. KDE calculates the density estimate for each point in the area by summing the kernel values for every data point considering its distance from the point of interest. The study area is segmented into a grid, with density estimations for each grid cell determined by aggregating the kernel contributions from data points, adjusted for proximity to the cell’s center. Importantly, *heat maps rely on past locations of events* to assume future events are likely to occur in the same locations. They do not rely on explanatory variables to make predictions about the future.
+
+<br>
+
+#### First, to prepare for both the KDE heat map and to prepare my shapefile polygon map to be used by my machine learning models, I will create a fishnet to divide the map of the Eastern DRC into equally sized grid cells having an area of 10 square miles. These grid cells will later be used to quantify the number of risk factors (i.e., features) existing in each cell, as well as to forecast how many attacks on civilians will likely occur in each grid cell during the test set time period. Creating the fishnet led to 8,409 unique grid cell locations. Each of these locations is distinguished by a unique row/observation ID in a column I name "uniqueID".
+
+<br>
+
+#### I will now proceeed to create several maps prior to creating KDE heat maps for the training set and test set periods.
+
+<br>
+
+#### The first map shows the fishnet map while displaying the locations of the 3 Eastern DRC provinces (which are second order administrative districts) under consideration - Ituri, North-Kivu, and South-Kivu.
+
+
+```{r East DRC Provinces with Fishnet, message = FALSE, warning= FALSE, cache=TRUE, cache.lazy=FALSE, fig.height=9, fig.width=9, eval=FALSE, echo=TRUE}
+
+setwd("C:/Users/rsb84/Desktop/RB/ds_projects/GIS/DRC/")
+
+options(scipen=9999)
+library(tidyverse)
+library(sf)
+library(spatstat)
+library(viridis)
+library(FNN)
+library(spdep)
+library(gridExtra)
+library(raster)
+library(rgdal)
+library(rasterVis)
+library(rhdf5)
+library(tidyr)
+library(raster)
+library(ggplot2)
+library(sf)
+library(viridis)
+library(dplyr)
+library(exactextractr)
+library(rgeos)
+
+source("https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/functions.r")
+
+# To install the rhdf5 library, use the following code:
+
+# if (!requireNamespace("BiocManager", quietly = TRUE))
+#     install.packages("BiocManager")
+# 
+#     BiocManager::install("rhdf5")
+
+# The following custom map theme function is modified from the original, which comes from the following site: https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/functions.r
+
+mapTheme <- function(base_size = 12, title_size = 16) {
+  theme(
+    text = element_text( color = "black"),
+    plot.title = element_text(size = title_size,colour = "black"),
+    plot.subtitle=element_text(face="italic"),
+    plot.caption=element_text(hjust=0),
+    axis.ticks = element_blank(),
+    panel.background = element_blank(),axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(colour = "black", fill=NA, linewidth = 2),
+    strip.text.x = element_text(size = 14))
+}
+
+# Load the map shapefile
+e_drc_adm3_map <- sf::st_read("COD_adm/east_drc_adm3_most_violent_provinces.shp")
+
+e_drc_adm3_map <- sf::st_set_crs(e_drc_adm3_map, 4326)
+
+# Create a second order administrative map from the above third order administrative map
+
+e_drc_adm2_map <- e_drc_adm3_map %>%
+  group_by(NAME_2) %>%
+  summarise(geometry = st_union(geometry)) %>%
+  ungroup() 
+
+# Replace "Nord-Kivu" with "North-Kivu" and "Sud-Kivu" with "South-Kivu", their English equivalents
+e_drc_adm2_map <- e_drc_adm2_map %>%
+  mutate(NAME_2 = case_when(
+    NAME_2 == "Nord-Kivu" ~ "North-Kivu",
+    NAME_2 == "Sud-Kivu" ~ "South-Kivu",
+    TRUE ~ NAME_2
+  ))
+
+# This is a custom projected CRS that works well for this area of the DRC:
+projected_crs <- "+proj=tmerc +lat_0=-0.6888125 +lon_0=29.0698245 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
+
+e_drc_adm2_map <- st_transform(e_drc_adm2_map, crs = projected_crs)
+# saveRDS(e_drc_adm2_map, "e_drc_adm2_map.rds")
+
+e_drc_adm3_map <- st_transform(e_drc_adm3_map, crs = projected_crs)
+# saveRDS(e_drc_adm3_map, "e_drc_adm3_map.rds")
+
+# Get the bounding box of e_drc_adm3_map
+map_bbox <- st_bbox(e_drc_adm3_map)
+
+# Create a bbox object for st_make_grid
+bbox_obj <- st_as_sfc(map_bbox)
+
+# Note: Below, I create a fishnet, which consists of grid cells placed on the map of the Eastern DRC
+
+# Use this bbox to create a fishnet grid that matches the bbox exactly
+fishnet <- st_make_grid(bbox_obj, 
+                        cellsize = sqrt(10)*1609.34) %>% # This is the equivalent of 10 mi.
+  st_sf() %>%
+  st_transform(crs = st_crs(e_drc_adm3_map)) %>%
+  st_intersection(e_drc_adm3_map)
+
+# After intersection, assign unique IDs based on row numbers to guarantee uniqueness
+fishnet <- fishnet %>%
+  mutate(uniqueID = 1:nrow(fishnet))
+
+fishnet$uniqueID <- as.numeric(as.factor(fishnet$uniqueID)) # Ensure uniqueID is interpreted as numeric
+
+# Because a given third order administrative district (from the NAME_3 column in e_drc_adm3_map) that has been assigned to each fishnet grid cell may not necessarily be the third order administrative district that makes up the majority of the area of each grid cell, the following code ensures that it is:
+
+# Step 1: Spatial intersection to identify overlapping areas
+# fishnet_intersection <- st_intersection(fishnet, e_drc_adm3_map)
+
+fishnet_intersection <- st_intersection(fishnet, e_drc_adm3_map[, c("geometry")])
+print(sum(duplicated(fishnet_intersection$uniqueID))) # 1423 grid cells have duplicate uniqueID values
+
+# Step 2: Calculate the intersection's area
+fishnet_intersection <- mutate(fishnet_intersection, intersection_area = st_area(geometry))
+
+# Step 3:
+fishnet_intersection <- fishnet_intersection %>%
+  group_by(uniqueID) %>%
+  summarize(max_area = max(intersection_area), .groups = "drop") %>%
+  left_join(as.data.frame(st_drop_geometry(fishnet_intersection)), ., by = "uniqueID") %>%
+  filter(intersection_area == max_area) %>% # Ensures focus is on rows where the intersection area is equal to the calculated maximum area for each uniqueID. This is crucial to ensure we are working with the part of the intersection that represents the largest overlap for each uniqueID.
+  distinct(uniqueID, .keep_all = TRUE) # This is not redundant as it is a safeguard against any anomalies where we may end up with multiple rows for the same uniqueID having the same maximum area.
+
+
+# Step 4: Add the NAME_3 column to fishnet by getting the `NAME_3` associated with the generated 'uniqueID'
+
+fishnet <- dplyr::select(fishnet, -NAME_3)
+fishnet <- left_join(fishnet, fishnet_intersection[, c("uniqueID", "NAME_3")], by = "uniqueID") %>%
+  st_as_sf()
+
+# saveRDS(fishnet, "fishnet.rds")
+# fishnet <- readRDS("fishnet.rds")
+
+ggplot() + 
+  geom_sf(data=fishnet) + 
+  geom_sf(data=e_drc_adm3_map, fill=NA, color = "white", linewidth = 0.3) +
+  geom_sf(data = e_drc_adm2_map, fill = NA, color = "black", linewidth = 0.8) +
+  geom_sf_label(data = e_drc_adm2_map, aes(label = NAME_2), color = "#DC143C", size = 6, nudge_x = 0.1, nudge_y = 0.1) +
+  labs(title="Eastern DRC Provinces & Fishnet") +
+  mapTheme() +
+  theme(plot.title = element_text(face = "bold"))
+
+
+```
+
+<br>
+
+```{r East DRC Provinces with Fishnet - Plot, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=TRUE, echo=FALSE, out.width="100%", fig.align='center'}
+
+setwd("C:/Users/rsb84/Desktop/RB/ds_projects/GIS/DRC/")
+
+# The following custom map theme function is modified from the original, which comes from the following site: https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/functions.r
+
+# Note: Uncomment out the following code to generate the image below
+
+# mapTheme <- function(base_size = 12, title_size = 16) {
+#   theme(
+#     text = element_text( color = "black"),
+#     plot.title = element_text(size = title_size,colour = "black"),
+#     plot.subtitle=element_text(face="italic"),
+#     plot.caption=element_text(hjust=0),
+#     axis.ticks = element_blank(),
+#     panel.background = element_blank(),axis.title = element_blank(),
+#     axis.text = element_blank(),
+#     axis.title.x = element_blank(),
+#     axis.title.y = element_blank(),
+#     panel.grid.minor = element_blank(),
+#     panel.border = element_rect(colour = "black", fill=NA, linewidth = 2),
+#     strip.text.x = element_text(size = 14))
+# }
+# 
+# 
+# library(ggplot2)
+# 
+# fishnet <- readRDS("fishnet.rds")
+# 
+# e_drc_adm2_map <- readRDS("e_drc_adm2_map.rds")
+# e_drc_adm3_map <- readRDS("e_drc_adm3_map.rds")
+# 
+# g_plot_1 <- ggplot() +
+#   geom_sf(data=fishnet) +
+#   geom_sf(data=e_drc_adm3_map, fill=NA, color = "white", linewidth = 0.3) +
+#   geom_sf(data = e_drc_adm2_map, fill = NA, color = "black", linewidth = 0.8) +
+#   geom_sf_label(data = e_drc_adm2_map, aes(label = NAME_2), color = "#DC143C", size = 6, nudge_x = 0.1, nudge_y = 0.1) +
+#   labs(title="Eastern DRC Provinces & Fishnet") +
+#   mapTheme() +
+#   theme(plot.title = element_text(face = "bold"))
+# 
+# # Save the plot
+# ggsave("East DRC Provinces with Fishnet.png", plot = g_plot_1, width = 10.5, height = 10.5, units = "in")
+
+knitr::include_graphics("East DRC Provinces with Fishnet.png")
+
+```
+
+<br>
+
+#### The second map shows the locations of the 20 territories (which are third order administrative districts) existing within these 3 Eastern DRC provinces.
+
+<br>
+
+```{r East DRC Territories with Fishnet, cache=TRUE, cache.lazy=FALSE, fig.height=9.5, fig.width=9.5, eval=FALSE, echo=TRUE}
+
+library(ggrepel)
+
+e_drc_adm3_map_centroids <- st_centroid(e_drc_adm3_map)
+# saveRDS(e_drc_adm3_map_centroids, "e_drc_adm3_map_centroids.rds")
+
+
+# Plotting the map with label repelling
+ggplot() + 
+  geom_sf(data = fishnet) + 
+  geom_sf(data = e_drc_adm3_map, fill = NA, color = "white", linewidth = 0.3) +
+  geom_sf(data = e_drc_adm2_map, fill = NA, color = "black", linewidth = 0.8) +
+  geom_text_repel(data = e_drc_adm3_map_centroids, 
+                  aes(label = NAME_3, geometry = geometry), 
+                  stat = "sf_coordinates", 
+                  color = "#DC143C", # Set label color here
+                  size = 6,
+                  fontface = "bold") +
+  labs(title = "Eastern DRC Territories & Fishnet") +
+  mapTheme() +
+  theme(plot.title = element_text(face = "bold"))
+
+```
+
+<br>
+
+```{r East DRC Territories with Fishnet - Plot, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=TRUE, echo=FALSE, out.width="100%", fig.align='center'}
+
+# Note: Uncomment out the following code to generate the image below
+
+# library(ggplot2)
+# library(ggrepel)
+# 
+# fishnet <- readRDS("fishnet.rds")
+# 
+# e_drc_adm2_map <- readRDS("e_drc_adm2_map.rds")
+# e_drc_adm3_map <- readRDS("e_drc_adm3_map.rds")
+# 
+# e_drc_adm3_map_centroids <- readRDS("e_drc_adm3_map_centroids.rds")
+# 
+# # Plotting the map with label repelling
+# g_plot_2 <- ggplot() +
+#   geom_sf(data = fishnet) +
+#   geom_sf(data = e_drc_adm3_map, fill = NA, color = "white", linewidth = 0.3) +
+#   geom_sf(data = e_drc_adm2_map, fill = NA, color = "black", linewidth = 0.8) +
+#   geom_text_repel(data = e_drc_adm3_map_centroids,
+#                   aes(label = NAME_3, geometry = geometry),
+#                   stat = "sf_coordinates",
+#                   color = "#DC143C", # Set label color here
+#                   size = 6,
+#                   fontface = "bold") +
+#   labs(title = "Eastern DRC Territories & Fishnet") +
+#   mapTheme() +
+#   theme(plot.title = element_text(face = "bold"))
+# 
+# # Save the plot
+# ggsave("East DRC Territories with Fishnet.png", plot = g_plot_2, width = 10.5, height = 10.5, units = "in")
+
+knitr::include_graphics("East DRC Territories with Fishnet.png")
+
+```
+
+<br>
+
+#### The third map shows the fishnet with the locations where attacks on civilians occurred during the time period encompassing both the training set and test set in the Eastern DRC. It is clear that the vast majority of attacks during the training set and test set periods occurred along the eastern side of the East DRC.
+
+<br>
+
+```{r Map of Attacks on Civilians (2018-2023), cache=TRUE, cache.lazy=FALSE, fig.height=9.5, fig.width=9.5, eval=FALSE, echo=TRUE}
+
+acled_all <- readxl::read_excel("2018-01-19-2023-12-31-DRC-ACLED.xlsx",
+     col_types = c("text", "date", "text",
+         "text", "text", "text", "text", "text",
+         "text", "text", "text", "text", "text",
+         "text", "text", "text", "text", "text",
+         "text", "text", "text", "text", "numeric",
+         "numeric", "text", "text", "text", "text",
+         "numeric", "text", "text"))
+
+saveRDS(acled_all, "acled_all.rds")
+
+# A new column "civilian_attacks" will be created and coded as 1 when:
+# The "event_type" column has the value "Violence against civilians".
+# Otherwise, it will be coded as 0.
+
+acled <- acled_all %>%
+  mutate(civilian_attacks = ifelse(event_type == "Violence against civilians", 1, 0))
+
+saveRDS(acled, "acled.rds")
+
+# Note: According to ACLED, "[T]he data cannot generally be used to estimate the number of deaths caused or suffered by one actor or another in a conflict, as a single event may contain information on fatalities caused or suffered by both parties in a battle. 
+
+# The exception to this is events targeting civilians and protesters, who are by definition not engaging in violence themselves. Therefore, the number of fatalities reported for each event involving civilians or protesters as ‘Actor 2’ can be understood as the number of civilians or protesters killed.
+ 
+# As such, aggregate estimates of “civilian fatalities” in ACLED’s curated data do not include civilians that may have died as ‘collateral damage’ during fighting between armed groups or as a result of the remote targeting of armed groups..." (https://acleddata.com/knowledge-base/faqs-acled-fatality-methodology/). 
+
+# This is important to note. Since I filter only for observations where event_type = "Violence against civilians", and since this event_type only includes civilians in the actor2 column, predictor variables that I will later create from the ACLED dataset which may impact the likelihood of collateral damage occurring are not likely to include ACLED's civilian fatality data in them. We do not want to be predicting the likelihood of civilian fatalities occuring in a given area with predictor variables that in part record those same civilian fatalities. 
+
+attacks <- acled %>%
+    filter(civilian_attacks == 1) %>%
+    mutate(long = longitude, lat = latitude) %>%
+    st_as_sf(coords = c("longitude", "latitude")) %>%
+    st_set_crs(4326) %>%
+    st_transform(st_crs(e_drc_adm3_map)) %>%
+    dplyr::select(event_date, sub_event_type, fatalities, actor1, assoc_actor_1, actor2, assoc_actor_2, long, lat) %>%
+    st_intersection(e_drc_adm3_map[, c("geometry")])
+
+# saveRDS(attacks, "acled_attacks.rds")
+
+ggplot() + 
+  geom_sf(data=fishnet) + 
+  geom_sf(data=e_drc_adm3_map, fill=NA, color = "white", linewidth = 0.3) +
+  geom_sf(data = e_drc_adm2_map, fill = NA, color = "black", linewidth = 0.8) +
+  geom_sf(data=attacks, color = "#DC143C") +
+  labs(title="Attacks on Civilians, 2018-2023",
+       subtitle="Training & Test Set Periods") +
+  mapTheme() +
+  theme(plot.title = element_text(face = "bold"))
+
+```
+
+<br>
+
+```{r Map of Attacks on Civilians (2018-2023) - Plot, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=TRUE, echo=FALSE, out.width="100%", fig.align='center'}
+
+# Note: Uncomment out the following code to generate the image below
+
+# attacks <- readRDS("acled_attacks.rds")
+# 
+# g_plot_3 <- ggplot() + 
+#   geom_sf(data=fishnet) + 
+#   geom_sf(data=e_drc_adm3_map, fill=NA, color = "white", linewidth = 0.3) +
+#   geom_sf(data = e_drc_adm2_map, fill = NA, color = "black", linewidth = 0.8) +
+#   geom_sf(data=attacks, color = "#DC143C") +
+#   labs(title="Attacks on Civilians, 2018-2023",
+#        subtitle="Training & Test Set Periods") +
+#   mapTheme() +
+#   theme(plot.title = element_text(face = "bold"))
+# 
+# ggsave("Attacks on Civilians, 2018-2023.png", plot = g_plot_3, width = 10.5, height = 10.5, units = "in")
+
+knitr::include_graphics("Attacks on Civilians, 2018-2023.png")
+
+```
+
+<br>
+
+#### **Grid Cell-Level Attack Count Maps:**
+
+#### The fourth map is a fishnet map with actual attack counts within each grid cell location for only the training set period. Those grid cell locations containing no attacks against civilians are colored grey. As you can see from both the map and from the summary statistics in the output, the vast majority (7,366 or 87.6%) of grid cell locations have zero attacks. The summary shows that among those locations experiencing at least 1 attack, the mean is around 5 attacks and the median is 2. The maximum number of attacks in a grid cell location is 183.
+
+<br>
+
+```{r Grid Cell Map of Attacks - Training Set, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+vac_train <- filter(attacks, event_date < as.Date("2023-07-01"))
+vac_test <- filter(attacks, event_date >= as.Date("2023-07-01"))
+
+attacks_in_net_train <- 
+  dplyr::select(vac_train) %>% 
+  mutate(countAttacks = 1) %>% 
+  aggregate(., fishnet, sum) %>%
+  mutate(countAttacks = replace_na(countAttacks, 0),
+         uniqueID = 1:nrow(.)
+         )
+
+saveRDS(attacks_in_net_train, "attacks_in_net_train.rds")
+
+# Replace points where countAttacks equals 0 with NA. This will result in all cells where no attacks occurred being colored with grey rather than the default color of dark blue, which is similar in color to the lower range of countAttack values. In this way, we can make even those cells in which relatively low numbers of attacks occurred be visible if we want to use the "H" scale_fill_viridis_c coloring scheme option.
+
+attacks_in_net_train_plotting <- attacks_in_net_train %>%
+  mutate(countAttacks = replace(countAttacks, countAttacks == 0, NA))
+
+# saveRDS(attacks_in_net_train_plotting, "attacks_in_net_train_plotting.rds")
+
+summary(attacks_in_net_train_plotting$countAttacks)
+
+# > summary(attacks_in_net_train_plotting$countAttacks)
+#    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
+#    1.00    1.00    2.00    5.06    5.00  183.00    7366
+
+nrow(attacks_in_net_train_plotting)
+
+# > nrow(attacks_in_net_train_plotting)
+# [1] 8409
+
+7366/8409
+
+# > 7366/8409
+# [1] 0.8759662
+
+# Now use geom_sf() in ggplot2 to plot the filtered points
+ggplot(data = attacks_in_net_train_plotting) +
+  geom_sf(aes(fill = countAttacks)) +
+  scale_fill_viridis_c(name = "Attacks Count", option = "H") +  # Color scale for countAttacks
+  geom_sf(data = e_drc_adm3_map, fill = NA, color = "white", size = 0.1) +
+  geom_sf(data = e_drc_adm2_map, fill = NA, color = "gold", linewidth = 1) +
+  labs(title = "Total Attacks on Civilians in Each 10 Square Mile Grid Cell", subtitle = "Training Set: 19 Jan. 2018 to 31 Jun. 2023") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold")
+  ) +
+  coord_sf()
+
+```
+
+<br>
+
+```{r Grid Cell Map of Attacks - Training Set - Plot, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=TRUE, echo=FALSE, out.width="100%", fig.align='center'}
+
+# Note: Uncomment out the following code to generate the image below
+
+# attacks_in_net_train_plotting <- readRDS("attacks_in_net_train_plotting.rds")
+# 
+# 
+# # Plot
+# g_plot_6 <- ggplot(data = attacks_in_net_train_plotting) +
+#   geom_sf(aes(fill = countAttacks)) +
+#   scale_fill_viridis_c(name = "Attacks Count", option = "H") +  # Color scale for countAttacks
+#   geom_sf(data = e_drc_adm3_map, fill = NA, color = "white", size = 0.1) +
+#   geom_sf(data = e_drc_adm2_map, fill = NA, color = "gold", linewidth = 1) +
+#   labs(title = "Total Attacks on Civilians in Each 10 Square Mile Grid Cell", subtitle = "Training Set: 19 Jan. 2018 to 31 Jun. 2023") +
+#   theme_minimal() +
+#   theme(
+#     plot.title = element_text(face = "bold")
+#   ) +
+#   coord_sf()
+# 
+# ggsave("Total Attacks on Civilians in Each 10 Square Mile Grid Cell - Training Set.png", plot = g_plot_6, width = 10.5, height = 10.5, units = "in")
+
+knitr::include_graphics("Total Attacks on Civilians in Each 10 Square Mile Grid Cell - Training Set.png")
+
+```
+
+<br>
+
+#### Similarly, the fifth map is a fishnet grid cell-level map of attack counts during the test set period. In this case, the map and the summary statistics in the output show the test set has even more grid cells with zero attacks (8,273 or 98.4%). Among those grid cells experiencing at least 1 attack, the mean is nearly 2 and the median is 1. In the test set, the highest number of attacks in any of the grid cells is 13.
+
+<br>
+
+```{r Grid Cell Map of Attacks - Test Set, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+attacks_in_net_test <- 
+  dplyr::select(vac_test) %>% 
+  mutate(countAttacks = 1) %>% 
+  aggregate(., fishnet, sum) %>%
+  mutate(countAttacks = replace_na(countAttacks, 0),
+         uniqueID = 1:nrow(.)
+         )
+
+saveRDS(attacks_in_net_test, "attacks_in_net_test.rds")
+
+attacks_in_net_test_plotting <- attacks_in_net_test %>%
+  mutate(countAttacks = replace(countAttacks, countAttacks == 0, NA))
+
+# saveRDS(attacks_in_net_test_plotting, "attacks_in_net_test_plotting.rds")
+
+summary(attacks_in_net_test_plotting$countAttacks)
+
+# > summary(attacks_in_net_test_plotting$countAttacks)
+#    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
+#   1.000   1.000   1.000   1.971   2.000  13.000    8273 
+
+8273/8409
+
+# > 8273/8409
+# [1] 0.9838269
+
+# Now use geom_sf() in ggplot2 to plot the filtered points
+ggplot(data = attacks_in_net_test_plotting) +
+  geom_sf(aes(fill = countAttacks)) +
+  scale_fill_viridis_c(name = "Attacks Count", option = "H") +  # Color scale for countAttacks
+  geom_sf(data = e_drc_adm3_map, fill = NA, color = "white", size = 0.1) +
+  geom_sf(data = e_drc_adm2_map, fill = NA, color = "gold", linewidth = 1) +
+  labs(title = "Total Attacks on Civilians in Each Fishnet Grid Cell", subtitle = "Test Set: 1 Jul. 2023 to 31 Dec. 2023") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold")
+  ) +
+  coord_sf()
+
+```
+
+<br>
+
+```{r Grid Cell Map of Attacks - Test Set - Plot, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=TRUE, echo=FALSE, out.width="100%", fig.align='center'}
+
+# Note: Uncomment out the following code to generate the image below
+
+# attacks_in_net_test_plotting <- readRDS("attacks_in_net_test_plotting.rds")
+# 
+# # Plot
+# g_plot_7 <- ggplot(data = attacks_in_net_test_plotting) +
+#   geom_sf(aes(fill = countAttacks)) +
+#   scale_fill_viridis_c(name = "Attacks Count", option = "H") +  # Color scale for countAttacks
+#   geom_sf(data = e_drc_adm3_map, fill = NA, color = "white", size = 0.1) +
+#   geom_sf(data = e_drc_adm2_map, fill = NA, color = "gold", linewidth = 1) +
+#   labs(title = "Total Attacks on Civilians in Each 10 Square Mile Grid Cell", subtitle = "Test Set: 1 Jul. 2023 to 31 Dec. 2023") +
+#   theme_minimal() +
+#   theme(
+#     plot.title = element_text(face = "bold")
+#   ) +
+#   coord_sf()
+# 
+# ggsave("Total Attacks on Civilians in Each 10 Square Mile Grid Cell - Test Set.png", plot = g_plot_7, width = 10.5, height = 10.5, units = "in")
+
+knitr::include_graphics("Total Attacks on Civilians in Each 10 Square Mile Grid Cell - Test Set.png")
+
+```
+
+<br>
+
+#### Next, I will calculate and then plot the actual KDE of attacks on civilians on faceted maps of the training set and test set periods. Keep in mind that an analyst seeking to use KDE to predict future locations of attacks on civilians would only have access to training set data, and would assume that the KDE for the (future) test set period would follow the same trends as the KDE from the training set period. However, we will soon see that this is not always the case.
+
+<br>
+
+#### First, I will find the names of the territories to display on the KDE maps which - either in the training set or in the test set - experienced a comparatively high total density or high average density. 
+
+<br>
+
+#### The code below finds there are 13 territories which meet my requirement of being among the top 5 territories in terms of total density in the training or test set, or among the top 5 territories in terms of average density in the training or test set. These 13 territories are: Beni, Mambasa, Irumu, Djugu, Rutshuru, Goma, Lubero, Mwenga, Kalehe, Bukavu, Walikale, Masisi, and Kabare.
+
+<br>
+
+```{r Calculate Total and Average Density Per Territory - Train and Test Set, cache=TRUE, cache.lazy=FALSE, fig.height=20.5, fig.width=20.5, eval=FALSE, echo=TRUE}
+
+# Here, I calculate and then plot the kernel density estimation (KDE) of attacks on civilians during the training set period, using the pplot2 stat_density2d() function.
+
+# Ensure vac_train is an sf object with a defined CRS and geometry column
+attacks_train_df <- as.data.frame(st_coordinates(vac_train))
+attacks_test_df <- as.data.frame(st_coordinates(vac_test))
+
+# Create the ggplot object with stat_density2d
+a_train <- ggplot(attacks_train_df, aes(x = X, y = Y)) +
+  stat_density2d(geom = "raster", aes(fill = after_stat(density)), contour = FALSE)
+a_test <- ggplot(attacks_test_df, aes(x = X, y = Y)) +
+  stat_density2d(geom = "raster", aes(fill = after_stat(density)), contour = FALSE)
+
+# Build the ggplot object
+plot_data_a_train <- ggplot_build(a_train)
+plot_data_a_test <- ggplot_build(a_test)
+
+# Extract the relevant columns
+density_values_a_train <- plot_data_a_train$data[[1]][, c("x", "y", "density")]
+density_values_a_test <- plot_data_a_test$data[[1]][, c("x", "y", "density")]
+
+# Convert the density values to a raster
+density_raster_a_train <- rasterFromXYZ(density_values_a_train, crs = st_crs(vac_train))
+density_raster_a_test <- rasterFromXYZ(density_values_a_test, crs = st_crs(vac_test))
+
+# Adjust the raster to the extent of the fishnet
+fishnet_bbox <- st_bbox(fishnet)
+extent(density_raster_a_train) <- fishnet_bbox
+extent(density_raster_a_test) <- fishnet_bbox
+
+# Rasterize the fishnet using uniqueID field
+fishnet$uniqueID <- as.numeric(as.factor(fishnet$uniqueID))
+
+
+# Use exact_extract to obtain the average density values for each fishnet polygon
+# Define a custom function for extraction that calculates the weighted mean of the kernel density values
+weighted_mean_fun <- function(values, coverage_fractions) {
+  sum(values * coverage_fractions, na.rm = TRUE) / sum(coverage_fractions, na.rm = TRUE)
+}
+
+# Extract the weighted mean density values per fishnet grid cell using the custom function
+avg_density_a_train <- exactextractr::exact_extract(density_raster_a_train, fishnet, fun = weighted_mean_fun)
+avg_density_a_test <- exactextractr::exact_extract(density_raster_a_test, fishnet, fun = weighted_mean_fun)
+
+# Create a data frame from the results comprising unique id of grid cells and the kernel mean density per cell as columns
+avg_density_df_a_train <- data.frame(uniqueID = fishnet$uniqueID, density = avg_density_a_train)
+avg_density_df_a_test <- data.frame(uniqueID = fishnet$uniqueID, density = avg_density_a_test)
+
+# Join this data frame with the fishnet sf object to get geometries
+fishnet_with_density_a_train <- left_join(fishnet, avg_density_df_a_train, by = "uniqueID")
+
+# Add a column to identify the dataset (train/test) before combining
+# fishnet_with_density_a_train$dataset_type <- "Training Set: 19 Jan. 2018 to 31 Jun. 2023"
+
+fishnet_with_density_a_train <- sf::st_transform(fishnet_with_density_a_train, projected_crs)
+
+fishnet_with_density_a_test <- left_join(fishnet, avg_density_df_a_test, by = "uniqueID")
+
+# fishnet_with_density_a_test$dataset_type <- "Test Set: 1 Jul. 2023 to 31 Dec. 2023"
+
+fishnet_with_density_a_test <- sf::st_transform(fishnet_with_density_a_test, projected_crs)
+
+fishnet_with_density_a_train$dataset_type <- as.factor("Training Set: 19 Jan. 2018 to 31 Jun. 2023")
+fishnet_with_density_a_test$dataset_type <- as.factor("Test Set: 1 Jul. 2023 to 31 Dec. 2023")
+
+# saveRDS(fishnet_with_density_a_train, "fishnet_with_density_a_train.rds")
+# saveRDS(fishnet_with_density_a_test, "fishnet_with_density_a_test.rds")
+
+# Train Set:
+
+# Sum of density for each unique territory in NAME_3 column
+density_sum_ranked.train <- fishnet_with_density_a_train %>%
+  group_by(NAME_3) %>%
+  summarise(total_density = sum(density, na.rm = TRUE)) %>%
+  arrange(desc(total_density)) %>%
+  slice_max(order_by = total_density, n = 5) %>%
+  as.data.frame() %>%
+  dplyr::select(-geometry)
+
+# Show the ranked territories based on total density sum
+density_sum_ranked.train
+
+# > density_sum_ranked.train
+#      NAME_3     total_density
+# 1      Beni 0.000000006988108
+# 2   Mambasa 0.000000005014315
+# 3     Irumu 0.000000004553904
+# 4     Djugu 0.000000004247471
+# 5  Rutshuru 0.000000004087125
+
+# Sum of density divided by the total number of rows (uniqueID observation grid cells) in each territory
+density_avg_ranked.train <- fishnet_with_density_a_train %>%
+  group_by(NAME_3) %>%
+  summarise(
+    total_density = sum(density, na.rm = TRUE),
+    num_grid_cells = n_distinct(uniqueID),
+    avg_density_per_grid_cell = total_density / num_grid_cells
+  ) %>%
+  arrange(desc(avg_density_per_grid_cell)) %>%
+  slice_max(order_by = avg_density_per_grid_cell, n = 5) %>%
+  as.data.frame() %>%
+  dplyr::select(-geometry, -total_density, -num_grid_cells)
+
+# Show the ranked territories based on the density average per grid cell
+density_avg_ranked.train
+
+# > density_avg_ranked
+#      NAME_3 avg_density_per_grid_cell
+# 1      Goma      0.000000000018768112 *
+# 2      Beni      0.000000000018389759
+# 3  Rutshuru      0.000000000015540401
+# 4    Masisi      0.000000000015394661
+# 5     Irumu      0.000000000012476449
+
+# Test Set:
+
+# Sum of density for each unique territory in NAME_3 column
+density_sum_ranked.test <- fishnet_with_density_a_test %>%
+  group_by(NAME_3) %>%
+  summarise(total_density = sum(density, na.rm = TRUE)) %>%
+  arrange(desc(total_density)) %>%
+  slice_max(order_by = total_density, n = 5) %>%
+  as.data.frame() %>%
+  dplyr::select(-geometry)
+
+# density_sum_ranked.test
+# 
+# > density_sum_ranked.test
+#      NAME_3     total_density
+# 1   Mambasa 0.000000015260013
+# 2  Walikale 0.000000007436427
+# 3    Lubero 0.000000005431408
+# 4    Mwenga 0.000000003589891
+# 5    Masisi 0.000000003426323
+
+
+density_avg_ranked.test <- fishnet_with_density_a_test %>%
+  group_by(NAME_3) %>%
+  summarise(
+    total_density = sum(density, na.rm = TRUE),
+    num_grid_cells = n_distinct(uniqueID),
+    avg_density_per_grid_cell = total_density / num_grid_cells
+  ) %>%
+  arrange(desc(avg_density_per_grid_cell)) %>%
+  slice_max(order_by = avg_density_per_grid_cell, n = 5) %>%
+  as.data.frame() %>%
+  dplyr::select(-geometry, -total_density, -num_grid_cells)
+
+# Show the ranked territories based on the density average per grid cell
+density_avg_ranked.test
+
+# > density_avg_ranked.test
+#      NAME_3 avg_density_per_grid_cell
+# 1    Masisi      0.000000000020516903
+# 2    Kalehe      0.000000000013623453
+# 3    Bukavu      0.000000000011615974
+# 4    Kabare      0.000000000010655307
+# 5   Mambasa      0.000000000010331762
+
+# Find all unique territory names from the four datasets
+all_unique_territories <- unique(c(
+  density_sum_ranked.train$NAME_3,
+  density_avg_ranked.train$NAME_3,
+  density_sum_ranked.test$NAME_3,
+  density_avg_ranked.test$NAME_3
+))
+
+# Show the result with all unique territory names
+all_unique_territories
+
+# > all_unique_territories
+#  [1] "Beni"     "Mambasa"  "Irumu"    "Djugu"    "Rutshuru" "Goma"     "Masisi"  
+#  [8] "Walikale" "Lubero"   "Mwenga"   "Kalehe"   "Bukavu"   "Kabare"  
+
+
+```
+
+<br>
+
+#### As seen in the KDE maps below, some territories which experienced a high density of attacks on civilians in the training set period no longer experienced such a high level in the test set period, and some territories which did not experience a high density of attacks in the training set period began to experience a high level in the test set period.
+
+<br>
+
+```{r KDE Map of Attacks - Train and Test Set, cache=TRUE, cache.lazy=FALSE, fig.height=20.5, fig.width=20.5, eval=FALSE, echo=TRUE}
+
+library(cowplot)
+
+# fishnet_with_density_a_train <- readRDS("fishnet_with_density_a_train.rds")
+# fishnet_with_density_a_test <- readRDS("fishnet_with_density_a_test.rds")
+
+combined_density_maps <- rbind(fishnet_with_density_a_train, fishnet_with_density_a_test)
+
+# Determine the maximum value in my data
+max_value <- max(combined_density_maps$density, na.rm = TRUE)
+
+# Calculate centroids of the districts for label placement
+e_drc_adm3_map_centroids <- e_drc_adm3_map %>%
+  st_centroid() %>%
+  st_coordinates() %>%
+  as.data.frame() %>%
+  rename(COORDS_X = X, COORDS_Y = Y)
+
+# Add centroid coordinates to the original sf object
+e_drc_adm3_map <- e_drc_adm3_map %>%
+  mutate(
+    COORDS_X = e_drc_adm3_map_centroids$COORDS_X,
+    COORDS_Y = e_drc_adm3_map_centroids$COORDS_Y
+  )
+
+# Split the districts into two groups
+group1 <- c("Beni", "Mambasa", "Irumu", "Djugu", "Rutshuru", "Goma", "Lubero", "Mwenga", "Kalehe", "Bukavu")
+group2 <- c("Walikale", "Masisi", "Kabare")
+
+# Combine the groups into districts_to_label
+districts_to_label <- c(group1, group2)
+
+# Define x_nudge values for the two groups
+x_nudge1 <- max(e_drc_adm3_map$COORDS_X) + 0.18 * (max(e_drc_adm3_map$COORDS_X) - min(e_drc_adm3_map$COORDS_X))
+x_nudge2 <- max(e_drc_adm3_map$COORDS_X) + -0.20 * (max(e_drc_adm3_map$COORDS_X) - min(e_drc_adm3_map$COORDS_X))
+
+
+# Define nudge directions and set a constant x position for labels on the right-hand side
+# Add nudge_x and nudge_y to e_drc_adm3_map based on groups
+e_drc_adm3_map <- e_drc_adm3_map %>%
+  mutate(
+    nudge_x = case_when(
+      NAME_3 %in% group1 ~ x_nudge1 - COORDS_X,
+      NAME_3 %in% group2 ~ x_nudge2 - COORDS_X,
+      TRUE ~ 0  # Default nudge_x is 0 for other territories
+    ),
+    nudge_y = 0
+  )
+
+# Set fixed x and y limits based on the entire dataset
+x_limits <- range(e_drc_adm3_map$COORDS_X)
+y_limits <- range(e_drc_adm3_map$COORDS_Y)
+
+# districts_to_label <- all_unique_territories
+
+# Manually adjust the positions to avoid overlaps
+label_positions <- e_drc_adm3_map %>%
+  filter(NAME_3 %in% districts_to_label) %>%
+  mutate(
+    COORDS_Y = COORDS_Y + seq(-1.5, 1.5, length.out = n())
+  )
+
+# Create the "Training Set" map with labels
+train_map <- ggplot(data = combined_density_maps %>% filter(dataset_type == "Training Set: 19 Jan. 2018 to 31 Jun. 2023")) +
+  geom_sf(aes(fill = density), color = "grey", size = 0.1, show.legend = FALSE) +
+  geom_sf(data = e_drc_adm3_map, fill = NA, color = "white", size = 0.1) +
+  geom_sf(data = e_drc_adm2_map, fill = NA, color = "green", linewidth = 0.8) +
+  geom_text(
+    data = label_positions,
+    aes(
+      x = COORDS_X + nudge_x,
+      y = COORDS_Y,
+      label = NAME_3
+    ),
+    size = 10,  # Adjusts the territory label text size
+    color = "steelblue",
+    hjust = 0
+  ) +
+  geom_segment(
+    data = label_positions,
+    aes(
+      x = COORDS_X,
+      y = COORDS_Y,
+      xend = COORDS_X + nudge_x,
+      yend = COORDS_Y
+    ),
+    color = "lightblue",
+    linewidth = 1
+  ) +
+  labs(title = "Training Set: 19 Jan. 2018 to 31 Jun. 2023") +
+  scale_fill_viridis_c(name = "Density", 
+                       option = "magma",
+                       limits = c(0, max_value),
+                       ) +
+  scale_x_continuous(breaks = c(27.5, 28.5, 29.5, 30.5), labels = c("27.5°E", "28.5°E", "29.5°E", "30.5°E")) +  # Only show selected longitude labels to make more space
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 25, face = "bold", vjust = 10),  # Moves the title upward
+    plot.margin = margin(0, 100, 0, 20),    # Move map to the right
+    axis.title.x = element_blank(),  # Remove x-axis title
+    axis.title.y = element_blank(),   # Remove y-axis title
+    axis.text.x = element_text(size = 20, margin = margin(t = 60)), # size adjusts logitude text size. t=20 moves longitude text downward
+    axis.text.y = element_text(size = 20, margin = margin(r = 70))  # size adjusts latitude text size. r=30 moves latitude text leftward
+    
+  ) +
+  coord_sf(xlim = x_limits, ylim = y_limits, clip = "off")  # Set fixed limits
+
+# Create the "Test Set" map without labels
+test_map <- ggplot(data = combined_density_maps %>% filter(dataset_type == "Test Set: 1 Jul. 2023 to 31 Dec. 2023")) +
+  geom_sf(aes(fill = density), color = "grey", size = 0.1) +
+  geom_sf(data = e_drc_adm3_map, fill = NA, color = "white", size = 0.1) +
+  geom_sf(data = e_drc_adm2_map, fill = NA, color = "green", linewidth = 0.8) +
+  labs(title = "Test Set: 1 Jul. 2023 to 31 Dec. 2023") +
+  scale_fill_viridis_c(name = "Density", 
+                       option = "magma",
+                       limits = c(0, max_value),
+                       guide = guide_colorbar(barwidth = 1.5, barheight = 13)) + # Increase legend size 1.5x)
+  scale_x_continuous(breaks = c(27.5, 28.5, 29.5, 30.5), labels = c("27.5°E", "28.5°E", "29.5°E", "30.5°E")) +  # Only show selected longitude labels to make more space
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 25, face = "bold", vjust = 10),  # Moves the title upward
+    plot.margin = margin(0, 100, 0, 0),      # Move map to the right
+    axis.text.x = element_text(size = 20, margin = margin(t = 60)), # size adjusts longitude text size. t = 20 moves longitude text downward
+    # axis.text.y = element_text(margin = margin(r = 30)) # move latitude text leftward
+    axis.text.y = element_blank(),       # Remove latitude text for the right map
+    axis.ticks.y = element_blank(),       # Remove latitude ticks for the right map
+    legend.title = element_text(size = 20, face = "bold"),     # Adjust legend title font size
+    legend.text = element_text(size = 18)     # Adjust legend text size
+  ) +
+  coord_sf(xlim = x_limits, ylim = y_limits, clip = "off")  # Set fixed limits
+
+# Create an empty ggdraw plot for padding/buffer
+buffer <- ggdraw() + draw_label(" ", x = 0, y = 0, hjust = 0, vjust = 0)
+
+# Combine the maps using cowplot::plot_grid
+combined_kde_map <- plot_grid(buffer,
+                              train_map, 
+                              test_map, 
+                              ncol = 3, 
+                              align = "hv", 
+                              rel_widths = c(0.2, 1, 1), # Lowering the first value increases the size of the maps. Increasing the first value shrinks them
+                              scale = c(0.7, 1.25, 1.25) # Scales the size of the maps
+                              )
+
+# saveRDS(combined_kde_map, "combined_kde_map.rds")
+# combined_kde_map <- readRDS("combined_kde_map.rds")
+
+
+# Add main title and subtitle using ggdraw
+final_kde_plot <- ggdraw() +
+  draw_label("Density of Attacks on Civilians in Eastern DRC Map Grid Cell Locations", fontface = 'bold', x = 0.5, y = 0.97, size = 30, hjust = 0.5) +
+  draw_label(" ", x = 0.5, y = 0.93, size = 14, hjust = 0.5) +
+  draw_plot(combined_kde_map, y = 0, height = 1, width = 1)
+
+# Display the final KDE map
+plot(final_kde_plot)
+
+```
+
+<br>
+
+```{r KDE Map of Attacks - Train and Test Set - Plot, cache=TRUE, cache.lazy=FALSE, fig.height=20.5, fig.width=20.5, eval=TRUE, echo=FALSE, out.width="100%", fig.align='center'}
+
+# Note: Uncomment out the following code to generate the image below
+
+# library(cowplot)
+#
+# fishnet_with_density_a_train <- readRDS("fishnet_with_density_a_train.rds")
+# fishnet_with_density_a_test <- readRDS("fishnet_with_density_a_test.rds")
+#
+# combined_kde_map <- readRDS("combined_kde_map.rds")
+# 
+# # Add main title and subtitle using ggdraw
+# g_plot_4 <- ggdraw() +
+#   draw_label("Density of Attacks on Civilians in Eastern DRC Map Grid Cell Locations", fontface = 'bold', x = 0.5, y = 0.97, size = 30, hjust = 0.5) +
+#   draw_label(" ", x = 0.5, y = 0.93, size = 14, hjust = 0.5) +
+#   draw_plot(combined_kde_map, y = 0, height = 1, width = 1)
+# 
+# 
+# ggsave(filename = "Density of Attacks on Civilians-Train & Test Set Periods.png", 
+#        plot = g_plot_4, width = 20.5, height = 20.5, dpi = 300)
+
+knitr::include_graphics("Density of Attacks on Civilians-Train & Test Set Periods.png")
+
+```
+
+#### **Differences Between the Training and Test Periods:**
+#### - *Density Patterns:*
+
+<br>
+
+#### <u>Training Set Map:</u> The density of attacks is more concentrated in specific regions, and overall, the density values are higher in the training set than in the test set. The hotspots appear more isolated, indicating that, across a longer timeframe, attacks appear to have persisted more often in certain areas. The densest area appears in yellow and organge and lies mostly along the border between Ituri and North Kivu provinces, specifically between the territories of Beni and Irumu, and to a lesser extent Mambasa. The second most dense area (redish pink) appears to be further south, mostly in Rutshuru territory, then slightly fading in density southward into Masisi and Goma territories. Most of Djugu territory in the far northeast also has a pink hue, indicating fairly dense levels of attacks.
+
+<br>
+
+#### <u>Test Set Map:</u> What is noticeably absent are any highly intense yellow or orange dense areas in comparison to the training set. This signifies there is less intense density overall. Further, the densest areas have been shifted further west compared to the training set map. The density is also more diffused and spread out, without as much sharp contrast between high-density and low-density areas. The densest areas stretch all the way from north to south in the center of Mambasa territory in the north of the map (redish pink), and in the center of the map, stretching from north to south in eastern Walikale and most of Masisi territories (a dimmer redish pink).
+
+<br>
+
+#### - *Time Span Impact vs. Conflict Trends Impact:*
+
+#### Training Set: Covers a longer period (from 19 Jan. 2018 to 31 Jun. 2023), so the density reflects a more comprehensive view of attacks.
+
+<br>
+
+#### Test Set: Covers a shorter time frame (from 1 Jul. 2023 to 31 Dec. 2023). The smaller levels of KDE density overall may either simply be a factor of the shorter time coverage, or may signify a decline in the magnitude of attack levels. Similarly, the difference in density distribution could signify a shift in conflict dynamics away from areas in the training set most prone to violence against civilians. Alternatively, it may simply reflect a temporary shift in conflict dynamics that - if the test set were extended into the future - might ultimately look similar to locational density trends in the training set map.  
+
+<br>
+
+#### - *Likely Explanation for Differences:*
+
+#### It is almost certain that the shorter time period of the test set has a substantial impact on the levels of density, though the distribution of the density is less certain. However, it is also likely that since he test set covers less time, the density is smoothed more out, apparently covering an overall wider area of the map. 
+
+<br>
+
+#### - *Which KDE is More Reliable for Future Trends?*
+
+#### Typically, long-term trends (represented by the training set) are more reliable for forecasting future patterns, if relying on KDE to make forecasts. However, if the decrease seen in the test set represents a deescalation, recent data (from the test set) would be crucial for short-term predictions. Let's look at a bar chart of half-year periods for both the training set and test set to gain a clearer picture of conflict escalation and deescalation trends.
+
+<br>
+
+#### - *Bar Chart - Trends in Attacks by Half-Year Period (Training Set & Test Set Periods):*
+
+#### When examining the following bar chart, it is clear that the differences between the two KDE maps are likely due to both the varying time spans and a recent deescalation in attacks during the test period. Both the training set and test set KDE maps would likely be important to consider as indicators of long-term trends. However, as mentioned previously, machine learning models - which we will soon focus our attention on - typically represent a more reliable way of predicting future trends. Though the focus of this portfolio project is simply spatial machine learning, a future project should definitely implement both spatial and temporal components of attack patterns for optimal predictions.
+
+<br>
+
+#### We can see from the bar chart that between the first half of 2018 and the second half of 2020 there was an increasing trend of attacks against civilians. Attacks declined slightly in the first half of 2021, before increasing dramatically in the second half of 2021 and the first half of 2022. However, in the second half of 2022 and the first half of 2023 attacks significantly declined. By the time of the test set period - the second half of 2023 - attacks had declined to their second lowest level across the entire period of time comprising the dataset. This suggests at least a temporary period of deescalation in attacks.
+
+<br>
+
+```{r Bar Chart of Attacks, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=FALSE, echo=TRUE}
+
+# Required libraries
+library(ggplot2)
+library(dplyr)
+library(lubridate)  # For working with dates
+library(ggthemes)
+
+categorize_year_half <- function(date) {
+  year <- year(date)
+  half <- ifelse(month(date) <= 6, "1st Half", "2nd Half")
+  paste0(year, " - ", half)
+}
+
+# Prepare the training set
+train_data <- vac_train %>%
+  mutate(period = categorize_year_half(event_date),
+         dataset = "Training Set")
+
+# Prepare the test set (for 6 months, it will have only one period)
+test_data <- vac_test %>%
+  mutate(period = categorize_year_half(event_date),
+         dataset = "Test Set")
+
+# Combine both datasets
+combined_data <- bind_rows(train_data, test_data)
+# saveRDS(combined_data, "combined_data.rds")
+
+# Plot
+ggplot(combined_data, aes(x = period, fill = dataset)) +
+  geom_bar(position = "dodge", width = 0.7) +  # Adjust the bar width
+  scale_fill_manual(name = "Dataset", 
+                    values = c("Training Set" = "brown", "Test Set" = "blue"),
+                    breaks = c("Training Set", "Test Set"),   # Specify order
+                    labels = c("Training Set", "Test Set")) + # Specify legend labels
+  labs(title = "Attacks on Civilians per Half-Year",
+       x = "Half-Year Periods",
+       y = "Number of Attacks") +
+  theme_fivethirtyeight() +
+  theme(
+    # Center and style the plot title
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+    
+    # Increase the space and make vertical axis title bold
+    axis.title.y = element_text(size = 14, face = "bold", margin = margin(r = 15)),
+    
+    # Increase the space and make horizontal axis title bold
+    axis.title.x = element_text(size = 14, face = "bold", margin = margin(t = 15)),
+    
+    # Adjust axis text and rotation
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+```
+
+<br>
+
+```{r Bar Chart of Attacks - Plot, cache=TRUE, cache.lazy=FALSE, fig.height=10.5, fig.width=10.5, eval=TRUE, echo=FALSE, out.width="100%", fig.align='center'}
+
+# Note: Uncomment out the following code to generate the image below
+
+# library(ggplot2)
+# library(dplyr)
+# library(lubridate)
+# library(ggthemes)
+# 
+# combined_data <- readRDS("combined_data.rds")
+# 
+# 
+# # Plot
+# g_plot_5 <- ggplot(combined_data, aes(x = period, fill = dataset)) +
+#   geom_bar(position = "dodge", width = 0.7) +  # Adjust the bar width
+#   scale_fill_manual(name = "Dataset", 
+#                     values = c("Training Set" = "brown", "Test Set" = "blue"),
+#                     breaks = c("Training Set", "Test Set"),   # Specify order
+#                     labels = c("Training Set", "Test Set")) + # Specify legend labels
+#   labs(title = "Attacks on Civilians per Half-Year",
+#        x = "Half-Year Periods",
+#        y = "Number of Attacks") +
+#   theme_fivethirtyeight() +
+#   theme(
+#     # Center and style the plot title
+#     plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+#     
+#     # Increase the space and make vertical axis title bold
+#     axis.title.y = element_text(size = 14, face = "bold", margin = margin(r = 15)),
+#     
+#     # Increase the space and make horizontal axis title bold
+#     axis.title.x = element_text(size = 14, face = "bold", margin = margin(t = 15)),
+#     
+#     # Adjust axis text and rotation
+#     axis.text.x = element_text(angle = 45, hjust = 1)
+#   )
+# 
+# ggsave("Attacks on Civilians per Half-Year - Bar Chart.png", plot = g_plot_5, width = 10.5, height = 10.5, units = "in")
+
+knitr::include_graphics("Attacks on Civilians per Half-Year - Bar Chart.png")
+
+```
+
+<br>
+
+#### Since the test set comprises a smaller than usual number of attacks against civilians compared to most half-year periods in the training set, it is possible that the machine learning models I build may overpredict, on average, the number of attacks against civilians, since they will be learning to predict based on the training set data. However, the dynamically weighted metrics I will be using during hyperparameter tuning may help significantly reduce such overpredictions.
+
+<br>
+
+```{r echo=FALSE}
+
+# Get the current page number from the file name
+current_page <- as.numeric(str_extract(knitr::current_input(), "\\d+"))
+
+# Set the total number of pages
+total_pages <- 5
+
+# Generate the URLs for the previous and next pages
+previous_page <- ifelse(current_page > 1, paste0("part_", current_page - 1, "-spatial_forecast-east_drc-attacks_on_civilians.html"), NA)
+next_page <- ifelse(current_page < total_pages, paste0("part_", current_page + 1, "-spatial_forecast-east_drc-attacks_on_civilians.html"), NA)
+
+```
+
+<ul class="pager">
+  <li><a href="`r previous_page`" style="color: crimson;">Previous Page</a></li>
+  <li><a href="`r next_page`" style="color: crimson;">Next Page</a></li>
+</ul>
