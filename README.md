@@ -47,6 +47,11 @@
         - Contents: Text data cleaning, Latent Dirichlet Allocation (LDA) topic modeling of Nigerian news article text, VADER (Valence Aware Dictionary for Sentiment Reasoning) sentiment analysis scores for articles containing specific political words, compared across quarters of the year.
 
 ### Non-Conflict Data Science Projects
+- Statistical Analysis:
+    - **Title:** ["Analyzing Promotional Strategy Effectiveness: A Mixed Effects Approach to Observational Retail Data"](./Econometrics/mixed_effects_study_portfolio.html)
+        - Focus: Investigating the association between promotional strategies and retail sales using hierarchical modeling techniques
+        - Technology Used: Python, statsmodels (MixedLM), pandas, NumPy, SciPy, seaborn, matplotlib
+        - Contents: An observational study analyzing 548 sales observations across 137 retail locations and 10 markets. Employed linear mixed effects models with nested random effects to account for hierarchical data structure (locations within markets). Identified bimodal distribution in sales, stratified analysis by market segment, and conducted pairwise comparisons with Bonferroni correction. Found Promotion 1 fairly consistently associated with higher sales compared to alternatives across market segments.
 - Large Language Models (LLMs):
     - **Title:** ["RAG for LLMs"](./LLMs/RAG/NVIDIA_NIM_RAG_Demo/RAG_Demo.html)
         - Focus: Enhancing LLM Performance and Utility for Internal Organizational Tasks
