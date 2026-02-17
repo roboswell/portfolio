@@ -48,27 +48,32 @@
 
 ### Non-Conflict Data Science Projects
 - Statistical Analysis:
+    - **Title:** ["Causal Impact of Job Training on Earnings: A Randomized Evaluation Using ANCOVA and Simulation-Based Power Analysis"](./Econometrics/randomized_control_trial-portfolio.html)
+        - Focus: Estimating the causal effect of a job training program on post-intervention earnings using randomized experimental data, with regression adjustment, treatment heterogeneity analysis, and Monte Carlo power validation.
+        - Technology Used: Python, pandas, NumPy, SciPy, statsmodels (OLS, ANCOVA), seaborn, matplotlib, Monte Carlo simulation.
+        - Contents: A randomized controlled trial of 445 participants evaluating the impact of a job training program on 1978 earnings. Randomization was validated through baseline balance tests and standardized mean differences. Treatment effects were estimated using Welch mean comparisons, fully adjusted regression with HC3 robust standard errors, and ANCOVA controlling for baseline earnings, with interaction models assessing heterogeneity and log-income models addressing skewness. The preferred ANCOVA model estimated a statistically significant earnings increase of about $1,773 (95% CI: $443–$3,102). Analytical power was approximately 80%, confirmed via Monte Carlo simulation.
+
     - **Title:** ["Analyzing Promotional Strategy Effectiveness: A Mixed Effects Approach to Observational Retail Data"](./Econometrics/mixed_effects_study_portfolio.html)
-        - Focus: Investigating the association between promotional strategies and retail sales using hierarchical modeling techniques
-        - Technology Used: Python, statsmodels (MixedLM), pandas, NumPy, SciPy, seaborn, matplotlib
+        - Focus: Investigating the association between promotional strategies and retail sales using hierarchical modeling techniques.
+        - Technology Used: Python, statsmodels (MixedLM), pandas, NumPy, SciPy, seaborn, matplotlib.
         - Contents: An observational study analyzing 548 sales observations across 137 retail locations and 10 markets. Employed linear mixed effects models with nested random effects to account for hierarchical data structure (locations within markets). Identified bimodal distribution in sales, stratified analysis by market segment, and conducted pairwise comparisons with Bonferroni correction. Found Promotion 1 fairly consistently associated with higher sales compared to alternatives across market segments.
 - Large Language Models (LLMs):
     - **Title:** ["RAG for LLMs"](./LLMs/RAG/NVIDIA_NIM_RAG_Demo/RAG_Demo.html)
-        - Focus: Enhancing LLM Performance and Utility for Internal Organizational Tasks
-        - Technology Used: Python, NVIDIA NIM, LangChain, Streamlit, IPython.display, NVIDIA Vector Embeddings, FAISS Vector Store, Meta Llama 3.1-8B LLM
+        - Focus: Enhancing LLM Performance and Utility for Internal Organizational Tasks.
+        - Technology Used: Python, NVIDIA NIM, LangChain, Streamlit, IPython.display, NVIDIA Vector Embeddings, FAISS Vector Store, Meta Llama 3.1-8B LLM.
         - Contents: A proof-of-concept for using Retrieval Augmented Generation (RAG) with an LLM to search PDF documents on a computer, providing context for chatbot queries.
 - Web Scraping:
     - **Title:** ["Web Scraping Using BeautifulSoup"](./Web_Scraping/Web_Scraping_Using_BeautifulSoup.html)
         - Focus: Illustrating how to scrape text and tables anonymously from embedded URL links located within URLs placed in a user's predefined list.
-        - Technology Used: Python, BeautifulSoup, TOR, Regular Expression (regex), IPython.display
+        - Technology Used: Python, BeautifulSoup, TOR, Regular Expression (regex), IPython.display.
         - Contents: Web scraping using BeautifulSoup and TOR, and structuring originating URLs, scraped URLs, text and tables from scraped URLs in Pandas DataFrames for analysis. Extensive cleaning of scraped text via regex. Viewing styled Pandas DataFrames. Viewing scraped tables in html.     
 - Convolutional Neural Networks (CNNs) for Image Classification:
     - **Title:** ["Comparative Analysis of CNN Deep Learning Models for X-ray Illness Classification"](./Neural%20Network%20Models/X-Ray%20Deep%20Learning%20Classificaton%20Models.html)
-        - Focus: Deep Learning for Medical Image Classification
-        - Technology Used: Python, Keras, CNNs, Transfer Learning, ImageDataGenerator, flow_from_directory, EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
+        - Focus: Deep Learning for Medical Image Classification.
+        - Technology Used: Python, Keras, CNNs, Transfer Learning, ImageDataGenerator, flow_from_directory, EarlyStopping, ModelCheckpoint, ReduceLROnPlateau.
         - Contents: Comparing the performance of 8 CNN deep learning models on X-ray images from three classes (COVID-19, viral pneumonia, and healthy). These include transfer learning models (e.g., InceptionV3), and various techniques to improve model generalization and help avoid overfitting (e.g., dropout, batch normalization, early stopping, data augmentation, L1 and L2 regularization, fire modules, and ways of using deep networks effectively). I also demonstrate best practices for structuring filters/kernels, channels, layers, activation functions, pooling, convolutional blocks, and other model components for optimal performance. Metrics include confusion matrixes, accuracy, precision, recall, F1-score, ROC curve, and AUC. Analysis of non-augmented vs. augmented data models with specific augmentation techniques are shown. Architectures and training strategies for each model are detailed.
 - Recurrent Neural Network (RNN) Models:
     - **Title:** ["RNN Text Classification Models for Twitter COVID-19 Misinformation Detection"](./Neural%20Network%20Models/Sequential_RNN_Text_Classification_Models_for_Twitter_Misinformation_Detection.html)
-        - Focus: RNN Sequential Models for Text Classification
+        - Focus: RNN Sequential Models for Text Classification.
         - Technology Used: Python, Pandas, NumPy, TensorFlow (TF), Keras, TF/Keras functions (Tokenizer, pad_sequences, Sequential, Embedding, Dense, Flatten, LSTM, GRU, Bidirectional, ModelCheckpoint, ReduceLROnPlateau, RMSprop), Scikit-Learn metrics, one-hot encoding.
         - Contents: Comparing the performance of 5 RNN sequential text classification models (having varying architectures) that were trained on text from accurate and misleading tweets about COVID-19, in order to classify unseen tweets as containing true or false information.
