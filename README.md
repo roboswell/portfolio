@@ -48,7 +48,7 @@
 
 ### Non-Conflict Data Science Projects
 - Statistical Analysis:
-    - **Title:** ["Causal Impact of Job Training on Earnings: A Randomized Evaluation Using ANCOVA and Simulation-Based Power Analysis"](./Econometrics/randomized_control_trial-portfolio.html)
+    - **Title:** ["Causal Impact of Job Training on Earnings: A Randomized Evaluation Using ANCOVA and Simulation-Based Power Analysis"](./Econometrics/Randomized_Control_Trial-Portfolio.html)
         - Focus: Estimating the causal effect of a job training program on post-intervention earnings using randomized experimental data, with regression adjustment, treatment heterogeneity analysis, and Monte Carlo power validation.
         - Technology Used: Python, pandas, NumPy, SciPy, statsmodels (OLS, ANCOVA), seaborn, matplotlib, Monte Carlo simulation.
         - Contents: A randomized controlled trial of 445 participants evaluating the impact of a job training program on 1978 earnings. Randomization was validated through baseline balance tests and standardized mean differences. Treatment effects were estimated using Welch mean comparisons, fully adjusted regression with HC3 robust standard errors, and ANCOVA controlling for baseline earnings, with interaction models assessing heterogeneity and log-income models addressing skewness. The preferred ANCOVA model estimated a statistically significant earnings increase of about $1,773 (95% CI: $443–$3,102). Analytical power was approximately 80%, confirmed via Monte Carlo simulation.
