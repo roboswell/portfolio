@@ -57,6 +57,11 @@
         - Focus: Investigating the association between promotional strategies and retail sales using hierarchical modeling techniques.
         - Technology Used: Python, statsmodels (MixedLM), pandas, NumPy, SciPy, seaborn, matplotlib.
         - Contents: An observational study analyzing 548 sales observations across 137 retail locations and 10 markets. Employed linear mixed effects models with nested random effects to account for hierarchical data structure (locations within markets). Identified bimodal distribution in sales, stratified analysis by market segment, and conducted pairwise comparisons with Bonferroni correction. Found Promotion 1 fairly consistently associated with higher sales compared to alternatives across market segments.
+- REST APIs:
+    - **Title:** ["Sentiment Scoring API Using FastAPI"](./REST_APIs/FastAPI_portfolio.html)
+        - Focus: Illustrating how to build and deploy a FastAPI endpoint.
+        - Technology Used: Python, FastAPI, Uvicorn, Pydantic, VADER Sentiment, NLTK PunktSentenceTokenizer, NumPy, Pandas.
+        - Contents: API design with POST /predict for multipart file upload (UploadFile) and a health check endpoint (GET /). One-time initialization at application startup using FastAPI lifespan to avoid reloading tokenizer/analyzer per request. Sentence segmentation with a Punkt tokenizer updated using a custom abbreviation set to improve splitting on common abbreviations. Sentence-level VADER compound scoring and aggregation into an overall mean sentiment score for the full document. Structured, validated JSON responses using Pydantic response models (filename, sentence count, per-sentence scores, overall score). Local execution using Uvicorn.
 - Large Language Models (LLMs):
     - **Title:** ["RAG for LLMs"](./LLMs/RAG/NVIDIA_NIM_RAG_Demo/RAG_Demo.html)
         - Focus: Enhancing LLM Performance and Utility for Internal Organizational Tasks.
