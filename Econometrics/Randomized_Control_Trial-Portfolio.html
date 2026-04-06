@@ -8344,9 +8344,7 @@ Thus, we must reject normality at all levels. Therefore, the variable RE78 in df
 <span class="kn">import</span><span class="w"> </span><span class="nn">statsmodels.formula.api</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">smf</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">statsmodels.stats.power</span><span class="w"> </span><span class="kn">import</span> <span class="n">TTestIndPower</span>
 
-<span class="c1"># ==================================================</span>
 <span class="c1"># STEP 0 — PREP DATA</span>
-<span class="c1"># ==================================================</span>
 
 <span class="n">df_treated</span><span class="p">[</span><span class="s2">"treatment_indicator"</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
 <span class="n">df_control</span><span class="p">[</span><span class="s2">"treatment_indicator"</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
@@ -8369,9 +8367,7 @@ Thus, we must reject normality at all levels. Therefore, the variable RE78 in df
 <div class="jp-InputPrompt jp-InputArea-prompt">In [32]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># ==================================================</span>
-<span class="c1"># STEP 1 — CHECK ATTRITION / MISSING OUTCOMES</span>
-<span class="c1"># ==================================================</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># STEP 1 — CHECK ATTRITION / MISSING OUTCOMES</span>
 
 <span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Missing RE78 by treatment status:"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"treatment_indicator"</span><span class="p">)[</span><span class="s2">"RE78"</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span><span class="o">.</span><span class="n">mean</span><span class="p">()))</span>
@@ -8417,9 +8413,7 @@ Name: RE78, dtype: float64
 <div class="jp-InputPrompt jp-InputArea-prompt">In [33]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># ==================================================</span>
-<span class="c1"># STEP 2 — BASELINE BALANCE TABLE</span>
-<span class="c1"># ==================================================</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># STEP 2 — BASELINE BALANCE TABLE</span>
 
 <span class="n">pre_vars</span> <span class="o">=</span> <span class="p">[</span>
     <span class="s2">"age"</span><span class="p">,</span> <span class="s2">"education"</span><span class="p">,</span> <span class="s2">"Black"</span><span class="p">,</span> <span class="s2">"Hispanic"</span><span class="p">,</span>
@@ -8570,9 +8564,7 @@ BASELINE BALANCE TABLE
 <div class="jp-InputPrompt jp-InputArea-prompt">In [35]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># ==================================================</span>
-<span class="c1"># STEP 3 — RAW DIFFERENCE IN MEANS (WELCH TEST)</span>
-<span class="c1"># ==================================================</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># STEP 3 — RAW DIFFERENCE IN MEANS (WELCH TEST)</span>
 
 <span class="n">t_stat</span><span class="p">,</span> <span class="n">p_val</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">ttest_ind</span><span class="p">(</span>
     <span class="n">treated</span><span class="p">[</span><span class="s2">"RE78"</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">(),</span>
@@ -8641,9 +8633,7 @@ p = 0.007892977714517335
 <div class="jp-InputPrompt jp-InputArea-prompt">In [36]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># ==================================================</span>
-<span class="c1"># STEP 4 — COHEN'S D</span>
-<span class="c1"># ==================================================</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># STEP 4 — COHEN'S D</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">cohens_d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
     <span class="n">nx</span><span class="p">,</span> <span class="n">ny</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
@@ -8740,10 +8730,8 @@ Cohen's d = 0.2727154073584651
 <div class="jp-InputPrompt jp-InputArea-prompt">In [37]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># ==================================================</span>
-<span class="c1"># STEP 5 — REGRESSION-ADJUSTED TREATMENT EFFECT</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># STEP 5 — REGRESSION-ADJUSTED TREATMENT EFFECT</span>
 <span class="c1"># (controls for pre-treatment variables)</span>
-<span class="c1"># ==================================================</span>
 
 <span class="n">formula</span> <span class="o">=</span> <span class="s2">"""</span>
 <span class="s2">RE78 ~ treatment_indicator</span>
@@ -8897,17 +8885,17 @@ Adjusted treatment effect = 1676.3426437677613
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">statsmodels.formula.api</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">smf</span>
 
-<span class="c1"># ---------------------------------------------</span>
-<span class="c1"># STEP 1 — Ensure categorical variables coded</span>
-<span class="c1"># ---------------------------------------------</span>
+
+<span class="c1"># STEP A — Ensure categorical variables coded</span>
+
 <span class="n">df</span><span class="p">[</span><span class="s2">"Black"</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">"Black"</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
 <span class="n">df</span><span class="p">[</span><span class="s2">"Hispanic"</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">"Hispanic"</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
 <span class="n">df</span><span class="p">[</span><span class="s2">"married"</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">"married"</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
 <span class="n">df</span><span class="p">[</span><span class="s2">"nodegree"</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">"nodegree"</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
 
-<span class="c1"># ---------------------------------------------</span>
-<span class="c1"># STEP 2 — Heterogeneity model with interactions</span>
-<span class="c1"># ---------------------------------------------</span>
+
+<span class="c1"># STEP B — Heterogeneity model with interactions</span>
+
 <span class="n">heterogeneity_model</span> <span class="o">=</span> <span class="n">smf</span><span class="o">.</span><span class="n">ols</span><span class="p">(</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    RE78 ~ treatment_indicator</span>
@@ -9052,10 +9040,9 @@ strong multicollinearity or other numerical problems.
 <div class="jp-InputPrompt jp-InputArea-prompt">In [26]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># ==================================================</span>
-<span class="c1"># STEP 6 — ANCOVA MODEL (BEST PRACTICE)</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># STEP 6 — ANCOVA MODEL (BEST PRACTICE)</span>
 <span class="c1"># Adjust only for baseline outcome(s)</span>
-<span class="c1"># ==================================================</span>
+
 
 <span class="n">ancova</span> <span class="o">=</span> <span class="n">smf</span><span class="o">.</span><span class="n">ols</span><span class="p">(</span>
     <span class="s2">"RE78 ~ treatment_indicator + RE75 + RE74"</span><span class="p">,</span>
@@ -9158,10 +9145,9 @@ p = 0.009
 <div class="jp-InputPrompt jp-InputArea-prompt">In [27]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># ==================================================</span>
-<span class="c1"># STEP 7 — LOG-INCOME ROBUSTNESS CHECK</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># STEP 7 — LOG-INCOME ROBUSTNESS CHECK</span>
 <span class="c1"># (common for skewed earnings)</span>
-<span class="c1"># ==================================================</span>
+
 
 <span class="n">df</span><span class="p">[</span><span class="s2">"log_RE78"</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">"RE78"</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
 
@@ -9302,9 +9288,8 @@ p = 0.010</p>
 <div class="jp-InputPrompt jp-InputArea-prompt">In [39]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># ==================================================</span>
-<span class="c1"># STEP 8 — CALCULATE THE ANCOVA-ADJUSTED STANDARDIZED EFFECT &amp; POWER</span>
-<span class="c1"># ==================================================</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># STEP 8 — CALCULATE THE ANCOVA-ADJUSTED STANDARDIZED EFFECT &amp; POWER</span>
+
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">statsmodels.stats.power</span><span class="w"> </span><span class="kn">import</span> <span class="n">TTestIndPower</span>
@@ -9394,17 +9379,17 @@ Standard research convention:</p>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">statsmodels.formula.api</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">smf</span>
 
-<span class="c1"># -------------------------------</span>
+
 <span class="c1"># SETTINGS</span>
-<span class="c1"># -------------------------------</span>
+
 <span class="n">n_treat</span> <span class="o">=</span> <span class="mi">185</span>
 <span class="n">n_control</span> <span class="o">=</span> <span class="mi">260</span>
 <span class="n">alpha</span> <span class="o">=</span> <span class="mf">0.05</span>
 <span class="n">n_sim</span> <span class="o">=</span> <span class="mi">10000</span>   <span class="c1"># increase for precision</span>
 
-<span class="c1"># -------------------------------</span>
+
 <span class="c1"># EXTRACT PARAMETERS FROM FITTED ANCOVA</span>
-<span class="c1"># -------------------------------</span>
+
 <span class="n">params</span> <span class="o">=</span> <span class="n">ancova</span><span class="o">.</span><span class="n">params</span>
 
 <span class="n">intercept</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">"Intercept"</span><span class="p">]</span>
@@ -9415,9 +9400,9 @@ Standard research convention:</p>
 
 <span class="n">sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">ancova</span><span class="o">.</span><span class="n">mse_resid</span><span class="p">)</span>
 
-<span class="c1"># -------------------------------</span>
+
 <span class="c1"># SIMULATE ONE DATASET</span>
-<span class="c1"># -------------------------------</span>
+
 <span class="k">def</span><span class="w"> </span><span class="nf">simulate_dataset</span><span class="p">():</span>
     
     <span class="n">n</span> <span class="o">=</span> <span class="n">n_treat</span> <span class="o">+</span> <span class="n">n_control</span>
@@ -9445,9 +9430,9 @@ Standard research convention:</p>
     <span class="n">df</span><span class="p">[</span><span class="s2">"RE78"</span><span class="p">]</span> <span class="o">=</span> <span class="n">y</span>
     <span class="k">return</span> <span class="n">df</span>
 
-<span class="c1"># -------------------------------</span>
+
 <span class="c1"># RUN MONTE CARLO</span>
-<span class="c1"># -------------------------------</span>
+
 <span class="n">reject_count</span> <span class="o">=</span> <span class="mi">0</span>
 
 <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_sim</span><span class="p">):</span>
